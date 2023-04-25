@@ -7,6 +7,9 @@ cmake-build-release
 # IDE ignores
 .idea/
 
+# build
+build/
+
 
 
 ## Ignore Visual Studio temporary files, build results, and
