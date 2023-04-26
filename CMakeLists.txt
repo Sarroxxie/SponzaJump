@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(GraphicsPraktikum src/main.cpp)
 
+# add additional source code
+target_sources(GraphicsPraktikum PUBLIC src/window.h src/window.cpp)
+
 # Constants for lib includes
 set(GLFW_DIR libs/glfw/)
 set(IMGUI_DIR libs/imgui/)

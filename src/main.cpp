@@ -1,37 +1,17 @@
 #include <iostream>
-#include "GLFW/glfw3.h"
-#include "imgui_impl_glfw.h"
-#include "imgui.h"
+#include "window.h"
+
+#define DEFAULT_APPLICATION_WIDTH 800
+#define DEFAULT_APPLICATION_HEIGHT 600
+#define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
 
 int main() {
-    glfwInit();
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
     // macro is defined by cmake
     std::cout << "glslangValidator path: " << VULKAN_GLSLANG_VALIDATOR_PATH << "\n";
-    ImGui::CreateContext();
 
-    int WIDTH = 800, HEIGHT = 500;
-
-    auto window = glfwCreateWindow(WIDTH, HEIGHT, "Graphics Praktikum", nullptr, nullptr);
-
-    //glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    // glfwSetWindowUserPointer(window, this);
-    // glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-
-
-
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-
-
-    }
-
-    glfwDestroyWindow(window);
-
-    glfwTerminate();
+    Window window = Window(DEFAULT_APPLICATION_WIDTH,
+                           DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
+    window.render();
 
     return 0;
 }
