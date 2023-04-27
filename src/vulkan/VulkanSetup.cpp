@@ -23,10 +23,25 @@ void initializeVulkan(VulkanContext &context, Window &window) {
     createImageViews(context);
     createRenderPass(context);
     createDescriptorSetLayout(context);
-    createGraphicsPipeline(context)
+    createGraphicsPipeline(context);
+    createCommandPool(context);
+
+    createColorResources(context);
+    createDepthResources(context);
+    createFrameBuffers(context);
+
+
 }
 
 void cleanupVulkan(VulkanContext &context) {
+    vkDestroyCommandPool(context.device, context.commandPool, nullptr);
+
+    vkDestroyPipeline(context.device, context.graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(context.device, context.pipelineLayout, nullptr);
+
+    vkDestroyRenderPass(context.device, context.renderPass, nullptr);
+
+
     vkDestroyDevice(context.device, nullptr);
 
     vkDestroySurfaceKHR(context.instance, context.surface, nullptr);
@@ -284,9 +299,9 @@ void recreateSwapChain(VulkanContext &context, Window &window) {
 
     createSwapChain(context, window);
     createImageViews(context);
-    createColorResources();
-    createDepthResources();
-    createFramebuffers();
+    createColorResources(context);
+    createDepthResources(context);
+    createFrameBuffers(context);
 }
 
 void cleanupSwapChain(VulkanContext &context) {
@@ -666,4 +681,80 @@ VkShaderModule createShaderModule(VulkanContext &context, const std::vector<char
     }
 
     return shaderModule;
+}
+
+void createCommandPool(VulkanContext &context) {
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(context.physicalDevice, context.surface);
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+    if (vkCreateCommandPool(context.device, &poolInfo, nullptr, &context.commandPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command pool!");
+    }
+}
+
+void createColorResources(VulkanContext &context) {
+    VkFormat colorFormat = context.swapChainImageFormat;
+
+    createImage(context,
+                context.swapChainExtent.width,
+                context.swapChainExtent.height,
+                1,
+                context.vulkanSettings.msaaSamples,
+                colorFormat,
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                context.colorImage,
+                context.colorImageMemory);
+
+    context.colorImageView = createImageView(context, context.colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+}
+
+void createDepthResources(VulkanContext &context) {
+    VkFormat depthFormat = findDepthFormat(context);
+
+
+    createImage(context,
+                context.swapChainExtent.width,
+                context.swapChainExtent.height,
+                1,
+                context.vulkanSettings.msaaSamples,
+                depthFormat,
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                context.depthImage,
+                context.depthImageMemory);
+
+    context.depthImageView = createImageView(context, context.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+}
+
+void createFrameBuffers(VulkanContext &context) {
+    context.swapChainFramebuffers.resize(context.swapChainImageViews.size());
+
+    for (size_t i = 0; i < context.swapChainImageViews.size(); i++) {
+        std::array<VkImageView, 3> attachments = {
+                context.colorImageView,
+                context.depthImageView,
+                context.swapChainImageViews[i]
+        };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = context.renderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = context.swapChainExtent.width;
+        framebufferInfo.height = context.swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(context.device, &framebufferInfo, nullptr, &context.swapChainFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+
 }

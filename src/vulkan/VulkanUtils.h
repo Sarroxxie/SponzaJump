@@ -5,6 +5,10 @@
 #include <iostream>
 #include <optional>
 #include "window.h"
+#include "VulkanContext.h"
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
+#include <array>
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
@@ -21,6 +25,8 @@ struct SwapChainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+
+// TODO This struct is taken from tutorial, we will probably create better way to hold vertices at some point, then this can be deleted
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
@@ -30,7 +36,7 @@ struct Vertex {
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
 
-        // TODO probably don't hardcode binding index here, can pass it in or similar
+        // TODO don't hardcode binding index here, can pass it in or similar
         bindingDescription.binding = 0;
         bindingDescription.stride = sizeof(Vertex);
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -107,5 +113,10 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &avai
 
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window &window);
 
+void createImage(VulkanContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
+                 VkFormat format, VkImageTiling tiling,
+                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
+                 VkDeviceMemory &imageMemory);
 
+uint32_t findMemoryType(VulkanContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

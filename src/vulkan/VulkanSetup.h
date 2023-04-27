@@ -5,33 +5,7 @@
 #include <vector>
 #include "window.h"
 #include "VulkanSettings.h"
-
-typedef struct {
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debugMessenger;
-    VkSurfaceKHR surface;
-    VkPhysicalDevice physicalDevice;
-    VkDevice device;
-
-    uint8_t maxSupportedMsaaSamples;
-    VulkanSettings vulkanSettings;
-
-    uint32_t graphicsQueueFamily;
-    VkQueue graphicsQueue;
-    VkQueue presentQueue;
-
-    VkSwapchainKHR swapChain;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
-
-    std::vector<VkImage> swapChainImages;
-    std::vector<VkImageView> swapChainImageViews;
-
-    VkRenderPass renderPass;
-
-    VkPipelineLayout pipelineLayout;
-    VkPipeline graphicsPipeline;
-} VulkanContext;
+#include "VulkanContext.h"
 
 void initializeVulkan(VulkanContext &context, Window &window);
 
@@ -74,4 +48,11 @@ void createGraphicsPipeline(VulkanContext &context);
 
 VkShaderModule createShaderModule(VulkanContext &context, const std::vector<char> &code);
 
+void createCommandPool(VulkanContext &context);
+
+void createColorResources(VulkanContext &context);
+
+void createDepthResources(VulkanContext &context);
+
+void createFrameBuffers(VulkanContext &context);
 #endif //GRAPHICSPRAKTIKUM_VULKANSETUP_H
