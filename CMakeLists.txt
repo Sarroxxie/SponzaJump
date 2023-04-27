@@ -11,6 +11,7 @@ target_sources(GraphicsPraktikum PUBLIC src/window.h src/window.cpp)
 # Constants for lib includes
 set(GLFW_DIR libs/glfw/)
 set(IMGUI_DIR libs/imgui/)
+set(GLM_DIR libs/glm/)
 
 # VulkanSDK
 find_package(Vulkan REQUIRED)
@@ -39,7 +40,11 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # Add and link libs
 add_subdirectory(${GLFW_DIR})
 target_link_libraries(GraphicsPraktikum glfw ${GLFW_LIBRARIES})
+
 target_link_libraries(GraphicsPraktikum Vulkan::Vulkan)
+
+add_subdirectory(${GLM_DIR})
+target_link_libraries(GraphicsPraktikum glm)
 
 # Pass path to the Vulkan glslangValidator.exe as definition to C++
 add_definitions(-DVULKAN_GLSLANG_VALIDATOR_PATH=\"${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}\")
