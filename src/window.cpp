@@ -29,3 +29,7 @@ void Window::render() {
         glfwPollEvents();
     }
 }
+
+GLFWwindow *Window::getWindowHandle() {
+    return window;
+}

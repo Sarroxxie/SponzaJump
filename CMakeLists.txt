@@ -3,11 +3,13 @@ project(GraphicsPraktikum)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(GraphicsPraktikum src/main.cpp)
+add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h)
 
 # add additional source code
 target_sources(GraphicsPraktikum PUBLIC src/window.h src/window.cpp)
 
+set(PROJECT_ROOT_DIR ${PROJECT_SOURCE_DIR})
+message(${PROJECT_ROOT_DIR})
 # Constants for lib includes
 set(GLFW_DIR libs/glfw/)
 set(IMGUI_DIR libs/imgui/)
@@ -16,7 +18,8 @@ set(IMGUI_DIR libs/imgui/)
 find_package(Vulkan REQUIRED)
 
 # ImGUI
-target_include_directories(GraphicsPraktikum PUBLIC 
+target_include_directories(GraphicsPraktikum PUBLIC
+${PROJECT_ROOT_DIR}/src # include so local includes are relative to sources root
 ${IMGUI_DIR} 
 ${IMGUI_DIR}/backends 
 )

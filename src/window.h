@@ -1,3 +1,5 @@
+#pragma once
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
@@ -16,6 +18,9 @@ class Window
   public:
     Window(int width, int height, std::string application_name);
     ~Window();
+
     void initGLFW();
     void render();
+
+    GLFWwindow *getWindowHandle();
 };
