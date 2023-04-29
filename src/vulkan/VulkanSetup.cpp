@@ -19,6 +19,7 @@ void initializeVulkan(VulkanContext &context, Window &window) {
     pickPhysicalDevice(context);
     createLogicalDevice(context);
 
+    // TODO: there is a whole part on swap chain recreation on window change. Right now program dies
     createSwapChain(context, window);
     createImageViews(context);
     createRenderPass(context);
@@ -30,10 +31,25 @@ void initializeVulkan(VulkanContext &context, Window &window) {
     createDepthResources(context);
     createFrameBuffers(context);
 
-
+    createVertexBuffer(context);
+    createIndexBuffer(context);
+    createCommandBuffers(context);
+    /*
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets();
+     */
 }
 
 void cleanupVulkan(VulkanContext &context) {
+    cleanupSwapChain(context);
+
+    vkDestroyBuffer(context.device, context.indexBuffer, nullptr);
+    vkFreeMemory(context.device, context.indexBufferMemory, nullptr);
+
+    vkDestroyBuffer(context.device, context.vertexBuffer, nullptr);
+    vkFreeMemory(context.device, context.vertexBufferMemory, nullptr);
+
     vkDestroyCommandPool(context.device, context.commandPool, nullptr);
 
     vkDestroyPipeline(context.device, context.graphicsPipeline, nullptr);
@@ -404,6 +420,7 @@ void createRenderPass(VulkanContext &context) {
     // Might also be important in createFrameBuffers ? (not sure, might also only save some memory)
 
     if (context.vulkanSettings.useMsaa) {
+        // when using Msaa, the color attachment is not the attachment presenting
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentDescription colorAttachmentResolve{};
@@ -436,14 +453,11 @@ void createRenderPass(VulkanContext &context) {
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
 
-    dependency.srcStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.srcAccessMask = 0;
 
-    dependency.dstStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
@@ -627,7 +641,7 @@ void createGraphicsPipeline(VulkanContext &context) {
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1; // Optional
+    pipelineLayoutInfo.setLayoutCount = 0; // Optional
 
     //pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout; // Optional
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
@@ -737,11 +751,26 @@ void createFrameBuffers(VulkanContext &context) {
     context.swapChainFramebuffers.resize(context.swapChainImageViews.size());
 
     for (size_t i = 0; i < context.swapChainImageViews.size(); i++) {
+
+        std::vector<VkImageView> attachments;
+
+        if (context.vulkanSettings.useMsaa) {
+            attachments.push_back(context.colorImageView);
+            attachments.push_back(context.depthImageView);
+            attachments.push_back(context.swapChainImageViews[i]);
+        } else {
+            attachments.push_back(context.swapChainImageViews[i]);
+            attachments.push_back(context.depthImageView);
+        }
+
+        /*
         std::array<VkImageView, 3> attachments = {
                 context.colorImageView,
                 context.depthImageView,
                 context.swapChainImageViews[i]
         };
+         */
+
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -757,4 +786,94 @@ void createFrameBuffers(VulkanContext &context) {
         }
     }
 
+}
+
+void createVertexBuffer(VulkanContext &context) {
+    const std::vector<Vertex> vertices({
+            {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    });
+
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(context,
+                 bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer,
+                 stagingBufferMemory);
+
+    void *data;
+    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
+    std::memcpy(data, vertices.data(), (size_t) bufferSize);
+    vkUnmapMemory(context.device, stagingBufferMemory);
+
+    createBuffer(context,
+                 bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 context.vertexBuffer,
+                 context.vertexBufferMemory);
+
+    copyBuffer(context, stagingBuffer, context.vertexBuffer, bufferSize);
+
+    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+}
+
+void createIndexBuffer(VulkanContext &context) {
+    const std::vector<uint32_t> indices({0, 1, 2});
+
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(context,
+                 bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer,
+                 stagingBufferMemory);
+
+    void *data;
+    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
+    memcpy(data, indices.data(), (size_t) bufferSize);
+    vkUnmapMemory(context.device, stagingBufferMemory);
+
+    createBuffer(context,
+                 bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 context.indexBuffer,
+                 context.indexBufferMemory);
+
+    copyBuffer(context, stagingBuffer, context.indexBuffer, bufferSize);
+
+    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+}
+
+void createCommandBuffers(VulkanContext &context) {
+    // context.commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = context.commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+    // allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+
+    // if (vkAllocateCommandBuffers(context.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(context.device, &allocInfo, &context.commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate command buffers!");
+    }
 }

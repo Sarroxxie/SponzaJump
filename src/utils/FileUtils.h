@@ -6,8 +6,6 @@
 #include <fstream>
 
 static bool readFile(const std::string& filename, std::vector<char> &result) {
-    // TODO: When refactoring this, don't copy return a vector ?
-    // Shouldn't be a big problem here though, they are not too large
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
     if (!file.is_open()) {

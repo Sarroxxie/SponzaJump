@@ -55,4 +55,12 @@ void createColorResources(VulkanContext &context);
 void createDepthResources(VulkanContext &context);
 
 void createFrameBuffers(VulkanContext &context);
+
+void createVertexBuffer(VulkanContext &context);
+
+void createIndexBuffer(VulkanContext &context);
+
+void createCommandBuffers(VulkanContext &context);
+
+
 #endif //GRAPHICSPRAKTIKUM_VULKANSETUP_H

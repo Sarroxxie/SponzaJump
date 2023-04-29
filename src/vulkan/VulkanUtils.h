@@ -28,10 +28,10 @@ struct SwapChainSupportDetails {
 
 // TODO This struct is taken from tutorial, we will probably create better way to hold vertices at some point, then this can be deleted
 struct Vertex {
-    glm::vec3 pos;
+    glm::vec2 pos;
     glm::vec3 color;
-    glm::vec2 texCoord;
-    uint32_t texIndex;
+    // glm::vec2 texCoord;
+    // uint32_t texIndex;
 
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
@@ -44,8 +44,8 @@ struct Vertex {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -57,6 +57,7 @@ struct Vertex {
         attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[1].offset = offsetof(Vertex, color);
 
+        /*
         attributeDescriptions[2].binding = 0;
         attributeDescriptions[2].location = 2;
         attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
@@ -66,12 +67,13 @@ struct Vertex {
         attributeDescriptions[3].location = 3;
         attributeDescriptions[3].format = VK_FORMAT_R32_UINT;
         attributeDescriptions[3].offset = offsetof(Vertex, texIndex);
+        */
 
         return attributeDescriptions;
     }
 
     bool operator==(const Vertex &other) const {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord && texIndex == other.texIndex;
+        return pos == other.pos && color == other.color; // && texCoord == other.texCoord && texIndex == other.texIndex;
     }
 };
 
@@ -117,6 +119,15 @@ void createImage(VulkanContext &context, uint32_t width, uint32_t height, uint32
                  VkFormat format, VkImageTiling tiling,
                  VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
                  VkDeviceMemory &imageMemory);
+
+void createBuffer(VulkanContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+                  VkBuffer &buffer, VkDeviceMemory &bufferMemory);
+
+void copyBuffer(VulkanContext &context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+VkCommandBuffer beginSingleTimeCommands(VulkanContext  &context);
+
+void endSingleTimeCommands(VulkanContext &context, VkCommandBuffer commandBuffer);
 
 uint32_t findMemoryType(VulkanContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

@@ -1,6 +1,7 @@
 #include <iostream>
 #include "window.h"
 #include "vulkan/VulkanSetup.h"
+#include "vulkan/VulkanRenderer.h"
 
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
@@ -16,8 +17,18 @@ int main() {
     VulkanContext context;
     initializeVulkan(context, window);
 
-    window.render();
+    // window.render();
 
+    VulkanRenderer renderer(context);
+
+    while(!glfwWindowShouldClose(window.getWindowHandle())) {
+        glfwPollEvents();
+
+       renderer.render();
+    }
+    vkDeviceWaitIdle(context.device);
+
+    renderer.cleanVulkanRessources();
     cleanupVulkan(context);
 
     return 0;

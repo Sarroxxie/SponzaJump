@@ -3,7 +3,7 @@ project(GraphicsPraktikum)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h src/vulkan/VulkanContext.h)
+add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h src/vulkan/VulkanContext.h src/vulkan/VulkanRenderer.cpp src/vulkan/VulkanRenderer.h)
 
 # add additional source code
 target_sources(GraphicsPraktikum PUBLIC src/window.h src/window.cpp)

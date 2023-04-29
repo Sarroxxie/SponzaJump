@@ -42,6 +42,16 @@ typedef struct {
     VkImageView depthImageView;
 
     std::vector<VkFramebuffer> swapChainFramebuffers;
+
+    // TODO these should be extracted into classes, used in single objects
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
+
+    // TODO might want a vector of commandBuffers here later, so we can record another one while the previous frame is still rendering, that way we can have multiple frames in flight
+    VkCommandBuffer commandBuffer;
 } VulkanContext;
 
 #endif //GRAPHICSPRAKTIKUM_VULKANCONTEXT_H
