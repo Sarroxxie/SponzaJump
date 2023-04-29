@@ -790,9 +790,9 @@ void createFrameBuffers(VulkanContext &context) {
 
 void createVertexBuffer(VulkanContext &context) {
     const std::vector<Vertex> vertices({
-            {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+            {{0.0f, -0.5f, 0.5}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f, 0.5f, 0}, {0.0f, 1.0f, 0.0f}},
+            {{-0.5f, 0.5f, 0.1}, {0.0f, 0.0f, 1.0f}}
     });
 
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();

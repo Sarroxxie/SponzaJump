@@ -28,7 +28,7 @@ struct SwapChainSupportDetails {
 
 // TODO This struct is taken from tutorial, we will probably create better way to hold vertices at some point, then this can be deleted
 struct Vertex {
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
     // glm::vec2 texCoord;
     // uint32_t texIndex;
