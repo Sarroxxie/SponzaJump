@@ -1,10 +1,11 @@
 #include <stdexcept>
 #include <array>
 #include "VulkanRenderer.h"
+#include "VulkanSetup.h"
 
 
-VulkanRenderer::VulkanRenderer(VulkanContext &context)
-        : m_Context(context) {
+VulkanRenderer::VulkanRenderer(VulkanContext &context, Window &window)
+        : m_Context(context), m_Window(window) {
     createSyncObjects(context);
 }
 
@@ -17,10 +18,19 @@ void VulkanRenderer::cleanVulkanRessources() {
 
 void VulkanRenderer::render() {
     vkWaitForFences(m_Context.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(m_Context.device, 1, &m_InFlightFence);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(m_Context.device, m_Context.swapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(m_Context.device, m_Context.swapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR | m_Window.wasResized()) {
+        recreateSwapChain(m_Context, m_Window);
+        m_Window.setResized(false);
+        return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    vkResetFences(m_Context.device, 1, &m_InFlightFence);
 
     vkResetCommandBuffer(m_Context.commandBuffer, 0);
 

@@ -19,7 +19,7 @@ int main() {
 
     // window.render();
 
-    VulkanRenderer renderer(context);
+    VulkanRenderer renderer(context, window);
 
     while(!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();

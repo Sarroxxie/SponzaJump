@@ -6,6 +6,7 @@
 
 
 #include "VulkanContext.h"
+#include "window.h"
 #include <vulkan/vulkan_core.h>
 
 class VulkanRenderer {
@@ -17,8 +18,10 @@ private:
 
     VulkanContext &m_Context;
 
+    Window &m_Window;
+
 public:
-    VulkanRenderer(VulkanContext &context);
+    VulkanRenderer(VulkanContext &context, Window &window);
 
     void cleanVulkanRessources();
 

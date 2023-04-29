@@ -19,6 +19,9 @@ void Window::initGLFW() {
     // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     window = glfwCreateWindow(width, height, application_name.c_str(), nullptr, nullptr);
+
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     //  glfwSetWindowUserPointer(window, this);
     //  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
@@ -32,4 +35,12 @@ void Window::render() {
 
 GLFWwindow *Window::getWindowHandle() {
     return window;
+}
+
+void Window::setResized(bool resized) {
+    m_resized = resized;
+}
+
+bool Window::wasResized() {
+    return m_resized;
 }

@@ -15,6 +15,8 @@ class Window
     std::string application_name;
     GLFWwindow* window;
 
+    bool m_resized = false;
+
   public:
     Window(int width, int height, std::string application_name);
     ~Window();
@@ -22,5 +24,14 @@ class Window
     void initGLFW();
     void render();
 
+    void setResized(bool resized);
+    bool wasResized();
+
     GLFWwindow *getWindowHandle();
 };
+
+
+static void framebufferResizeCallback(GLFWwindow* glfWwindow, int width, int height) {
+    auto window = reinterpret_cast<Window*>(glfwGetWindowUserPointer(glfWwindow));
+    window->setResized(true);
+}
