@@ -44,9 +44,13 @@ VkFormat findSupportedFormat(VulkanContext &context, const std::vector<VkFormat>
 
 void createDescriptorSetLayout(VulkanContext &context);
 
-void createGraphicsPipeline(VulkanContext &context);
+void createGraphicsPipeline(VulkanContext&    context,
+                            VkPipelineLayout& pipelineLayout,
+                            VkPipeline&       graphicsPipeline,
+                            std::string vertexShaderPath = "../res/shaders/spv/triangle.vert.spv",
+                            std::string fragmentShaderPath = "../res/shaders/spv/triangle.frag.spv");
 
-VkShaderModule createShaderModule(VulkanContext &context, const std::vector<char> &code);
+VkShaderModule createShaderModule(VulkanContext& context, const std::vector<char>& code);
 
 void createCommandPool(VulkanContext &context);
 
@@ -62,5 +66,10 @@ void createIndexBuffer(VulkanContext &context);
 
 void createCommandBuffers(VulkanContext &context);
 
+void buildSecondaryGraphicsPipeline(VulkanContext& context);
 
-#endif //GRAPHICSPRAKTIKUM_VULKANSETUP_H
+bool swapGraphicsPipeline(VulkanContext& context);
+
+void compileShader(std::string path, std::string shaderDirectoryPath = "../res/shaders/source/");
+
+#endif  // GRAPHICSPRAKTIKUM_VULKANSETUP_H

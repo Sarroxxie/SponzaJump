@@ -27,6 +27,9 @@ public:
 
     void render();
 
+    void recompileToSecondaryPipeline();
+    void swapToSecondaryPipeline();
+
 private:
     void recordCommandBuffer(VulkanContext &context, uint32_t imageIndex);
 

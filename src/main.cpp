@@ -3,28 +3,27 @@
 #include "vulkan/VulkanSetup.h"
 #include "vulkan/VulkanRenderer.h"
 
+#include "utils/FileUtils.h"
+
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
 
 int main() {
-    // macro is defined by cmake
-    std::cout << "glslangValidator path: " << VULKAN_GLSLANG_VALIDATOR_PATH << "\n";
-
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
 
     VulkanContext context;
     initializeVulkan(context, window);
 
-    // window.render();
-
     VulkanRenderer renderer(context, window);
+    // passes reference to the renderer to the key callback function
+    glfwSetWindowUserPointer(window.getWindowHandle(), (void*) &renderer);
 
     while(!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();
 
-       renderer.render();
+        renderer.render();
     }
     vkDeviceWaitIdle(context.device);
 

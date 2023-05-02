@@ -24,7 +24,8 @@ void initializeVulkan(VulkanContext &context, Window &window) {
     createImageViews(context);
     createRenderPass(context);
     createDescriptorSetLayout(context);
-    createGraphicsPipeline(context);
+    createGraphicsPipeline(context,context.pipelineLayouts[0],
+                           context.graphicsPipelines[0]);
     createCommandPool(context);
 
     createColorResources(context);
@@ -52,8 +53,13 @@ void cleanupVulkan(VulkanContext &context) {
 
     vkDestroyCommandPool(context.device, context.commandPool, nullptr);
 
-    vkDestroyPipeline(context.device, context.graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(context.device, context.pipelineLayout, nullptr);
+    // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
+    vkDestroyPipeline(context.device, context.graphicsPipelines[0], nullptr);
+    vkDestroyPipelineLayout(context.device, context.pipelineLayouts[0], nullptr);
+    if(context.graphicsPipelines[1] != VK_NULL_HANDLE) {
+        vkDestroyPipeline(context.device, context.graphicsPipelines[1], nullptr);
+        vkDestroyPipelineLayout(context.device, context.pipelineLayouts[1], nullptr);
+    }
 
     vkDestroyRenderPass(context.device, context.renderPass, nullptr);
 
@@ -119,7 +125,7 @@ std::vector<const char *> getRequiredExtensions() {
 }
 
 bool checkValidationLayerSupport() {
-    std::cout << "Checking Validation Layer Support" << std::endl;
+    //std::cout << "Checking Validation Layer Support" << std::endl;
 
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -521,15 +527,19 @@ void createDescriptorSetLayout(VulkanContext &context) {
      */
 }
 
-void createGraphicsPipeline(VulkanContext &context) {
-    //TODO hardcoded shaders to display triangle
+void createGraphicsPipeline(VulkanContext&    context,
+                            VkPipelineLayout& pipelineLayout,
+                            VkPipeline&       graphicsPipeline,
+                            std::string       vertexShaderPath,
+                            std::string       fragmentShaderPath) {
+    // TODO hardcoded shaders to display triangle
     std::vector<char> vertexShaderCode;
     std::vector<char> fragmentShaderCode;
 
-    if (!readFile("res/shaders/triangle_vert.spv", vertexShaderCode)) {
+    if (!readFile(vertexShaderPath, vertexShaderCode)) {
         throw std::runtime_error("failed to open vertex shader code!");
     }
-    if (!readFile("res/shaders/triangle_frag.spv", fragmentShaderCode)) {
+    if(!readFile(fragmentShaderPath, fragmentShaderCode)) {
         throw std::runtime_error("failed to open fragment shader code!");
     }
 
@@ -647,7 +657,9 @@ void createGraphicsPipeline(VulkanContext &context) {
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-    if (vkCreatePipelineLayout(context.device, &pipelineLayoutInfo, nullptr, &context.pipelineLayout) != VK_SUCCESS) {
+    if(vkCreatePipelineLayout(context.device, &pipelineLayoutInfo, nullptr,
+                              &pipelineLayout)
+       != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -666,7 +678,7 @@ void createGraphicsPipeline(VulkanContext &context) {
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    pipelineInfo.layout = context.pipelineLayout;
+    pipelineInfo.layout = pipelineLayout;
 
     pipelineInfo.renderPass = context.renderPass;
     pipelineInfo.subpass = 0;
@@ -674,7 +686,9 @@ void createGraphicsPipeline(VulkanContext &context) {
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
 
-    if (vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &context.graphicsPipeline) !=
+    if(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineInfo,
+                                 nullptr, &graphicsPipeline)
+       !=
         VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
@@ -876,4 +890,46 @@ void createCommandBuffers(VulkanContext &context) {
     if (vkAllocateCommandBuffers(context.device, &allocInfo, &context.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
+}
+
+// Builds a graphics pipeline and stores it in the secondary slot
+void buildSecondaryGraphicsPipeline(VulkanContext& context) {
+    compileShader("triangle.frag");
+    compileShader("triangle.vert");
+    if(context.graphicsPipelines[!context.activePipelineIndex] != VK_NULL_HANDLE) {
+        vkDestroyPipeline(context.device,
+                          context.graphicsPipelines[!context.activePipelineIndex], nullptr);
+        vkDestroyPipelineLayout(context.device,
+                                context.pipelineLayouts[!context.activePipelineIndex],
+                                nullptr);
+    }
+
+    createGraphicsPipeline(context, context.pipelineLayouts[!context.activePipelineIndex],
+                           context.graphicsPipelines[!context.activePipelineIndex]);
+}
+
+// Swaps to the secondary graphics pipeline if it is valid
+bool swapGraphicsPipeline(VulkanContext& context) {
+    if(context.graphicsPipelines[!context.activePipelineIndex] != VK_NULL_HANDLE) {
+        context.activePipelineIndex = !context.activePipelineIndex;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Compiles a shader to SPIR-V format using a systemcall for "glslangValidator.exe".
+// The shader path has to be relative to the shaderDirectoryPath.
+void compileShader(std::string relativeShaderPath, std::string shaderDirectoryPath) {
+    std::string command = std::string(VULKAN_GLSLANG_VALIDATOR_PATH)
+                          + " -g --target-env vulkan1.1 -o \"" + shaderDirectoryPath
+                          + "../spv/" + relativeShaderPath + ".spv\" \""
+                          + shaderDirectoryPath + relativeShaderPath + "\"";
+    // this suppresses the console output from the command (command differs on windows and unix)
+    /*#if defined(_WIN32) || defined(_WIN64)
+        command += " > nul";
+    #else
+        command += " > /dev/null";
+    #endif*/
+    system(command.c_str());
 }

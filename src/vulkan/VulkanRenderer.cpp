@@ -3,6 +3,8 @@
 #include "VulkanRenderer.h"
 #include "VulkanSetup.h"
 
+#include <iostream>
+
 
 VulkanRenderer::VulkanRenderer(VulkanContext &context, Window &window)
         : m_Context(context), m_Window(window) {
@@ -97,7 +99,8 @@ void VulkanRenderer::recordCommandBuffer(VulkanContext &context, uint32_t imageI
 
     vkCmdBeginRenderPass(context.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(context.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context.graphicsPipeline);
+    vkCmdBindPipeline(context.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      context.graphicsPipelines[context.activePipelineIndex]);
 
 
     VkBuffer vertexBuffers[] = {context.vertexBuffer};
@@ -190,4 +193,12 @@ void VulkanRenderer::createSyncObjects(VulkanContext &context) {
         throw std::runtime_error("failed to create synchronization objects for a frame!");
     }
 
+}
+
+void VulkanRenderer::recompileToSecondaryPipeline() {
+    buildSecondaryGraphicsPipeline(m_Context);
+}
+
+void VulkanRenderer::swapToSecondaryPipeline() {
+    swapGraphicsPipeline(m_Context);
 }

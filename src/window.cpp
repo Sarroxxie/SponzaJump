@@ -1,4 +1,19 @@
 #include "window.h"
+#include <iostream>
+#include "vulkan/VulkanRenderer.h"
+#include "vulkan/VulkanSetup.h"
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    VulkanRenderer* renderer = (VulkanRenderer*)glfwGetWindowUserPointer(window);
+    // compile shaders
+    if(key == GLFW_KEY_C && action == GLFW_PRESS) {
+        renderer->recompileToSecondaryPipeline();
+    }
+    // swap graphics pipelines
+    if(key == GLFW_KEY_S && action == GLFW_PRESS) {
+        renderer->swapToSecondaryPipeline();
+    }
+}
 
 Window::Window(int width, int height, std::string application_name)
     : width(width)
@@ -22,15 +37,10 @@ void Window::initGLFW() {
 
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+    glfwSetKeyCallback(window, keyCallback);
     // glfwSetMouseButtonCallback(window, mouseButtonCallback);
     //  glfwSetWindowUserPointer(window, this);
     //  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-}
-
-void Window::render() {
-    while(!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-    }
 }
 
 GLFWwindow *Window::getWindowHandle() {

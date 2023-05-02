@@ -22,7 +22,6 @@ class Window
     ~Window();
 
     void initGLFW();
-    void render();
 
     void setResized(bool resized);
     bool wasResized();
