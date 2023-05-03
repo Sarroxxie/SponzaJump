@@ -10,6 +10,7 @@
 #include <cstring>
 #include <set>
 #include <array>
+#include <filesystem>
 
 // setup in large parts taken from https://vulkan-tutorial.com/Introduction
 void initializeVulkan(VulkanContext &context, Window &window) {
@@ -536,8 +537,15 @@ void createGraphicsPipeline(VulkanContext&    context,
     std::vector<char> vertexShaderCode;
     std::vector<char> fragmentShaderCode;
 
+    if (!std::filesystem::exists(vertexShaderPath)) {
+        compileShader("triangle.vert");
+    }
     if (!readFile(vertexShaderPath, vertexShaderCode)) {
         throw std::runtime_error("failed to open vertex shader code!");
+    }
+
+    if (!std::filesystem::exists(fragmentShaderPath)) {
+        compileShader("triangle.frag");
     }
     if(!readFile(fragmentShaderPath, fragmentShaderCode)) {
         throw std::runtime_error("failed to open fragment shader code!");
