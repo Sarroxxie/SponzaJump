@@ -30,7 +30,3 @@ class Window
 };
 
 
-static void framebufferResizeCallback(GLFWwindow* glfWwindow, int width, int height) {
-    auto window = reinterpret_cast<Window*>(glfwGetWindowUserPointer(glfWwindow));
-    window->setResized(true);
-}

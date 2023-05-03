@@ -1,8 +1,8 @@
 #include "VulkanSetup.h"
 #include "VulkanSettings.h"
 #include "GLFW/glfw3.h"
-#include "VulkanUtils.h"
 #include "utils/FileUtils.h"
+#include "VulkanUtils.h"
 
 #include <vulkan/vulkan_core.h>
 #include <stdexcept>
@@ -13,29 +13,17 @@
 #include <filesystem>
 
 // setup in large parts taken from https://vulkan-tutorial.com/Introduction
-void initializeVulkan(VulkanContext &context, Window &window) {
-    createInstance(context);
-    setupDebugMessenger(context);
-    createSurface(context, window);
-    pickPhysicalDevice(context);
-    createLogicalDevice(context);
+void initializeGraphicsApplication(ApplicationContext &appContext) {
+    initializeBaseVulkan(appContext);
+    initializeSwapChain(appContext);
+    initializeRenderContext(appContext);
 
-    // TODO: there is a whole part on swap chain recreation on window change. Right now program dies
-    createSwapChain(context, window);
-    createImageViews(context);
-    createRenderPass(context);
-    createDescriptorSetLayout(context);
-    createGraphicsPipeline(context,context.pipelineLayouts[0],
-                           context.graphicsPipelines[0]);
-    createCommandPool(context);
+    createFrameBuffers(appContext);
 
-    createColorResources(context);
-    createDepthResources(context);
-    createFrameBuffers(context);
+    createVertexBuffer(appContext);
+    createIndexBuffer(appContext);
 
-    createVertexBuffer(context);
-    createIndexBuffer(context);
-    createCommandBuffers(context);
+    createDescriptorSetLayout(appContext);
     /*
     createUniformBuffers();
     createDescriptorPool();
@@ -43,40 +31,37 @@ void initializeVulkan(VulkanContext &context, Window &window) {
      */
 }
 
-void cleanupVulkan(VulkanContext &context) {
-    cleanupSwapChain(context);
-
-    vkDestroyBuffer(context.device, context.indexBuffer, nullptr);
-    vkFreeMemory(context.device, context.indexBufferMemory, nullptr);
-
-    vkDestroyBuffer(context.device, context.vertexBuffer, nullptr);
-    vkFreeMemory(context.device, context.vertexBufferMemory, nullptr);
-
-    vkDestroyCommandPool(context.device, context.commandPool, nullptr);
-
-    // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
-    vkDestroyPipeline(context.device, context.graphicsPipelines[0], nullptr);
-    vkDestroyPipelineLayout(context.device, context.pipelineLayouts[0], nullptr);
-    if(context.graphicsPipelines[1] != VK_NULL_HANDLE) {
-        vkDestroyPipeline(context.device, context.graphicsPipelines[1], nullptr);
-        vkDestroyPipelineLayout(context.device, context.pipelineLayouts[1], nullptr);
-    }
-
-    vkDestroyRenderPass(context.device, context.renderPass, nullptr);
-
-
-    vkDestroyDevice(context.device, nullptr);
-
-    vkDestroySurfaceKHR(context.instance, context.surface, nullptr);
-
-    if (enableValidationLayers) {
-        DestroyDebugUtilsMessengerEXT(context.instance, context.debugMessenger, nullptr);
-    }
-
-    vkDestroyInstance(context.instance, nullptr);
+void initializeBaseVulkan(ApplicationContext &appContext) {
+    createInstance(appContext.baseContext);
+    setupDebugMessenger(appContext.baseContext);
+    createSurface(appContext.baseContext, appContext.window);
+    pickPhysicalDevice(appContext.baseContext, appContext.renderSettings);
+    createLogicalDevice(appContext.baseContext);
 }
 
-void createInstance(VulkanContext &context) {
+void initializeSwapChain(ApplicationContext &appContext) {
+    createSwapChain(appContext.baseContext, appContext.swapchainContext, appContext.window);
+    createImageViews(appContext.baseContext, appContext.swapchainContext);
+
+    // TODO don't need to create ColorRessources if multisampling is turned off
+    createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
+    createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
+}
+
+void initializeRenderContext(ApplicationContext &appContext) {
+    createRenderPass(appContext);
+
+    createGraphicsPipeline(appContext,
+                           appContext.renderContext,
+                           appContext.renderContext.pipelineLayouts[0],
+                           appContext.renderContext.graphicsPipelines[0]);
+
+    createCommandPool(appContext.baseContext, appContext.renderContext);
+    createCommandBuffers(appContext.baseContext, appContext.renderContext);
+}
+
+
+void createInstance(VulkanBaseContext &context) {
     if (enableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
     }
@@ -109,6 +94,46 @@ void createInstance(VulkanContext &context) {
     if (vkCreateInstance(&createInfo, nullptr, &context.instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
+}
+
+void cleanupVulkan(ApplicationContext &appContext) {
+    cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
+
+    cleanupRenderContext(appContext.baseContext, appContext.renderContext);
+
+    cleanupBaseVulkanRessources(appContext.baseContext);
+}
+
+void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext) {
+    vkDestroyDevice(baseContext.device, nullptr);
+
+    vkDestroySurfaceKHR(baseContext.instance, baseContext.surface, nullptr);
+
+    if (enableValidationLayers) {
+        DestroyDebugUtilsMessengerEXT(baseContext.instance, baseContext.debugMessenger, nullptr);
+    }
+
+    vkDestroyInstance(baseContext.instance, nullptr);
+}
+
+void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderContext) {
+    vkDestroyCommandPool(baseContext.device, renderContext.commandPool, nullptr);
+
+    // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
+    vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[0], nullptr);
+    vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[0], nullptr);
+    if(renderContext.graphicsPipelines[1] != VK_NULL_HANDLE) {
+        vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[1], nullptr);
+        vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[1], nullptr);
+    }
+
+    vkDestroyRenderPass(baseContext.device, renderContext.renderPass, nullptr);
+
+    vkDestroyBuffer(baseContext.device, renderContext.object.indexBuffer, nullptr);
+    vkFreeMemory(baseContext.device, renderContext.object.indexBufferMemory, nullptr);
+
+    vkDestroyBuffer(baseContext.device, renderContext.object.vertexBuffer, nullptr);
+    vkFreeMemory(baseContext.device, renderContext.object.vertexBufferMemory, nullptr);
 }
 
 std::vector<const char *> getRequiredExtensions() {
@@ -152,7 +177,7 @@ bool checkValidationLayerSupport() {
     return true;
 }
 
-void setupDebugMessenger(VulkanContext &context) {
+void setupDebugMessenger(VulkanBaseContext &context) {
     if (!enableValidationLayers) return;
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -170,13 +195,13 @@ void setupDebugMessenger(VulkanContext &context) {
     }
 }
 
-void createSurface(VulkanContext &context, Window &window) {
-    if (glfwCreateWindowSurface(context.instance, window.getWindowHandle(), nullptr, &context.surface) != VK_SUCCESS) {
+void createSurface(VulkanBaseContext &context, Window *window) {
+    if (glfwCreateWindowSurface(context.instance, window->getWindowHandle(), nullptr, &context.surface) != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
 }
 
-void pickPhysicalDevice(VulkanContext &context) {
+void pickPhysicalDevice(VulkanBaseContext &context, RenderSettings &renderSettings) {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
 
@@ -192,7 +217,7 @@ void pickPhysicalDevice(VulkanContext &context) {
     for (const auto &device: devices) {
         if (isDeviceSuitable(device, context.surface)) {
             context.physicalDevice = device;
-            context.maxSupportedMsaaSamples = getMaxUsableSampleCount(device);
+            renderSettings.maxMsaaSamples = getMaxUsableSampleCount(device);
             break;
         }
     }
@@ -202,7 +227,7 @@ void pickPhysicalDevice(VulkanContext &context) {
     }
 }
 
-void createLogicalDevice(VulkanContext &context) {
+void createLogicalDevice(VulkanBaseContext &context) {
     QueueFamilyIndices indices = findQueueFamilies(context.physicalDevice, context.surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -250,7 +275,7 @@ void createLogicalDevice(VulkanContext &context) {
     vkGetDeviceQueue(context.device, indices.presentFamily.value(), 0, &context.presentQueue);
 }
 
-void createSwapChain(VulkanContext &context, Window &window) {
+void createSwapChain(VulkanBaseContext &context, SwapchainContext &swapchainContext, Window *window) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(context.physicalDevice, context.surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -296,68 +321,71 @@ void createSwapChain(VulkanContext &context, Window &window) {
 
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(context.device, &createInfo, nullptr, &context.swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(context.device, &createInfo, nullptr, &swapchainContext.swapChain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(context.device, context.swapChain, &imageCount, nullptr);
-    context.swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(context.device, context.swapChain, &imageCount, context.swapChainImages.data());
+    vkGetSwapchainImagesKHR(context.device, swapchainContext.swapChain, &imageCount, nullptr);
+    swapchainContext.swapChainImages.resize(imageCount);
+    vkGetSwapchainImagesKHR(context.device, swapchainContext.swapChain, &imageCount, swapchainContext.swapChainImages.data());
 
-    context.swapChainImageFormat = surfaceFormat.format;
-    context.swapChainExtent = extent;
+    swapchainContext.swapChainImageFormat = surfaceFormat.format;
+    swapchainContext.swapChainExtent = extent;
 }
 
-void recreateSwapChain(VulkanContext &context, Window &window) {
+void recreateSwapChain(ApplicationContext &appContext) {
     int width = 0, height = 0;
-    glfwGetFramebufferSize(window.getWindowHandle(), &width, &height);
+    glfwGetFramebufferSize(appContext.window->getWindowHandle(), &width, &height);
     while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(window.getWindowHandle(), &width, &height);
+        glfwGetFramebufferSize(appContext.window->getWindowHandle(), &width, &height);
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(context.device);
+    vkDeviceWaitIdle(appContext.baseContext.device);
 
-    cleanupSwapChain(context);
+    cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
 
-    createSwapChain(context, window);
-    createImageViews(context);
-    createColorResources(context);
-    createDepthResources(context);
-    createFrameBuffers(context);
+    createSwapChain(appContext.baseContext, appContext.swapchainContext, appContext.window);
+    createImageViews(appContext.baseContext, appContext.swapchainContext);
+
+    // TODO don't need to create ColorRessources if multisampling is turned off
+    createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
+    createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
+
+    createFrameBuffers(appContext);
 }
 
-void cleanupSwapChain(VulkanContext &context) {
-    vkDestroyImageView(context.device, context.colorImageView, nullptr);
-    vkDestroyImage(context.device, context.colorImage, nullptr);
-    vkFreeMemory(context.device, context.colorImageMemory, nullptr);
+void cleanupSwapChain(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext) {
+    vkDestroyImageView(baseContext.device, swapchainContext.colorImage.imageView, nullptr);
+    vkDestroyImage(baseContext.device, swapchainContext.colorImage.image, nullptr);
+    vkFreeMemory(baseContext.device, swapchainContext.colorImage.imageMemory, nullptr);
 
-    vkDestroyImageView(context.device, context.depthImageView, nullptr);
-    vkDestroyImage(context.device, context.depthImage, nullptr);
-    vkFreeMemory(context.device, context.depthImageMemory, nullptr);
+    vkDestroyImageView(baseContext.device, swapchainContext.depthImage.imageView, nullptr);
+    vkDestroyImage(baseContext.device, swapchainContext.depthImage.image, nullptr);
+    vkFreeMemory(baseContext.device, swapchainContext.depthImage.imageMemory, nullptr);
 
-    for (auto framebuffer: context.swapChainFramebuffers) {
-        vkDestroyFramebuffer(context.device, framebuffer, nullptr);
+    for (auto framebuffer: swapchainContext.swapChainFramebuffers) {
+        vkDestroyFramebuffer(baseContext.device, framebuffer, nullptr);
     }
 
-    for (auto imageView: context.swapChainImageViews) {
-        vkDestroyImageView(context.device, imageView, nullptr);
+    for (auto imageView: swapchainContext.swapChainImageViews) {
+        vkDestroyImageView(baseContext.device, imageView, nullptr);
     }
 
-    vkDestroySwapchainKHR(context.device, context.swapChain, nullptr);
+    vkDestroySwapchainKHR(baseContext.device, swapchainContext.swapChain, nullptr);
 }
 
-void createImageViews(VulkanContext &context) {
-    context.swapChainImageViews.resize(context.swapChainImages.size());
+void createImageViews(VulkanBaseContext &context, SwapchainContext &swapchainContext) {
+    swapchainContext.swapChainImageViews.resize(swapchainContext.swapChainImages.size());
 
-    for (size_t i = 0; i < context.swapChainImages.size(); i++) {
-        context.swapChainImageViews[i] = createImageView(context, context.swapChainImages[i],
-                                                         context.swapChainImageFormat,
+    for (size_t i = 0; i < swapchainContext.swapChainImages.size(); i++) {
+        swapchainContext.swapChainImageViews[i] = createImageView(context, swapchainContext.swapChainImages[i],
+                                                                  swapchainContext.swapChainImageFormat,
                                                          VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
 }
 
-VkImageView createImageView(VulkanContext &context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
+VkImageView createImageView(VulkanBaseContext &context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
                             uint32_t mipLevels) {
     VkImageViewCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -380,10 +408,10 @@ VkImageView createImageView(VulkanContext &context, VkImage image, VkFormat form
     return imageView;
 }
 
-void createRenderPass(VulkanContext &context) {
+void createRenderPass(ApplicationContext &appContext) {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = context.swapChainImageFormat;
-    colorAttachment.samples = context.vulkanSettings.msaaSamples;
+    colorAttachment.format = appContext.swapchainContext.swapChainImageFormat;
+    colorAttachment.samples = appContext.renderSettings.msaaSamples;
 
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -400,8 +428,8 @@ void createRenderPass(VulkanContext &context) {
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = findDepthFormat(context);
-    depthAttachment.samples = context.vulkanSettings.msaaSamples;
+    depthAttachment.format = findDepthFormat(appContext.baseContext);
+    depthAttachment.samples = appContext.renderSettings.msaaSamples;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -426,12 +454,12 @@ void createRenderPass(VulkanContext &context) {
     // This has not been tested yet -> might be error source
     // Might also be important in createFrameBuffers ? (not sure, might also only save some memory)
 
-    if (context.vulkanSettings.useMsaa) {
+    if (appContext.renderSettings.useMsaa) {
         // when using Msaa, the color attachment is not the attachment presenting
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentDescription colorAttachmentResolve{};
-        colorAttachmentResolve.format = context.swapChainImageFormat;
+        colorAttachmentResolve.format = appContext.swapchainContext.swapChainImageFormat;
         colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -469,12 +497,12 @@ void createRenderPass(VulkanContext &context) {
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(context.device, &renderPassInfo, nullptr, &context.renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr, &appContext.renderContext.renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
 
-VkFormat findDepthFormat(VulkanContext &context) {
+VkFormat findDepthFormat(VulkanBaseContext &context) {
     return findSupportedFormat(
             context,
             {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
@@ -483,7 +511,7 @@ VkFormat findDepthFormat(VulkanContext &context) {
     );
 }
 
-VkFormat findSupportedFormat(VulkanContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
+VkFormat findSupportedFormat(VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features) {
     for (VkFormat format: candidates) {
         VkFormatProperties props;
@@ -499,7 +527,7 @@ VkFormat findSupportedFormat(VulkanContext &context, const std::vector<VkFormat>
     throw std::runtime_error("failed to find supported format!");
 }
 
-void createDescriptorSetLayout(VulkanContext &context) {
+void createDescriptorSetLayout(ApplicationContext &appContext) {
     // TODO: currently empty, this is used to create descriptors for shaders, so we can pass data -> Maybe use some sort of struct to define what we want, so we don't have to hardcode it.
     // -> currently setting DescriptorSetLayouts for pipelineLayoutInfo in createGraphicsPipeline is commented out
     /*
@@ -528,7 +556,8 @@ void createDescriptorSetLayout(VulkanContext &context) {
      */
 }
 
-void createGraphicsPipeline(VulkanContext&    context,
+void createGraphicsPipeline(ApplicationContext &appContext,
+                            RenderContext &renderContext,
                             VkPipelineLayout& pipelineLayout,
                             VkPipeline&       graphicsPipeline,
                             std::string       vertexShaderPath,
@@ -551,8 +580,8 @@ void createGraphicsPipeline(VulkanContext&    context,
         throw std::runtime_error("failed to open fragment shader code!");
     }
 
-    VkShaderModule vertShaderModule = createShaderModule(context, vertexShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(context, fragmentShaderCode);
+    VkShaderModule vertShaderModule = createShaderModule(appContext.baseContext, vertexShaderCode);
+    VkShaderModule fragShaderModule = createShaderModule(appContext.baseContext, fragmentShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -620,7 +649,7 @@ void createGraphicsPipeline(VulkanContext&    context,
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_TRUE;
     multisampling.minSampleShading = .2f;
-    multisampling.rasterizationSamples = context.vulkanSettings.msaaSamples;
+    multisampling.rasterizationSamples = appContext.renderSettings.msaaSamples;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask =
@@ -665,7 +694,7 @@ void createGraphicsPipeline(VulkanContext&    context,
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-    if(vkCreatePipelineLayout(context.device, &pipelineLayoutInfo, nullptr,
+    if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo, nullptr,
                               &pipelineLayout)
        != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
@@ -688,24 +717,24 @@ void createGraphicsPipeline(VulkanContext&    context,
 
     pipelineInfo.layout = pipelineLayout;
 
-    pipelineInfo.renderPass = context.renderPass;
+    pipelineInfo.renderPass = renderContext.renderPass;
     pipelineInfo.subpass = 0;
 
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
 
-    if(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineInfo,
+    if(vkCreateGraphicsPipelines(appContext.baseContext.device, VK_NULL_HANDLE, 1, &pipelineInfo,
                                  nullptr, &graphicsPipeline)
        !=
         VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
-    vkDestroyShaderModule(context.device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(context.device, vertShaderModule, nullptr);
+    vkDestroyShaderModule(appContext.baseContext.device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(appContext.baseContext.device, vertShaderModule, nullptr);
 }
 
-VkShaderModule createShaderModule(VulkanContext &context, const std::vector<char> &code) {
+VkShaderModule createShaderModule(VulkanBaseContext &context, const std::vector<char> &code) {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
@@ -719,98 +748,88 @@ VkShaderModule createShaderModule(VulkanContext &context, const std::vector<char
     return shaderModule;
 }
 
-void createCommandPool(VulkanContext &context) {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(context.physicalDevice, context.surface);
+void createCommandPool(VulkanBaseContext &baseContext, RenderContext &renderContext) {
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(baseContext.physicalDevice, baseContext.surface);
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(context.device, &poolInfo, nullptr, &context.commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(baseContext.device, &poolInfo, nullptr, &renderContext.commandPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create command pool!");
     }
 }
 
-void createColorResources(VulkanContext &context) {
-    VkFormat colorFormat = context.swapChainImageFormat;
+void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings) {
+    VkFormat colorFormat = swapchainContext.swapChainImageFormat;
 
-    createImage(context,
-                context.swapChainExtent.width,
-                context.swapChainExtent.height,
+    createImage(baseContext,
+                swapchainContext.swapChainExtent.width,
+                swapchainContext.swapChainExtent.height,
                 1,
-                context.vulkanSettings.msaaSamples,
+                renderSettings.msaaSamples,
                 colorFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                context.colorImage,
-                context.colorImageMemory);
+                swapchainContext.colorImage.image,
+                swapchainContext.colorImage.imageMemory);
 
-    context.colorImageView = createImageView(context, context.colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    swapchainContext.colorImage.imageView = createImageView(baseContext, swapchainContext.colorImage.image, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 
-void createDepthResources(VulkanContext &context) {
-    VkFormat depthFormat = findDepthFormat(context);
+void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings) {
+    VkFormat depthFormat = findDepthFormat(baseContext);
 
-
-    createImage(context,
-                context.swapChainExtent.width,
-                context.swapChainExtent.height,
+    createImage(baseContext,
+                swapchainContext.swapChainExtent.width,
+                swapchainContext.swapChainExtent.height,
                 1,
-                context.vulkanSettings.msaaSamples,
+                renderSettings.msaaSamples,
                 depthFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                context.depthImage,
-                context.depthImageMemory);
+                swapchainContext.depthImage.image,
+                swapchainContext.depthImage.imageMemory);
 
-    context.depthImageView = createImageView(context, context.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+    swapchainContext.depthImage.imageView = createImageView(baseContext, swapchainContext.depthImage.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 }
 
-void createFrameBuffers(VulkanContext &context) {
-    context.swapChainFramebuffers.resize(context.swapChainImageViews.size());
+void createFrameBuffers(ApplicationContext &appContext) {
+    appContext.swapchainContext.swapChainFramebuffers.resize(appContext.swapchainContext.swapChainImageViews.size());
 
-    for (size_t i = 0; i < context.swapChainImageViews.size(); i++) {
+    for (size_t i = 0; i < appContext.swapchainContext.swapChainImageViews.size(); i++) {
 
         std::vector<VkImageView> attachments;
 
-        if (context.vulkanSettings.useMsaa) {
-            attachments.push_back(context.colorImageView);
-            attachments.push_back(context.depthImageView);
-            attachments.push_back(context.swapChainImageViews[i]);
+        if (appContext.renderSettings.useMsaa) {
+            attachments.push_back(appContext.swapchainContext.colorImage.imageView);
+            attachments.push_back(appContext.swapchainContext.depthImage.imageView);
+            attachments.push_back(appContext.swapchainContext.swapChainImageViews[i]);
         } else {
-            attachments.push_back(context.swapChainImageViews[i]);
-            attachments.push_back(context.depthImageView);
+            attachments.push_back(appContext.swapchainContext.swapChainImageViews[i]);
+            attachments.push_back(appContext.swapchainContext.depthImage.imageView);
         }
-
-        /*
-        std::array<VkImageView, 3> attachments = {
-                context.colorImageView,
-                context.depthImageView,
-                context.swapChainImageViews[i]
-        };
-         */
-
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = context.renderPass;
+        framebufferInfo.renderPass = appContext.renderContext.renderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = context.swapChainExtent.width;
-        framebufferInfo.height = context.swapChainExtent.height;
+        framebufferInfo.width = appContext.swapchainContext.swapChainExtent.width;
+        framebufferInfo.height = appContext.swapchainContext.swapChainExtent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(context.device, &framebufferInfo, nullptr, &context.swapChainFramebuffers[i]) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(appContext.baseContext.device, &framebufferInfo, nullptr, &appContext.swapchainContext.swapChainFramebuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create framebuffer!");
         }
     }
 
 }
 
-void createVertexBuffer(VulkanContext &context) {
+void createVertexBuffer(ApplicationContext &appContext) {
     const std::vector<Vertex> vertices({
             {{0.0f, -0.5f, 0.5}, {1.0f, 0.0f, 0.0f}},
             {{0.5f, 0.5f, 0}, {0.0f, 1.0f, 0.0f}},
@@ -822,7 +841,7 @@ void createVertexBuffer(VulkanContext &context) {
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    createBuffer(context,
+    createBuffer(appContext.baseContext,
                  bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -830,26 +849,26 @@ void createVertexBuffer(VulkanContext &context) {
                  stagingBufferMemory);
 
     void *data;
-    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(appContext.baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
     // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
     std::memcpy(data, vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(context.device, stagingBufferMemory);
+    vkUnmapMemory(appContext.baseContext.device, stagingBufferMemory);
 
-    createBuffer(context,
+    createBuffer(appContext.baseContext,
                  bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 context.vertexBuffer,
-                 context.vertexBufferMemory);
+                 appContext.renderContext.object.vertexBuffer,
+                 appContext.renderContext.object.vertexBufferMemory);
 
-    copyBuffer(context, stagingBuffer, context.vertexBuffer, bufferSize);
+    copyBuffer(appContext.baseContext, appContext.renderContext, stagingBuffer, appContext.renderContext.object.vertexBuffer, bufferSize);
 
-    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
-    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(appContext.baseContext.device, stagingBuffer, nullptr);
+    vkFreeMemory(appContext.baseContext.device, stagingBufferMemory, nullptr);
 }
 
-void createIndexBuffer(VulkanContext &context) {
+void createIndexBuffer(ApplicationContext &appContext) {
     const std::vector<uint32_t> indices({0, 1, 2});
 
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
@@ -857,7 +876,7 @@ void createIndexBuffer(VulkanContext &context) {
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    createBuffer(context,
+    createBuffer(appContext.baseContext,
                  bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -865,61 +884,63 @@ void createIndexBuffer(VulkanContext &context) {
                  stagingBufferMemory);
 
     void *data;
-    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(appContext.baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
     // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
     memcpy(data, indices.data(), (size_t) bufferSize);
-    vkUnmapMemory(context.device, stagingBufferMemory);
+    vkUnmapMemory(appContext.baseContext.device, stagingBufferMemory);
 
-    createBuffer(context,
+    createBuffer(appContext.baseContext,
                  bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 context.indexBuffer,
-                 context.indexBufferMemory);
+                 appContext.renderContext.object.indexBuffer,
+                 appContext.renderContext.object.indexBufferMemory);
 
-    copyBuffer(context, stagingBuffer, context.indexBuffer, bufferSize);
+    copyBuffer(appContext.baseContext, appContext.renderContext, stagingBuffer, appContext.renderContext.object.indexBuffer, bufferSize);
 
-    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
-    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(appContext.baseContext.device, stagingBuffer, nullptr);
+    vkFreeMemory(appContext.baseContext.device, stagingBufferMemory, nullptr);
 }
 
-void createCommandBuffers(VulkanContext &context) {
+void createCommandBuffers(VulkanBaseContext &baseContext, RenderContext &renderContext) {
     // context.commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = context.commandPool;
+    allocInfo.commandPool = renderContext.commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
     // allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
     // if (vkAllocateCommandBuffers(context.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
-    if (vkAllocateCommandBuffers(context.device, &allocInfo, &context.commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(baseContext.device, &allocInfo, &renderContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
 
 // Builds a graphics pipeline and stores it in the secondary slot
-void buildSecondaryGraphicsPipeline(VulkanContext& context) {
+void buildSecondaryGraphicsPipeline(ApplicationContext &appContext) {
     compileShader("triangle.frag");
     compileShader("triangle.vert");
-    if(context.graphicsPipelines[!context.activePipelineIndex] != VK_NULL_HANDLE) {
-        vkDestroyPipeline(context.device,
-                          context.graphicsPipelines[!context.activePipelineIndex], nullptr);
-        vkDestroyPipelineLayout(context.device,
-                                context.pipelineLayouts[!context.activePipelineIndex],
+    if(appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex] != VK_NULL_HANDLE) {
+        vkDestroyPipeline(appContext.baseContext.device,
+                          appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex], nullptr);
+        vkDestroyPipelineLayout(appContext.baseContext.device,
+                                appContext.renderContext.pipelineLayouts[!appContext.renderContext.activePipelineIndex],
                                 nullptr);
     }
 
-    createGraphicsPipeline(context, context.pipelineLayouts[!context.activePipelineIndex],
-                           context.graphicsPipelines[!context.activePipelineIndex]);
+    createGraphicsPipeline(appContext,
+                           appContext.renderContext,
+                           appContext.renderContext.pipelineLayouts[!appContext.renderContext.activePipelineIndex],
+                           appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex]);
 }
 
 // Swaps to the secondary graphics pipeline if it is valid
-bool swapGraphicsPipeline(VulkanContext& context) {
-    if(context.graphicsPipelines[!context.activePipelineIndex] != VK_NULL_HANDLE) {
-        context.activePipelineIndex = !context.activePipelineIndex;
+bool swapGraphicsPipeline(ApplicationContext &appContext) {
+    if(appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex] != VK_NULL_HANDLE) {
+        appContext.renderContext.activePipelineIndex = !appContext.renderContext.activePipelineIndex;
         return true;
     } else {
         return false;

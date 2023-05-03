@@ -161,12 +161,12 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &avai
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window &window) {
+VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window *window) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     } else {
         int width, height;
-        glfwGetFramebufferSize(window.getWindowHandle(), &width, &height);
+        glfwGetFramebufferSize(window->getWindowHandle(), &width, &height);
 
         VkExtent2D actualExtent = {
                 static_cast<uint32_t>(width),
@@ -182,7 +182,7 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window
     }
 }
 
-void createImage(VulkanContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
+void createImage(VulkanBaseContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
                              VkFormat format, VkImageTiling tiling,
                              VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
                              VkDeviceMemory &imageMemory) {
@@ -220,7 +220,7 @@ void createImage(VulkanContext &context, uint32_t width, uint32_t height, uint32
     vkBindImageMemory(context.device, image, imageMemory, 0);
 }
 
-void createBuffer(VulkanContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -248,21 +248,21 @@ void createBuffer(VulkanContext &context, VkDeviceSize size, VkBufferUsageFlags 
 
 }
 
-void copyBuffer(VulkanContext &context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands(context);
+void copyBuffer(VulkanBaseContext &context, RenderContext &renderContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+    VkCommandBuffer commandBuffer = beginSingleTimeCommands(context, renderContext);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-    endSingleTimeCommands(context, commandBuffer);
+    endSingleTimeCommands(context, renderContext, commandBuffer);
 }
 
-VkCommandBuffer beginSingleTimeCommands(VulkanContext  &context) {
+VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderContext) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = context.commandPool;
+    allocInfo.commandPool = renderContext.commandPool;
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
@@ -277,7 +277,7 @@ VkCommandBuffer beginSingleTimeCommands(VulkanContext  &context) {
     return commandBuffer;
 }
 
-void endSingleTimeCommands(VulkanContext &context, VkCommandBuffer commandBuffer) {
+void endSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderContext, VkCommandBuffer commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -288,10 +288,10 @@ void endSingleTimeCommands(VulkanContext &context, VkCommandBuffer commandBuffer
     vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(context.graphicsQueue);
 
-    vkFreeCommandBuffers(context.device, context.commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(context.device, renderContext.commandPool, 1, &commandBuffer);
 }
 
-uint32_t findMemoryType(VulkanContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(context.physicalDevice, &memProperties);
 

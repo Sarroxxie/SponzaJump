@@ -16,12 +16,10 @@ private:
     VkSemaphore m_RenderFinishedSemaphore;
     VkFence m_InFlightFence;
 
-    VulkanContext &m_Context;
-
-    Window &m_Window;
+    ApplicationContext &m_Context;
 
 public:
-    VulkanRenderer(VulkanContext &context, Window &window);
+    VulkanRenderer(ApplicationContext &context);
 
     void cleanVulkanRessources();
 
@@ -30,10 +28,12 @@ public:
     void recompileToSecondaryPipeline();
     void swapToSecondaryPipeline();
 
-private:
-    void recordCommandBuffer(VulkanContext &context, uint32_t imageIndex);
+    ApplicationContext getContext();
 
-    void createSyncObjects(VulkanContext &context);
+private:
+    void recordCommandBuffer(SwapchainContext &swapchainContext, RenderContext &renderContext, uint32_t imageIndex);
+
+    void createSyncObjects(VulkanBaseContext &baseContext);
 };
 
 

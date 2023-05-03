@@ -6,37 +6,37 @@
 #include <iostream>
 
 
-VulkanRenderer::VulkanRenderer(VulkanContext &context, Window &window)
-        : m_Context(context), m_Window(window) {
-    createSyncObjects(context);
+VulkanRenderer::VulkanRenderer(ApplicationContext &context)
+        : m_Context(context) {
+    createSyncObjects(context.baseContext);
 }
 
 
 void VulkanRenderer::cleanVulkanRessources() {
-    vkDestroySemaphore(m_Context.device, m_ImageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(m_Context.device, m_RenderFinishedSemaphore, nullptr);
-    vkDestroyFence(m_Context.device, m_InFlightFence, nullptr);
+    vkDestroySemaphore(m_Context.baseContext.device, m_ImageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(m_Context.baseContext.device, m_RenderFinishedSemaphore, nullptr);
+    vkDestroyFence(m_Context.baseContext.device, m_InFlightFence, nullptr);
 }
 
 void VulkanRenderer::render() {
-    vkWaitForFences(m_Context.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
+    vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(m_Context.device, m_Context.swapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(m_Context.baseContext.device, m_Context.swapchainContext.swapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR | m_Window.wasResized()) {
-        recreateSwapChain(m_Context, m_Window);
-        m_Window.setResized(false);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || m_Context.window->wasResized()) {
+        recreateSwapChain(m_Context);
+        m_Context.window->setResized(false);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-    vkResetFences(m_Context.device, 1, &m_InFlightFence);
+    vkResetFences(m_Context.baseContext.device, 1, &m_InFlightFence);
 
-    vkResetCommandBuffer(m_Context.commandBuffer, 0);
+    vkResetCommandBuffer(m_Context.renderContext.commandBuffer, 0);
 
-    recordCommandBuffer(m_Context, imageIndex);
+    recordCommandBuffer(m_Context.swapchainContext, m_Context.renderContext, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -48,13 +48,13 @@ void VulkanRenderer::render() {
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_Context.commandBuffer;
+    submitInfo.pCommandBuffers = &m_Context.renderContext.commandBuffer;
 
     VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(m_Context.graphicsQueue, 1, &submitInfo, m_InFlightFence) != VK_SUCCESS) {
+    if (vkQueueSubmit(m_Context.baseContext.graphicsQueue, 1, &submitInfo, m_InFlightFence) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
@@ -64,31 +64,31 @@ void VulkanRenderer::render() {
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = { m_Context.swapChain };
+    VkSwapchainKHR swapChains[] = { m_Context.swapchainContext.swapChain };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
 
-    vkQueuePresentKHR(m_Context.presentQueue, &presentInfo);
+    vkQueuePresentKHR(m_Context.baseContext.presentQueue, &presentInfo);
 }
 
-void VulkanRenderer::recordCommandBuffer(VulkanContext &context, uint32_t imageIndex) {
+void VulkanRenderer::recordCommandBuffer(SwapchainContext &swapchainContext, RenderContext &renderContext, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    if (vkBeginCommandBuffer(context.commandBuffer, &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(renderContext.commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = context.renderPass;
-    renderPassInfo.framebuffer = context.swapChainFramebuffers[imageIndex];
+    renderPassInfo.renderPass = renderContext.renderPass;
+    renderPassInfo.framebuffer = swapchainContext.swapChainFramebuffers[imageIndex];
 
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = context.swapChainExtent;
+    renderPassInfo.renderArea.extent = swapchainContext.swapChainExtent;
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 0.0f}};
@@ -97,17 +97,17 @@ void VulkanRenderer::recordCommandBuffer(VulkanContext &context, uint32_t imageI
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(context.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(renderContext.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(context.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      context.graphicsPipelines[context.activePipelineIndex]);
+    vkCmdBindPipeline(renderContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      renderContext.graphicsPipelines[renderContext.activePipelineIndex]);
 
 
-    VkBuffer vertexBuffers[] = {context.vertexBuffer};
+    VkBuffer vertexBuffers[] = {renderContext.object.vertexBuffer};
     VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(context.commandBuffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindVertexBuffers(renderContext.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(context.commandBuffer, context.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(renderContext.commandBuffer, renderContext.object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 
     /*
@@ -133,16 +133,16 @@ void VulkanRenderer::recordCommandBuffer(VulkanContext &context, uint32_t imageI
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(context.swapChainExtent.width);
-    viewport.height = static_cast<float>(context.swapChainExtent.height);
+    viewport.width = static_cast<float>(swapchainContext.swapChainExtent.width);
+    viewport.height = static_cast<float>(swapchainContext.swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(context.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(renderContext.commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = context.swapChainExtent;
-    vkCmdSetScissor(context.commandBuffer, 0, 1, &scissor);
+    scissor.extent = swapchainContext.swapChainExtent;
+    vkCmdSetScissor(renderContext.commandBuffer, 0, 1, &scissor);
 
     // Without Index Buffer
     // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
@@ -158,16 +158,16 @@ void VulkanRenderer::recordCommandBuffer(VulkanContext &context, uint32_t imageI
                             nullptr);
     */
 
-    vkCmdDrawIndexed(context.commandBuffer, 3, 1, 0, 0, 0);
+    vkCmdDrawIndexed(renderContext.commandBuffer, 3, 1, 0, 0, 0);
 
-    vkCmdEndRenderPass(context.commandBuffer);
+    vkCmdEndRenderPass(renderContext.commandBuffer);
 
-    if (vkEndCommandBuffer(context.commandBuffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(renderContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
 }
 
-void VulkanRenderer::createSyncObjects(VulkanContext &context) {
+void VulkanRenderer::createSyncObjects(VulkanBaseContext &baseContext) {
     /*
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -186,9 +186,9 @@ void VulkanRenderer::createSyncObjects(VulkanContext &context) {
     }
      */
 
-    if (vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore) != VK_SUCCESS ||
-        vkCreateFence(context.device, &fenceInfo, nullptr, &m_InFlightFence) != VK_SUCCESS) {
+    if (vkCreateSemaphore(baseContext.device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphore) != VK_SUCCESS ||
+        vkCreateSemaphore(baseContext.device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore) != VK_SUCCESS ||
+        vkCreateFence(baseContext.device, &fenceInfo, nullptr, &m_InFlightFence) != VK_SUCCESS) {
 
         throw std::runtime_error("failed to create synchronization objects for a frame!");
     }
@@ -201,4 +201,8 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
 
 void VulkanRenderer::swapToSecondaryPipeline() {
     swapGraphicsPipeline(m_Context);
+}
+
+ApplicationContext VulkanRenderer::getContext() {
+    return m_Context;
 }

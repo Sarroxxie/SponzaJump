@@ -13,10 +13,13 @@ int main() {
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
 
-    VulkanContext context;
-    initializeVulkan(context, window);
+    ApplicationContext appContext;
+    appContext.window = &window;
+    initializeGraphicsApplication(appContext);
+    // VulkanContext context;
+    // initializeVulkan(context, window);
 
-    VulkanRenderer renderer(context, window);
+    VulkanRenderer renderer(appContext);
     // passes reference to the renderer to the key callback function
     glfwSetWindowUserPointer(window.getWindowHandle(), (void*) &renderer);
 
@@ -25,10 +28,10 @@ int main() {
 
         renderer.render();
     }
-    vkDeviceWaitIdle(context.device);
+    vkDeviceWaitIdle(appContext.baseContext.device);
 
     renderer.cleanVulkanRessources();
-    cleanupVulkan(context);
+    cleanupVulkan(appContext);
 
     return 0;
 }

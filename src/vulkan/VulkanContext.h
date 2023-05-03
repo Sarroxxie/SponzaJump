@@ -3,60 +3,79 @@
 
 #include <vulkan/vulkan_core.h>
 #include "VulkanSettings.h"
+#include "BufferImage.h"
+#include "window.h"
+
+typedef struct {
+    VkInstance instance;
+    VkDebugUtilsMessengerEXT debugMessenger;
+    VkSurfaceKHR surface;
+    VkPhysicalDevice physicalDevice;
+    VkDevice device;
+
+    uint32_t graphicsQueueFamily;
+    VkQueue graphicsQueue;
+    VkQueue presentQueue;
+} VulkanBaseContext;
+
+typedef struct {
+    VkSwapchainKHR swapChain;
+    VkFormat swapChainImageFormat;
+    VkExtent2D swapChainExtent;
+
+    std::vector<VkImage> swapChainImages;
+    std::vector<VkImageView> swapChainImageViews;
+
+    // TODO how to combine Framebuffers with swapChainImageViews ?
+    std::vector<VkFramebuffer> swapChainFramebuffers;
+
+    BufferImage colorImage;
+    BufferImage depthImage;
+} SwapchainContext;
 
 typedef struct
 {
-    VkInstance               instance;
-    VkDebugUtilsMessengerEXT debugMessenger;
-    VkSurfaceKHR             surface;
-    VkPhysicalDevice         physicalDevice;
-    VkDevice                 device;
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
 
-    uint8_t        maxSupportedMsaaSamples;
-    VulkanSettings vulkanSettings;
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
+} RenderableObject;
 
-    uint32_t graphicsQueueFamily;
-    VkQueue  graphicsQueue;
-    VkQueue  presentQueue;
-
-    VkSwapchainKHR swapChain;
-    VkFormat       swapChainImageFormat;
-    VkExtent2D     swapChainExtent;
-
-    std::vector<VkImage>     swapChainImages;
-    std::vector<VkImageView> swapChainImageViews;
-
+typedef struct
+{
+    // TODO how to use multiple Renderpasses, multiple pipelines ?
     VkRenderPass renderPass;
 
     // allows swapping between graphics pipeline at runtime
     VkPipelineLayout pipelineLayouts[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-    VkPipeline       graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-    bool             activePipelineIndex = 0;
+    VkPipeline graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
+
+    bool activePipelineIndex = 0;
 
     VkCommandPool commandPool;
-
-    // TODO these should be extracted to "BufferImage" class or similar
-    VkImage        colorImage;
-    VkDeviceMemory colorImageMemory;
-    VkImageView    colorImageView;
-
-    VkImage        depthImage;
-    VkDeviceMemory depthImageMemory;
-    VkImageView    depthImageView;
-
-    std::vector<VkFramebuffer> swapChainFramebuffers;
-
-    // TODO these should be extracted into classes, used in single objects
-    VkBuffer       vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-
-    VkBuffer       indexBuffer;
-    VkDeviceMemory indexBufferMemory;
 
     // TODO might want a vector of commandBuffers here later, so we can record
     // another one while the previous frame is still rendering, that way we can
     // have multiple frames in flight
     VkCommandBuffer commandBuffer;
-} VulkanContext;
+
+    // TODO: extract this into more complete class and create something to manage entire scene, it doesn't belong directly in the rendering context and ultimately should also not be created during setup call
+    RenderableObject object;
+} RenderContext;
+
+typedef struct {
+    bool useMsaa = false;
+    uint8_t maxMsaaSamples = 1;
+    VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+} RenderSettings;
+
+typedef struct {
+    VulkanBaseContext baseContext;
+    SwapchainContext swapchainContext;
+    RenderContext renderContext;
+    RenderSettings renderSettings;
+    Window *window;
+} ApplicationContext;
 
 #endif  // GRAPHICSPRAKTIKUM_VULKANCONTEXT_H

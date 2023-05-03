@@ -113,21 +113,21 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>
 
 VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes);
 
-VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window &window);
+VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window *window);
 
-void createImage(VulkanContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
+void createImage(VulkanBaseContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
                  VkFormat format, VkImageTiling tiling,
                  VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
                  VkDeviceMemory &imageMemory);
 
-void createBuffer(VulkanContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
-void copyBuffer(VulkanContext &context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void copyBuffer(VulkanBaseContext &context, RenderContext &renderContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-VkCommandBuffer beginSingleTimeCommands(VulkanContext  &context);
+VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext  &context, RenderContext &renderContext);
 
-void endSingleTimeCommands(VulkanContext &context, VkCommandBuffer commandBuffer);
+void endSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderContext, VkCommandBuffer commandBuffer);
 
-uint32_t findMemoryType(VulkanContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

@@ -15,6 +15,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
+static void framebufferResizeCallback(GLFWwindow* glfWwindow, int width, int height) {
+    VulkanRenderer* renderer = (VulkanRenderer*) glfwGetWindowUserPointer(glfWwindow);
+    renderer->getContext().window->setResized(true);
+}
+
+
 Window::Window(int width, int height, std::string application_name)
     : width(width)
     , height(height)
@@ -35,7 +41,6 @@ void Window::initGLFW() {
 
     window = glfwCreateWindow(width, height, application_name.c_str(), nullptr, nullptr);
 
-    glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
     glfwSetKeyCallback(window, keyCallback);
     // glfwSetMouseButtonCallback(window, mouseButtonCallback);

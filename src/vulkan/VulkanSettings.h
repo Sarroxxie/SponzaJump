@@ -15,7 +15,7 @@ const std::vector<const char*> deviceExtensions = {
 
 typedef struct VulkanSettings_s {
     bool useMsaa = false;
-    uint8_t maxMsaaSamples = 4;
+    uint8_t maxMsaaSamples = 1;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 } VulkanSettings;
 
