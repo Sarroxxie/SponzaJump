@@ -1,26 +1,29 @@
+#include <algorithm>
 #include "SceneSetup.h"
 #include "vulkan/VulkanUtils.h"
 
-RenderableObject createSampleObject(VulkanBaseContext context, CommandContext commandContext, float xOffset) {
+RenderableObject createObject(VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, glm::vec3 offset) {
     RenderableObject object;
 
-    createSampleVertexBuffer(context, commandContext, object, xOffset);
-    createSampleIndexBuffer(context, commandContext, object);
+    createSampleVertexBuffer(context, commandContext, objectDef, object, offset);
+    createSampleIndexBuffer(context, commandContext, objectDef, object);
 
     return object;
 }
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, RenderableObject &object, float xOffset) {
-    const std::vector<Vertex> vertices({
-                                               {{0.0f + xOffset, -0.5f, 0.5}, {1.0f, 0.0f, 0.0f}},
-                                               {{0.5f + xOffset, 0.5f, 0}, {0.0f, 1.0f, 0.0f}},
-                                               {{-0.5f + xOffset, 0.5f, 0.1}, {0.0f, 0.0f, 1.0f}},
-                                               {{-0.5f + xOffset, -0.5f, 0.1}, {1.0f, 0.0f, 1.0f}}
-                                       });
+void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object, glm::vec3 offset) {
+    std::vector<Vertex> shiftedVertices(objectDef.vertices.size());
 
-    object.verticesCount = vertices.size();
+    object.offset = offset;
 
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    std::transform(objectDef.vertices.begin(),
+                   objectDef.vertices.end(),
+                   shiftedVertices.begin(),
+                   [offset](Vertex v) -> Vertex { return {v.pos + offset, v.color}; });
+
+    object.verticesCount = shiftedVertices.size();
+
+    VkDeviceSize bufferSize = sizeof(shiftedVertices[0]) * object.verticesCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -36,7 +39,7 @@ void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &comman
     vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
     // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, vertices.data(), (size_t) bufferSize);
+    memcpy(data, shiftedVertices.data(), (size_t) bufferSize);
     vkUnmapMemory(context.device, stagingBufferMemory);
 
     createBuffer(context,
@@ -52,12 +55,11 @@ void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &comman
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 }
 
-void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, RenderableObject &object) {
-    const std::vector<uint32_t> indices({0, 1, 2, 2, 1, 3});
+void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object) {
 
-    object.indicesCount = indices.size();
+    object.indicesCount = objectDef.indices.size();
 
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    VkDeviceSize bufferSize = sizeof(objectDef.indices[0]) * object.indicesCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -73,7 +75,7 @@ void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &com
     vkMapMemory(baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
     // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, indices.data(), (size_t) bufferSize);
+    memcpy(data, objectDef.indices.data(), (size_t) bufferSize);
     vkUnmapMemory(baseContext.device, stagingBufferMemory);
 
     createBuffer(baseContext,

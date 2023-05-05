@@ -4,6 +4,7 @@
 #include "vulkan/VulkanRenderer.h"
 
 #include "utils/FileUtils.h"
+#include "scene/RenderableObject.h"
 
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
@@ -19,8 +20,13 @@ int main() {
 
     Scene scene;
 
-    scene.addObject(createSampleObject(appContext.baseContext, appContext.commandContext, -0.5));
-    scene.addObject(createSampleObject(appContext.baseContext, appContext.commandContext, 0.5));
+    /*
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_SQUARE_DEF, glm::vec3(0.5, 0.5, 0.0)));
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_SQUARE_DEF, glm::vec3(-0.5, -0.5, 0)));
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(-0.5, 0.5, 0)));
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(0.5, -0.5, 0)));
+     */
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(0.0, 0, 0.1)));
 
     VulkanRenderer renderer(appContext);
     // passes reference to the renderer to the key callback function

@@ -5,10 +5,10 @@
 #include "vulkan/VulkanContext.h"
 #include "RenderableObject.h"
 
-RenderableObject createSampleObject(VulkanBaseContext context, CommandContext commandContext, float xOffset = 0);
+RenderableObject createObject(VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, glm::vec3 offset = glm::vec3(0));
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, RenderableObject &object, float xOffset);
+void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object, glm::vec3 offset);
 
-void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, RenderableObject &object);
+void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object);
 
 #endif //GRAPHICSPRAKTIKUM_SCENESETUP_H
