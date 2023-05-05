@@ -7,6 +7,7 @@
 
 #include "VulkanContext.h"
 #include "window.h"
+#include "scene/Scene.h"
 #include <vulkan/vulkan_core.h>
 
 class VulkanRenderer {
@@ -23,7 +24,7 @@ public:
 
     void cleanVulkanRessources();
 
-    void render();
+    void render(Scene &scene);
 
     void recompileToSecondaryPipeline();
     void swapToSecondaryPipeline();
@@ -31,7 +32,7 @@ public:
     ApplicationContext getContext();
 
 private:
-    void recordCommandBuffer(SwapchainContext &swapchainContext, RenderContext &renderContext, uint32_t imageIndex);
+    void recordCommandBuffer(ApplicationContext &appContext, RenderContext &renderContext, Scene &scene, uint32_t imageIndex);
 
     void createSyncObjects(VulkanBaseContext &baseContext);
 };

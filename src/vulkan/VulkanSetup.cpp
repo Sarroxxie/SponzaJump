@@ -6,10 +6,8 @@
 
 #include <vulkan/vulkan_core.h>
 #include <stdexcept>
-#include <iostream>
 #include <cstring>
 #include <set>
-#include <array>
 #include <filesystem>
 
 // setup in large parts taken from https://vulkan-tutorial.com/Introduction
@@ -17,11 +15,9 @@ void initializeGraphicsApplication(ApplicationContext &appContext) {
     initializeBaseVulkan(appContext);
     initializeSwapChain(appContext);
     initializeRenderContext(appContext);
+    initializeCommandContext(appContext);
 
     createFrameBuffers(appContext);
-
-    createVertexBuffer(appContext);
-    createIndexBuffer(appContext);
 
     createDescriptorSetLayout(appContext);
     /*
@@ -55,11 +51,13 @@ void initializeRenderContext(ApplicationContext &appContext) {
                            appContext.renderContext,
                            appContext.renderContext.pipelineLayouts[0],
                            appContext.renderContext.graphicsPipelines[0]);
-
-    createCommandPool(appContext.baseContext, appContext.renderContext);
-    createCommandBuffers(appContext.baseContext, appContext.renderContext);
 }
 
+
+void initializeCommandContext(ApplicationContext &appContext) {
+    createCommandPool(appContext.baseContext, appContext.commandContext);
+    createCommandBuffers(appContext.baseContext, appContext.commandContext);
+}
 
 void createInstance(VulkanBaseContext &context) {
     if (enableValidationLayers && !checkValidationLayerSupport()) {
@@ -99,6 +97,8 @@ void createInstance(VulkanBaseContext &context) {
 void cleanupVulkan(ApplicationContext &appContext) {
     cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
 
+    cleanupCommandContext(appContext.baseContext, appContext.commandContext);
+
     cleanupRenderContext(appContext.baseContext, appContext.renderContext);
 
     cleanupBaseVulkanRessources(appContext.baseContext);
@@ -117,8 +117,6 @@ void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext) {
 }
 
 void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderContext) {
-    vkDestroyCommandPool(baseContext.device, renderContext.commandPool, nullptr);
-
     // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
     vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[0], nullptr);
     vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[0], nullptr);
@@ -128,12 +126,11 @@ void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderC
     }
 
     vkDestroyRenderPass(baseContext.device, renderContext.renderPass, nullptr);
+}
 
-    vkDestroyBuffer(baseContext.device, renderContext.object.indexBuffer, nullptr);
-    vkFreeMemory(baseContext.device, renderContext.object.indexBufferMemory, nullptr);
+void cleanupCommandContext(VulkanBaseContext &baseContext, CommandContext &commandContext) {
+    vkDestroyCommandPool(baseContext.device, commandContext.commandPool, nullptr);
 
-    vkDestroyBuffer(baseContext.device, renderContext.object.vertexBuffer, nullptr);
-    vkFreeMemory(baseContext.device, renderContext.object.vertexBufferMemory, nullptr);
 }
 
 std::vector<const char *> getRequiredExtensions() {
@@ -748,7 +745,7 @@ VkShaderModule createShaderModule(VulkanBaseContext &context, const std::vector<
     return shaderModule;
 }
 
-void createCommandPool(VulkanBaseContext &baseContext, RenderContext &renderContext) {
+void createCommandPool(VulkanBaseContext &baseContext, CommandContext &commandContext) {
     QueueFamilyIndices queueFamilyIndices = findQueueFamilies(baseContext.physicalDevice, baseContext.surface);
 
     VkCommandPoolCreateInfo poolInfo{};
@@ -756,7 +753,7 @@ void createCommandPool(VulkanBaseContext &baseContext, RenderContext &renderCont
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(baseContext.device, &poolInfo, nullptr, &renderContext.commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(baseContext.device, &poolInfo, nullptr, &commandContext.commandPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create command pool!");
     }
 }
@@ -829,92 +826,18 @@ void createFrameBuffers(ApplicationContext &appContext) {
 
 }
 
-void createVertexBuffer(ApplicationContext &appContext) {
-    const std::vector<Vertex> vertices({
-            {{0.0f, -0.5f, 0.5}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, 0.5f, 0}, {0.0f, 1.0f, 0.0f}},
-            {{-0.5f, 0.5f, 0.1}, {0.0f, 0.0f, 1.0f}}
-    });
-
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-
-    createBuffer(appContext.baseContext,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer,
-                 stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(appContext.baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
-
-    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    std::memcpy(data, vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(appContext.baseContext.device, stagingBufferMemory);
-
-    createBuffer(appContext.baseContext,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 appContext.renderContext.object.vertexBuffer,
-                 appContext.renderContext.object.vertexBufferMemory);
-
-    copyBuffer(appContext.baseContext, appContext.renderContext, stagingBuffer, appContext.renderContext.object.vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(appContext.baseContext.device, stagingBuffer, nullptr);
-    vkFreeMemory(appContext.baseContext.device, stagingBufferMemory, nullptr);
-}
-
-void createIndexBuffer(ApplicationContext &appContext) {
-    const std::vector<uint32_t> indices({0, 1, 2});
-
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-
-    createBuffer(appContext.baseContext,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer,
-                 stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(appContext.baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
-
-    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, indices.data(), (size_t) bufferSize);
-    vkUnmapMemory(appContext.baseContext.device, stagingBufferMemory);
-
-    createBuffer(appContext.baseContext,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 appContext.renderContext.object.indexBuffer,
-                 appContext.renderContext.object.indexBufferMemory);
-
-    copyBuffer(appContext.baseContext, appContext.renderContext, stagingBuffer, appContext.renderContext.object.indexBuffer, bufferSize);
-
-    vkDestroyBuffer(appContext.baseContext.device, stagingBuffer, nullptr);
-    vkFreeMemory(appContext.baseContext.device, stagingBufferMemory, nullptr);
-}
-
-void createCommandBuffers(VulkanBaseContext &baseContext, RenderContext &renderContext) {
+void createCommandBuffers(VulkanBaseContext &baseContext, CommandContext &commandContext) {
     // context.commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = renderContext.commandPool;
+    allocInfo.commandPool = commandContext.commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
     // allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
     // if (vkAllocateCommandBuffers(context.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
-    if (vkAllocateCommandBuffers(baseContext.device, &allocInfo, &renderContext.commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(baseContext.device, &allocInfo, &commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }

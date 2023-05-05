@@ -123,11 +123,11 @@ void createImage(VulkanBaseContext &context, uint32_t width, uint32_t height, ui
 void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
-void copyBuffer(VulkanBaseContext &context, RenderContext &renderContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void copyBuffer(VulkanBaseContext &context, CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext  &context, RenderContext &renderContext);
+VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext  &context, CommandContext &commandContext);
 
-void endSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderContext, VkCommandBuffer commandBuffer);
+void endSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext, VkCommandBuffer commandBuffer);
 
 uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

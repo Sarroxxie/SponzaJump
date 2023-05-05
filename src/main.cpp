@@ -16,8 +16,10 @@ int main() {
     ApplicationContext appContext;
     appContext.window = &window;
     initializeGraphicsApplication(appContext);
-    // VulkanContext context;
-    // initializeVulkan(context, window);
+
+    Scene scene;
+
+    scene.addObject(createSampleObject(appContext.baseContext, appContext.commandContext));
 
     VulkanRenderer renderer(appContext);
     // passes reference to the renderer to the key callback function
@@ -26,10 +28,11 @@ int main() {
     while(!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();
 
-        renderer.render();
+        renderer.render(scene);
     }
     vkDeviceWaitIdle(appContext.baseContext.device);
 
+    scene.cleanup(appContext.baseContext);
     renderer.cleanVulkanRessources();
     cleanupVulkan(appContext);
 

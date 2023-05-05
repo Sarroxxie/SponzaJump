@@ -15,6 +15,8 @@ void initializeSwapChain(ApplicationContext &appContext);
 
 void initializeRenderContext(ApplicationContext &appContext);
 
+void initializeCommandContext(ApplicationContext &appContext);
+
 void cleanupVulkan(ApplicationContext &appContext);
 
 void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext);
@@ -22,6 +24,8 @@ void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext);
 void cleanupSwapChain(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext);
 
 void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderContext);
+
+void cleanupCommandContext(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
 void createInstance(VulkanBaseContext &context);
 
@@ -63,7 +67,7 @@ void createGraphicsPipeline(ApplicationContext &appContext,
 
 VkShaderModule createShaderModule(VulkanBaseContext &context, const std::vector<char>& code);
 
-void createCommandPool(VulkanBaseContext &baseContext, RenderContext &renderContext);
+void createCommandPool(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
 void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings);
 
@@ -71,11 +75,7 @@ void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swap
 
 void createFrameBuffers(ApplicationContext &appContext);
 
-void createVertexBuffer(ApplicationContext &appContext);
-
-void createIndexBuffer(ApplicationContext &appContext);
-
-void createCommandBuffers(VulkanBaseContext &baseContext, RenderContext &renderContext);
+void createCommandBuffers(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
 void buildSecondaryGraphicsPipeline(ApplicationContext &appContext);
 

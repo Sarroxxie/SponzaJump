@@ -18,7 +18,12 @@ void VulkanRenderer::cleanVulkanRessources() {
     vkDestroyFence(m_Context.baseContext.device, m_InFlightFence, nullptr);
 }
 
-void VulkanRenderer::render() {
+void VulkanRenderer::render(Scene &scene) {
+    if (!scene.hasObject()) {
+        std::cout << "Scene needs objects to be rendered" << std::endl;
+        return;
+    }
+
     vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -34,9 +39,9 @@ void VulkanRenderer::render() {
 
     vkResetFences(m_Context.baseContext.device, 1, &m_InFlightFence);
 
-    vkResetCommandBuffer(m_Context.renderContext.commandBuffer, 0);
+    vkResetCommandBuffer(m_Context.commandContext.commandBuffer, 0);
 
-    recordCommandBuffer(m_Context.swapchainContext, m_Context.renderContext, imageIndex);
+    recordCommandBuffer(m_Context, m_Context.renderContext, scene, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -48,7 +53,7 @@ void VulkanRenderer::render() {
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_Context.renderContext.commandBuffer;
+    submitInfo.pCommandBuffers = &m_Context.commandContext.commandBuffer;
 
     VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
     submitInfo.signalSemaphoreCount = 1;
@@ -72,23 +77,23 @@ void VulkanRenderer::render() {
     vkQueuePresentKHR(m_Context.baseContext.presentQueue, &presentInfo);
 }
 
-void VulkanRenderer::recordCommandBuffer(SwapchainContext &swapchainContext, RenderContext &renderContext, uint32_t imageIndex) {
+void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderContext &renderContext, Scene &scene, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    if (vkBeginCommandBuffer(renderContext.commandBuffer, &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(appContext.commandContext.commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = renderContext.renderPass;
-    renderPassInfo.framebuffer = swapchainContext.swapChainFramebuffers[imageIndex];
+    renderPassInfo.framebuffer = appContext.swapchainContext.swapChainFramebuffers[imageIndex];
 
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapchainContext.swapChainExtent;
+    renderPassInfo.renderArea.extent = appContext.swapchainContext.swapChainExtent;
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 0.0f}};
@@ -97,17 +102,19 @@ void VulkanRenderer::recordCommandBuffer(SwapchainContext &swapchainContext, Ren
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(renderContext.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(appContext.commandContext.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(renderContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindPipeline(appContext.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderContext.graphicsPipelines[renderContext.activePipelineIndex]);
 
 
-    VkBuffer vertexBuffers[] = {renderContext.object.vertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(renderContext.commandBuffer, 0, 1, vertexBuffers, offsets);
+    auto sceneObjects = scene.getObjects();
 
-    vkCmdBindIndexBuffer(renderContext.commandBuffer, renderContext.object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    VkBuffer vertexBuffers[] = {sceneObjects[0].vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(appContext.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, sceneObjects[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 
     /*
@@ -133,16 +140,16 @@ void VulkanRenderer::recordCommandBuffer(SwapchainContext &swapchainContext, Ren
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(swapchainContext.swapChainExtent.width);
-    viewport.height = static_cast<float>(swapchainContext.swapChainExtent.height);
+    viewport.width = static_cast<float>(appContext.swapchainContext.swapChainExtent.width);
+    viewport.height = static_cast<float>(appContext.swapchainContext.swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(renderContext.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(appContext.commandContext.commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = swapchainContext.swapChainExtent;
-    vkCmdSetScissor(renderContext.commandBuffer, 0, 1, &scissor);
+    scissor.extent = appContext.swapchainContext.swapChainExtent;
+    vkCmdSetScissor(appContext.commandContext.commandBuffer, 0, 1, &scissor);
 
     // Without Index Buffer
     // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
@@ -158,11 +165,11 @@ void VulkanRenderer::recordCommandBuffer(SwapchainContext &swapchainContext, Ren
                             nullptr);
     */
 
-    vkCmdDrawIndexed(renderContext.commandBuffer, 3, 1, 0, 0, 0);
+    vkCmdDrawIndexed(appContext.commandContext.commandBuffer, 3, 1, 0, 0, 0);
 
-    vkCmdEndRenderPass(renderContext.commandBuffer);
+    vkCmdEndRenderPass(appContext.commandContext.commandBuffer);
 
-    if (vkEndCommandBuffer(renderContext.commandBuffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(appContext.commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
 }

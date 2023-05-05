@@ -248,21 +248,21 @@ void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFl
 
 }
 
-void copyBuffer(VulkanBaseContext &context, RenderContext &renderContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands(context, renderContext);
+void copyBuffer(VulkanBaseContext &context, CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+    VkCommandBuffer commandBuffer = beginSingleTimeCommands(context, commandContext);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-    endSingleTimeCommands(context, renderContext, commandBuffer);
+    endSingleTimeCommands(context, commandContext, commandBuffer);
 }
 
-VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderContext) {
+VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = renderContext.commandPool;
+    allocInfo.commandPool = commandContext.commandPool;
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
@@ -277,7 +277,7 @@ VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext &context, RenderContex
     return commandBuffer;
 }
 
-void endSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderContext, VkCommandBuffer commandBuffer) {
+void endSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext, VkCommandBuffer commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -288,7 +288,7 @@ void endSingleTimeCommands(VulkanBaseContext &context, RenderContext &renderCont
     vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(context.graphicsQueue);
 
-    vkFreeCommandBuffers(context.device, renderContext.commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(context.device, commandContext.commandPool, 1, &commandBuffer);
 }
 
 uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties) {

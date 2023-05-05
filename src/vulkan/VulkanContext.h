@@ -35,15 +35,6 @@ typedef struct {
 
 typedef struct
 {
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
-} RenderableObject;
-
-typedef struct
-{
     // TODO how to use multiple Renderpasses, multiple pipelines ?
     VkRenderPass renderPass;
 
@@ -52,17 +43,16 @@ typedef struct
     VkPipeline graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
 
     bool activePipelineIndex = 0;
+} RenderContext;
 
+typedef struct {
     VkCommandPool commandPool;
 
     // TODO might want a vector of commandBuffers here later, so we can record
     // another one while the previous frame is still rendering, that way we can
     // have multiple frames in flight
     VkCommandBuffer commandBuffer;
-
-    // TODO: extract this into more complete class and create something to manage entire scene, it doesn't belong directly in the rendering context and ultimately should also not be created during setup call
-    RenderableObject object;
-} RenderContext;
+} CommandContext;
 
 typedef struct {
     bool useMsaa = false;
@@ -74,6 +64,8 @@ typedef struct {
     VulkanBaseContext baseContext;
     SwapchainContext swapchainContext;
     RenderContext renderContext;
+    CommandContext commandContext;
+
     RenderSettings renderSettings;
     Window *window;
 } ApplicationContext;
