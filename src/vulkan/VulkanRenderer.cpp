@@ -4,6 +4,7 @@
 #include "VulkanSetup.h"
 
 #include <iostream>
+#include <algorithm>
 
 
 VulkanRenderer::VulkanRenderer(ApplicationContext &context)
@@ -108,13 +109,6 @@ void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderC
                       renderContext.graphicsPipelines[renderContext.activePipelineIndex]);
 
 
-    auto sceneObjects = scene.getObjects();
-
-    VkBuffer vertexBuffers[] = {sceneObjects[0].vertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(appContext.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
-
-    vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, sceneObjects[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 
     /*
@@ -165,8 +159,29 @@ void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderC
                             nullptr);
     */
 
-    vkCmdDrawIndexed(appContext.commandContext.commandBuffer, 3, 1, 0, 0, 0);
+    auto sceneObjects = scene.getObjects();
 
+    for (auto &object: sceneObjects) {
+        VkBuffer vertexBuffers[] = { object.vertexBuffer };
+        VkDeviceSize offsets[] = {0};
+
+        vkCmdBindVertexBuffers(appContext.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
+
+        vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdDrawIndexed(appContext.commandContext.commandBuffer, object.indicesCount, 1, 0, 0, 0);
+    }
+
+    /*
+    VkBuffer vertexBuffers[] = {sceneObjects[0].vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(appContext.commandContext.commandBuffer, 0, 1, vertexBuffersVec.data(), offsets);
+
+    vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, sceneObjects[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+
+    vkCmdDrawIndexed(appContext.commandContext.commandBuffer, 3, 1, 0, 0, 0);
+*/
     vkCmdEndRenderPass(appContext.commandContext.commandBuffer);
 
     if (vkEndCommandBuffer(appContext.commandContext.commandBuffer) != VK_SUCCESS) {

@@ -19,7 +19,8 @@ int main() {
 
     Scene scene;
 
-    scene.addObject(createSampleObject(appContext.baseContext, appContext.commandContext));
+    scene.addObject(createSampleObject(appContext.baseContext, appContext.commandContext, -0.5));
+    scene.addObject(createSampleObject(appContext.baseContext, appContext.commandContext, 0.5));
 
     VulkanRenderer renderer(appContext);
     // passes reference to the renderer to the key callback function

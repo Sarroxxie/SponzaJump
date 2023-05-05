@@ -5,9 +5,9 @@
 #include "vulkan/VulkanContext.h"
 #include "RenderableObject.h"
 
-RenderableObject createSampleObject(VulkanBaseContext context, CommandContext commandContext);
+RenderableObject createSampleObject(VulkanBaseContext context, CommandContext commandContext, float xOffset = 0);
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, RenderableObject &object);
+void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, RenderableObject &object, float xOffset);
 
 void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, RenderableObject &object);
 

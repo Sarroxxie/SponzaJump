@@ -12,6 +12,9 @@ typedef struct
 
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
+
+    uint32_t verticesCount;
+    uint32_t indicesCount;
 } RenderableObject;
 
 void cleanRenderableObject(VulkanBaseContext &baseContext, RenderableObject &object);
