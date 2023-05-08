@@ -7,23 +7,25 @@
 #include "VulkanSettings.h"
 #include "VulkanContext.h"
 
-void initializeGraphicsApplication(ApplicationContext &appContext);
+void initializeGraphicsApplication(ApplicationVulkanContext &appContext);
 
-void initializeBaseVulkan(ApplicationContext &appContext);
+void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
-void initializeSwapChain(ApplicationContext &appContext);
+void initializeBaseVulkan(ApplicationVulkanContext &appContext);
 
-void initializeRenderContext(ApplicationContext &appContext);
+void initializeSwapChain(ApplicationVulkanContext &appContext);
 
-void initializeCommandContext(ApplicationContext &appContext);
+void initializeVulkanRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
-void cleanupVulkan(ApplicationContext &appContext);
+void initializeCommandContext(ApplicationVulkanContext &appContext);
+
+void cleanupVulkanApplication(ApplicationVulkanContext &appContext);
 
 void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext);
 
 void cleanupSwapChain(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext);
 
-void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderContext);
+void cleanupRenderContext(VulkanBaseContext &baseContext, VulkanRenderContext &renderContext);
 
 void cleanupCommandContext(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
@@ -37,29 +39,29 @@ void setupDebugMessenger(VulkanBaseContext &context);
 
 void createSurface(VulkanBaseContext &context, Window *window);
 
-void pickPhysicalDevice(VulkanBaseContext &context, RenderSettings &renderSettings);
+void pickPhysicalDevice(VulkanBaseContext &context, GraphicSettings &graphicSettings);
 
 void createLogicalDevice(VulkanBaseContext &context);
 
 void createSwapChain(VulkanBaseContext &context, SwapchainContext &swapchainContext, Window *window);
 
-void recreateSwapChain(ApplicationContext &appContext);
+void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
 void createImageViews(VulkanBaseContext &context, SwapchainContext &swapchainContext);
 
 VkImageView createImageView(VulkanBaseContext &context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 
-void createRenderPass(ApplicationContext &appContext);
+void createRenderPass(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
 VkFormat findDepthFormat(VulkanBaseContext &context);
 
 VkFormat findSupportedFormat(VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features);
 
-void createDescriptorSetLayout(ApplicationContext &appContext);
+void createDescriptorSetLayout(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
-void createGraphicsPipeline(ApplicationContext &appContext,
-                            RenderContext &renderContext,
+void createGraphicsPipeline(ApplicationVulkanContext &appContext,
+                            VulkanRenderContext &renderContext,
                             VkPipelineLayout& pipelineLayout,
                             VkPipeline&       graphicsPipeline,
                             std::string vertexShaderPath = "res/shaders/spv/triangle.vert.spv",
@@ -69,17 +71,17 @@ VkShaderModule createShaderModule(VulkanBaseContext &context, const std::vector<
 
 void createCommandPool(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
-void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings);
+void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings);
 
-void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings);
+void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings);
 
-void createFrameBuffers(ApplicationContext &appContext);
+void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
 void createCommandBuffers(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
-void buildSecondaryGraphicsPipeline(ApplicationContext &appContext);
+void buildSecondaryGraphicsPipeline(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
-bool swapGraphicsPipeline(ApplicationContext &appContext);
+bool swapGraphicsPipeline(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
 void compileShader(std::string path, std::string shaderDirectoryPath = "res/shaders/source/");
 

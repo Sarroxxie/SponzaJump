@@ -7,8 +7,8 @@
 #include <algorithm>
 
 
-VulkanRenderer::VulkanRenderer(ApplicationContext &context)
-        : m_Context(context) {
+VulkanRenderer::VulkanRenderer(ApplicationVulkanContext &context, RenderContext renderContext)
+        : m_Context(context), m_RenderContext(renderContext) {
     createSyncObjects(context.baseContext);
 }
 
@@ -31,7 +31,7 @@ void VulkanRenderer::render(Scene &scene) {
     VkResult result = vkAcquireNextImageKHR(m_Context.baseContext.device, m_Context.swapchainContext.swapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || m_Context.window->wasResized()) {
-        recreateSwapChain(m_Context);
+        recreateSwapChain(m_Context, m_RenderContext);
         m_Context.window->setResized(false);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -42,7 +42,7 @@ void VulkanRenderer::render(Scene &scene) {
 
     vkResetCommandBuffer(m_Context.commandContext.commandBuffer, 0);
 
-    recordCommandBuffer(m_Context, m_Context.renderContext, scene, imageIndex);
+    recordCommandBuffer(scene, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -78,23 +78,23 @@ void VulkanRenderer::render(Scene &scene) {
     vkQueuePresentKHR(m_Context.baseContext.presentQueue, &presentInfo);
 }
 
-void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderContext &renderContext, Scene &scene, uint32_t imageIndex) {
+void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    if (vkBeginCommandBuffer(appContext.commandContext.commandBuffer, &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(m_Context.commandContext.commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = renderContext.renderPass;
-    renderPassInfo.framebuffer = appContext.swapchainContext.swapChainFramebuffers[imageIndex];
+    renderPassInfo.renderPass = m_RenderContext.vulkanRenderContext.renderPass;
+    renderPassInfo.framebuffer = m_Context.swapchainContext.swapChainFramebuffers[imageIndex];
 
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = appContext.swapchainContext.swapChainExtent;
+    renderPassInfo.renderArea.extent = m_Context.swapchainContext.swapChainExtent;
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 0.0f}};
@@ -103,10 +103,10 @@ void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderC
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(appContext.commandContext.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(appContext.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderContext.graphicsPipelines[renderContext.activePipelineIndex]);
+    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      m_RenderContext.vulkanRenderContext.graphicsPipelines[m_RenderContext.vulkanRenderContext.activePipelineIndex]);
 
 
 
@@ -134,16 +134,16 @@ void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderC
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(appContext.swapchainContext.swapChainExtent.width);
-    viewport.height = static_cast<float>(appContext.swapchainContext.swapChainExtent.height);
+    viewport.width = static_cast<float>(m_Context.swapchainContext.swapChainExtent.width);
+    viewport.height = static_cast<float>(m_Context.swapchainContext.swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(appContext.commandContext.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(m_Context.commandContext.commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = appContext.swapchainContext.swapChainExtent;
-    vkCmdSetScissor(appContext.commandContext.commandBuffer, 0, 1, &scissor);
+    scissor.extent = m_Context.swapchainContext.swapChainExtent;
+    vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
     // Without Index Buffer
     // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
@@ -165,11 +165,11 @@ void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderC
         VkBuffer vertexBuffers[] = { object.vertexBuffer };
         VkDeviceSize offsets[] = {0};
 
-        vkCmdBindVertexBuffers(appContext.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdDrawIndexed(appContext.commandContext.commandBuffer, object.indicesCount, 1, 0, 0, 0);
+        vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, object.indicesCount, 1, 0, 0, 0);
     }
 
     /*
@@ -182,9 +182,9 @@ void VulkanRenderer::recordCommandBuffer(ApplicationContext &appContext, RenderC
 
     vkCmdDrawIndexed(appContext.commandContext.commandBuffer, 3, 1, 0, 0, 0);
 */
-    vkCmdEndRenderPass(appContext.commandContext.commandBuffer);
+    vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 
-    if (vkEndCommandBuffer(appContext.commandContext.commandBuffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(m_Context.commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
 }
@@ -218,13 +218,17 @@ void VulkanRenderer::createSyncObjects(VulkanBaseContext &baseContext) {
 }
 
 void VulkanRenderer::recompileToSecondaryPipeline() {
-    buildSecondaryGraphicsPipeline(m_Context);
+    buildSecondaryGraphicsPipeline(m_Context, m_RenderContext);
 }
 
 void VulkanRenderer::swapToSecondaryPipeline() {
-    swapGraphicsPipeline(m_Context);
+    swapGraphicsPipeline(m_Context, m_RenderContext);
 }
 
-ApplicationContext VulkanRenderer::getContext() {
+ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;
+}
+
+void VulkanRenderer::setRenderContext(RenderContext &renderContext) {
+    m_RenderContext = renderContext;
 }

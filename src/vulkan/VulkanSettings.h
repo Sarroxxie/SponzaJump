@@ -13,10 +13,4 @@ const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-typedef struct VulkanSettings_s {
-    bool useMsaa = false;
-    uint8_t maxMsaaSamples = 1;
-    VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-} VulkanSettings;
-
 #endif //GRAPHICSPRAKTIKUM_VULKANSETTINGS_H

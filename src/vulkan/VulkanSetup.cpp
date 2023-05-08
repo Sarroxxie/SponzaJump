@@ -11,15 +11,18 @@
 #include <filesystem>
 
 // setup in large parts taken from https://vulkan-tutorial.com/Introduction
-void initializeGraphicsApplication(ApplicationContext &appContext) {
+void initializeGraphicsApplication(ApplicationVulkanContext &appContext) {
     initializeBaseVulkan(appContext);
     initializeSwapChain(appContext);
-    initializeRenderContext(appContext);
     initializeCommandContext(appContext);
 
-    createFrameBuffers(appContext);
+}
 
-    createDescriptorSetLayout(appContext);
+void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
+    initializeVulkanRenderContext(appContext, renderContext);
+    createFrameBuffers(appContext, renderContext);
+
+    createDescriptorSetLayout(appContext, renderContext);
     /*
     createUniformBuffers();
     createDescriptorPool();
@@ -27,34 +30,34 @@ void initializeGraphicsApplication(ApplicationContext &appContext) {
      */
 }
 
-void initializeBaseVulkan(ApplicationContext &appContext) {
+void initializeBaseVulkan(ApplicationVulkanContext &appContext) {
     createInstance(appContext.baseContext);
     setupDebugMessenger(appContext.baseContext);
     createSurface(appContext.baseContext, appContext.window);
-    pickPhysicalDevice(appContext.baseContext, appContext.renderSettings);
+    pickPhysicalDevice(appContext.baseContext, appContext.graphicSettings);
     createLogicalDevice(appContext.baseContext);
 }
 
-void initializeSwapChain(ApplicationContext &appContext) {
+void initializeSwapChain(ApplicationVulkanContext &appContext) {
     createSwapChain(appContext.baseContext, appContext.swapchainContext, appContext.window);
     createImageViews(appContext.baseContext, appContext.swapchainContext);
 
     // TODO don't need to create ColorRessources if multisampling is turned off
-    createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
-    createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
+    createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.graphicSettings);
+    createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.graphicSettings);
 }
 
-void initializeRenderContext(ApplicationContext &appContext) {
-    createRenderPass(appContext);
+void initializeVulkanRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
+    createRenderPass(appContext, renderContext);
 
     createGraphicsPipeline(appContext,
-                           appContext.renderContext,
-                           appContext.renderContext.pipelineLayouts[0],
-                           appContext.renderContext.graphicsPipelines[0]);
+                           renderContext.vulkanRenderContext,
+                           renderContext.vulkanRenderContext.pipelineLayouts[0],
+                           renderContext.vulkanRenderContext.graphicsPipelines[0]);
 }
 
 
-void initializeCommandContext(ApplicationContext &appContext) {
+void initializeCommandContext(ApplicationVulkanContext &appContext) {
     createCommandPool(appContext.baseContext, appContext.commandContext);
     createCommandBuffers(appContext.baseContext, appContext.commandContext);
 }
@@ -94,12 +97,10 @@ void createInstance(VulkanBaseContext &context) {
     }
 }
 
-void cleanupVulkan(ApplicationContext &appContext) {
+void cleanupVulkanApplication(ApplicationVulkanContext &appContext) {
     cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
 
     cleanupCommandContext(appContext.baseContext, appContext.commandContext);
-
-    cleanupRenderContext(appContext.baseContext, appContext.renderContext);
 
     cleanupBaseVulkanRessources(appContext.baseContext);
 }
@@ -116,7 +117,7 @@ void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext) {
     vkDestroyInstance(baseContext.instance, nullptr);
 }
 
-void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderContext) {
+void cleanupRenderContext(VulkanBaseContext &baseContext, VulkanRenderContext &renderContext) {
     // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
     vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[0], nullptr);
     vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[0], nullptr);
@@ -198,7 +199,7 @@ void createSurface(VulkanBaseContext &context, Window *window) {
     }
 }
 
-void pickPhysicalDevice(VulkanBaseContext &context, RenderSettings &renderSettings) {
+void pickPhysicalDevice(VulkanBaseContext &context, GraphicSettings &graphicSettings) {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
 
@@ -214,7 +215,7 @@ void pickPhysicalDevice(VulkanBaseContext &context, RenderSettings &renderSettin
     for (const auto &device: devices) {
         if (isDeviceSuitable(device, context.surface)) {
             context.physicalDevice = device;
-            renderSettings.maxMsaaSamples = getMaxUsableSampleCount(device);
+            graphicSettings.maxMsaaSamples = getMaxUsableSampleCount(device);
             break;
         }
     }
@@ -330,7 +331,7 @@ void createSwapChain(VulkanBaseContext &context, SwapchainContext &swapchainCont
     swapchainContext.swapChainExtent = extent;
 }
 
-void recreateSwapChain(ApplicationContext &appContext) {
+void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     int width = 0, height = 0;
     glfwGetFramebufferSize(appContext.window->getWindowHandle(), &width, &height);
     while (width == 0 || height == 0) {
@@ -346,10 +347,10 @@ void recreateSwapChain(ApplicationContext &appContext) {
     createImageViews(appContext.baseContext, appContext.swapchainContext);
 
     // TODO don't need to create ColorRessources if multisampling is turned off
-    createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
-    createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.renderSettings);
+    createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.graphicSettings);
+    createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.graphicSettings);
 
-    createFrameBuffers(appContext);
+    createFrameBuffers(appContext, renderContext);
 }
 
 void cleanupSwapChain(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext) {
@@ -405,10 +406,10 @@ VkImageView createImageView(VulkanBaseContext &context, VkImage image, VkFormat 
     return imageView;
 }
 
-void createRenderPass(ApplicationContext &appContext) {
+void createRenderPass(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = appContext.swapchainContext.swapChainImageFormat;
-    colorAttachment.samples = appContext.renderSettings.msaaSamples;
+    colorAttachment.samples = appContext.graphicSettings.msaaSamples;
 
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -426,7 +427,7 @@ void createRenderPass(ApplicationContext &appContext) {
 
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = findDepthFormat(appContext.baseContext);
-    depthAttachment.samples = appContext.renderSettings.msaaSamples;
+    depthAttachment.samples = appContext.graphicSettings.msaaSamples;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -451,7 +452,7 @@ void createRenderPass(ApplicationContext &appContext) {
     // This has not been tested yet -> might be error source
     // Might also be important in createFrameBuffers ? (not sure, might also only save some memory)
 
-    if (appContext.renderSettings.useMsaa) {
+    if (appContext.graphicSettings.useMsaa) {
         // when using Msaa, the color attachment is not the attachment presenting
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -494,7 +495,7 @@ void createRenderPass(ApplicationContext &appContext) {
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr, &appContext.renderContext.renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr, &renderContext.vulkanRenderContext.renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
@@ -524,7 +525,7 @@ VkFormat findSupportedFormat(VulkanBaseContext &context, const std::vector<VkFor
     throw std::runtime_error("failed to find supported format!");
 }
 
-void createDescriptorSetLayout(ApplicationContext &appContext) {
+void createDescriptorSetLayout(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     // TODO: currently empty, this is used to create descriptors for shaders, so we can pass data -> Maybe use some sort of struct to define what we want, so we don't have to hardcode it.
     // -> currently setting DescriptorSetLayouts for pipelineLayoutInfo in createGraphicsPipeline is commented out
     /*
@@ -553,8 +554,8 @@ void createDescriptorSetLayout(ApplicationContext &appContext) {
      */
 }
 
-void createGraphicsPipeline(ApplicationContext &appContext,
-                            RenderContext &renderContext,
+void createGraphicsPipeline(ApplicationVulkanContext &appContext,
+                            VulkanRenderContext &renderContext,
                             VkPipelineLayout& pipelineLayout,
                             VkPipeline&       graphicsPipeline,
                             std::string       vertexShaderPath,
@@ -646,7 +647,7 @@ void createGraphicsPipeline(ApplicationContext &appContext,
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_TRUE;
     multisampling.minSampleShading = .2f;
-    multisampling.rasterizationSamples = appContext.renderSettings.msaaSamples;
+    multisampling.rasterizationSamples = appContext.graphicSettings.msaaSamples;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask =
@@ -758,14 +759,14 @@ void createCommandPool(VulkanBaseContext &baseContext, CommandContext &commandCo
     }
 }
 
-void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings) {
+void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings) {
     VkFormat colorFormat = swapchainContext.swapChainImageFormat;
 
     createImage(baseContext,
                 swapchainContext.swapChainExtent.width,
                 swapchainContext.swapChainExtent.height,
                 1,
-                renderSettings.msaaSamples,
+                graphicSettings.msaaSamples,
                 colorFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -776,14 +777,14 @@ void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swap
     swapchainContext.colorImage.imageView = createImageView(baseContext, swapchainContext.colorImage.image, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 
-void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, RenderSettings &renderSettings) {
+void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings) {
     VkFormat depthFormat = findDepthFormat(baseContext);
 
     createImage(baseContext,
                 swapchainContext.swapChainExtent.width,
                 swapchainContext.swapChainExtent.height,
                 1,
-                renderSettings.msaaSamples,
+                graphicSettings.msaaSamples,
                 depthFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -794,14 +795,14 @@ void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swap
     swapchainContext.depthImage.imageView = createImageView(baseContext, swapchainContext.depthImage.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 }
 
-void createFrameBuffers(ApplicationContext &appContext) {
+void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     appContext.swapchainContext.swapChainFramebuffers.resize(appContext.swapchainContext.swapChainImageViews.size());
 
     for (size_t i = 0; i < appContext.swapchainContext.swapChainImageViews.size(); i++) {
 
         std::vector<VkImageView> attachments;
 
-        if (appContext.renderSettings.useMsaa) {
+        if (appContext.graphicSettings.useMsaa) {
             attachments.push_back(appContext.swapchainContext.colorImage.imageView);
             attachments.push_back(appContext.swapchainContext.depthImage.imageView);
             attachments.push_back(appContext.swapchainContext.swapChainImageViews[i]);
@@ -812,7 +813,7 @@ void createFrameBuffers(ApplicationContext &appContext) {
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = appContext.renderContext.renderPass;
+        framebufferInfo.renderPass = renderContext.vulkanRenderContext.renderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = appContext.swapchainContext.swapChainExtent.width;
@@ -843,27 +844,27 @@ void createCommandBuffers(VulkanBaseContext &baseContext, CommandContext &comman
 }
 
 // Builds a graphics pipeline and stores it in the secondary slot
-void buildSecondaryGraphicsPipeline(ApplicationContext &appContext) {
+void buildSecondaryGraphicsPipeline(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     compileShader("triangle.frag");
     compileShader("triangle.vert");
-    if(appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex] != VK_NULL_HANDLE) {
+    if(renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex] != VK_NULL_HANDLE) {
         vkDestroyPipeline(appContext.baseContext.device,
-                          appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex], nullptr);
+                          renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex], nullptr);
         vkDestroyPipelineLayout(appContext.baseContext.device,
-                                appContext.renderContext.pipelineLayouts[!appContext.renderContext.activePipelineIndex],
+                                renderContext.vulkanRenderContext.pipelineLayouts[!renderContext.vulkanRenderContext.activePipelineIndex],
                                 nullptr);
     }
 
     createGraphicsPipeline(appContext,
-                           appContext.renderContext,
-                           appContext.renderContext.pipelineLayouts[!appContext.renderContext.activePipelineIndex],
-                           appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex]);
+                           renderContext.vulkanRenderContext,
+                           renderContext.vulkanRenderContext.pipelineLayouts[!renderContext.vulkanRenderContext.activePipelineIndex],
+                           renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex]);
 }
 
 // Swaps to the secondary graphics pipeline if it is valid
-bool swapGraphicsPipeline(ApplicationContext &appContext) {
-    if(appContext.renderContext.graphicsPipelines[!appContext.renderContext.activePipelineIndex] != VK_NULL_HANDLE) {
-        appContext.renderContext.activePipelineIndex = !appContext.renderContext.activePipelineIndex;
+bool swapGraphicsPipeline(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
+    if(renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex] != VK_NULL_HANDLE) {
+        renderContext.vulkanRenderContext.activePipelineIndex = !renderContext.vulkanRenderContext.activePipelineIndex;
         return true;
     } else {
         return false;

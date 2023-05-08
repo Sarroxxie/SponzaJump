@@ -14,9 +14,12 @@ int main() {
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
 
-    ApplicationContext appContext;
+    ApplicationVulkanContext appContext;
     appContext.window = &window;
     initializeGraphicsApplication(appContext);
+
+    RenderContext renderContext;
+    initializeRenderContext(appContext, renderContext);
 
     Scene scene;
 
@@ -28,7 +31,8 @@ int main() {
      */
     scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(0.0, 0, 0.1)));
 
-    VulkanRenderer renderer(appContext);
+    VulkanRenderer renderer(appContext, renderContext);
+
     // passes reference to the renderer to the key callback function
     glfwSetWindowUserPointer(window.getWindowHandle(), (void*) &renderer);
 
@@ -41,7 +45,8 @@ int main() {
 
     scene.cleanup(appContext.baseContext);
     renderer.cleanVulkanRessources();
-    cleanupVulkan(appContext);
+    cleanupRenderContext(appContext.baseContext, renderContext.vulkanRenderContext);
+    cleanupVulkanApplication(appContext);
 
     return 0;
 }

@@ -33,18 +33,6 @@ typedef struct {
     BufferImage depthImage;
 } SwapchainContext;
 
-typedef struct
-{
-    // TODO how to use multiple Renderpasses, multiple pipelines ?
-    VkRenderPass renderPass;
-
-    // allows swapping between graphics pipeline at runtime
-    VkPipelineLayout pipelineLayouts[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-    VkPipeline graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-
-    bool activePipelineIndex = 0;
-} RenderContext;
-
 typedef struct {
     VkCommandPool commandPool;
 
@@ -58,16 +46,39 @@ typedef struct {
     bool useMsaa = false;
     uint8_t maxMsaaSamples = 1;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-} RenderSettings;
+} GraphicSettings;
 
 typedef struct {
     VulkanBaseContext baseContext;
     SwapchainContext swapchainContext;
-    RenderContext renderContext;
     CommandContext commandContext;
 
-    RenderSettings renderSettings;
+    GraphicSettings graphicSettings;
+
     Window *window;
-} ApplicationContext;
+} ApplicationVulkanContext;
+
+
+
+typedef struct
+{
+    // TODO how to use multiple Renderpasses, multiple pipelines ?
+    VkRenderPass renderPass;
+
+    // allows swapping between graphics pipeline at runtime
+    VkPipelineLayout pipelineLayouts[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
+    VkPipeline graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
+
+    bool activePipelineIndex = 0;
+} VulkanRenderContext;
+
+typedef struct {
+    // TODO stuff like projection ...
+} RenderSettings;
+
+typedef struct {
+    VulkanRenderContext vulkanRenderContext;
+    RenderSettings renderSettings;
+} RenderContext;
 
 #endif  // GRAPHICSPRAKTIKUM_VULKANCONTEXT_H
