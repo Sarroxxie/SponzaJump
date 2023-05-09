@@ -4,50 +4,25 @@
 #include "vulkan/VulkanUtils.h"
 #include "utils/FileUtils.h"
 
-void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    createDescriptorSetLayout(appContext.baseContext, renderContext.vulkanRenderContext);
-
-    initializeVulkanRenderContext(appContext, renderContext);
-    createFrameBuffers(appContext, renderContext);
-
+void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     auto &settings = renderContext.renderSettings;
     settings.fov = glm::radians(45.0f);
     settings.nearPlane = 0.1;
     settings.farPlane = 100;
-}
 
-void initializeVulkanRenderContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    createRenderPass(appContext, renderContext);
+    RenderSetupDescription renderSetupDescription;
 
-    renderContext.vulkanRenderContext.vertexShader.type = VERTEX_SHADER;
-    renderContext.vulkanRenderContext.vertexShader.shaderSourceName = "simpleScene.vert";
-    renderContext.vulkanRenderContext.vertexShader.sourceDirectory = "res/shaders/source/";
-    renderContext.vulkanRenderContext.vertexShader.spvDirectory = "res/shaders/spv/";
+    renderSetupDescription.vertexShader.shaderStage = VERTEX_SHADER;
+    renderSetupDescription.vertexShader.shaderSourceName = "simpleScene.vert";
+    renderSetupDescription.vertexShader.sourceDirectory = "res/shaders/source/";
+    renderSetupDescription.vertexShader.spvDirectory = "res/shaders/spv/";
 
-    renderContext.vulkanRenderContext.fragmentShader.type = FRAGMENT_SHADER;
-    renderContext.vulkanRenderContext.fragmentShader.shaderSourceName = "simpleScene.frag";
-    renderContext.vulkanRenderContext.fragmentShader.sourceDirectory = "res/shaders/source/";
-    renderContext.vulkanRenderContext.fragmentShader.spvDirectory = "res/shaders/spv/";
+    renderSetupDescription.fragmentShader.shaderStage = FRAGMENT_SHADER;
+    renderSetupDescription.fragmentShader.shaderSourceName = "simpleScene.frag";
+    renderSetupDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
+    renderSetupDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
-    createGraphicsPipeline(appContext,
-                           renderContext.vulkanRenderContext,
-                           renderContext.vulkanRenderContext.pipelineLayouts[0],
-                           renderContext.vulkanRenderContext.graphicsPipelines[0],
-                           renderContext.vulkanRenderContext.vertexShader,
-                           renderContext.vulkanRenderContext.fragmentShader);
-}
-
-void createDescriptorSetLayout(const VulkanBaseContext &context, VulkanRenderContext &renderContext) {
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-
-
-    VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    bindings.push_back(uboLayoutBinding);
-
+    renderSetupDescription.bindings.push_back(createUniformBufferLayoutBinding(0, 1, VERTEX_SHADER));
     /*
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
@@ -58,6 +33,30 @@ void createDescriptorSetLayout(const VulkanBaseContext &context, VulkanRenderCon
     bindings.push_back(samplerLayoutBinding);
     */
 
+    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(0, sizeof(glm::mat4), VERTEX_SHADER));
+
+    initializeRenderContext(appContext, renderContext, renderSetupDescription);
+}
+
+void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription) {
+    createDescriptorSetLayout(appContext.baseContext, renderContext.renderPassContext, renderSetupDescription.bindings);
+
+    initializeRenderPassContext(appContext, renderContext, renderSetupDescription);
+    createFrameBuffers(appContext, renderContext);
+    renderContext.renderSetupDescription = renderSetupDescription;
+}
+
+void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription) {
+    createRenderPass(appContext, renderContext);
+
+    createGraphicsPipeline(appContext,
+                           renderContext.renderPassContext,
+                           renderContext.renderPassContext.pipelineLayouts[0],
+                           renderContext.renderPassContext.graphicsPipelines[0],
+                           renderSetupDescription);
+}
+
+void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassContext &renderContext, const std::vector<VkDescriptorSetLayoutBinding> &bindings) {
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -68,7 +67,7 @@ void createDescriptorSetLayout(const VulkanBaseContext &context, VulkanRenderCon
     }
 }
 
-void cleanupRenderContext(const VulkanBaseContext &baseContext, VulkanRenderContext &renderContext) {
+void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderPassContext &renderContext) {
     vkDestroyDescriptorSetLayout(baseContext.device, renderContext.descriptorSetLayout, nullptr);
 
     // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
@@ -82,6 +81,7 @@ void cleanupRenderContext(const VulkanBaseContext &baseContext, VulkanRenderCont
 
     vkDestroyRenderPass(baseContext.device, renderContext.renderPass, nullptr);
 }
+
 
 void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     VkAttachmentDescription colorAttachment{};
@@ -172,21 +172,19 @@ void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext 
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr, &renderContext.vulkanRenderContext.renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr, &renderContext.renderPassContext.renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
 
-
 void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
-                            VulkanRenderContext &renderContext,
+                            RenderPassContext &renderContext,
                             VkPipelineLayout& pipelineLayout,
                             VkPipeline&       graphicsPipeline,
-                            const Shader &vertexShader,
-                            const Shader &fragmentShader) {
+                            const RenderSetupDescription &renderSetupDescription) {
 
-    VkShaderModule vertShaderModule = createShaderModule(appContext.baseContext, vertexShader);
-    VkShaderModule fragShaderModule = createShaderModule(appContext.baseContext, fragmentShader);
+    VkShaderModule vertShaderModule = createShaderModule(appContext.baseContext, renderSetupDescription.vertexShader);
+    VkShaderModule fragShaderModule = createShaderModule(appContext.baseContext, renderSetupDescription.fragmentShader);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -297,6 +295,7 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &renderContext.descriptorSetLayout;
 
+
     VkPushConstantRange pushConstantRange;
     //this push constant range starts at the beginning
     pushConstantRange.offset = 0;
@@ -307,6 +306,10 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
 
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
+
+    pipelineLayoutInfo.pushConstantRangeCount = renderSetupDescription.pushConstantRanges.size();
+    pipelineLayoutInfo.pPushConstantRanges = renderSetupDescription.pushConstantRanges.data();
 
     if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo, nullptr,
                               &pipelineLayout)
@@ -368,7 +371,7 @@ void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &ren
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderContext.vulkanRenderContext.renderPass;
+        framebufferInfo.renderPass = renderContext.renderPassContext.renderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = appContext.swapchainContext.swapChainExtent.width;
@@ -384,30 +387,57 @@ void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &ren
 
 // Builds a graphics pipeline and stores it in the secondary slot
 void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    compileShader(renderContext.vulkanRenderContext.vertexShader);
-    compileShader(renderContext.vulkanRenderContext.fragmentShader);
-    if(renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex] != VK_NULL_HANDLE) {
+    compileShader(renderContext.renderSetupDescription.vertexShader);
+    compileShader(renderContext.renderSetupDescription.fragmentShader);
+    if(renderContext.renderPassContext.graphicsPipelines[!renderContext.renderPassContext.activePipelineIndex] != VK_NULL_HANDLE) {
         vkDestroyPipeline(appContext.baseContext.device,
-                          renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex], nullptr);
+                          renderContext.renderPassContext.graphicsPipelines[!renderContext.renderPassContext.activePipelineIndex], nullptr);
         vkDestroyPipelineLayout(appContext.baseContext.device,
-                                renderContext.vulkanRenderContext.pipelineLayouts[!renderContext.vulkanRenderContext.activePipelineIndex],
+                                renderContext.renderPassContext.pipelineLayouts[!renderContext.renderPassContext.activePipelineIndex],
                                 nullptr);
     }
 
     createGraphicsPipeline(appContext,
-                           renderContext.vulkanRenderContext,
-                           renderContext.vulkanRenderContext.pipelineLayouts[!renderContext.vulkanRenderContext.activePipelineIndex],
-                           renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex],
-                           renderContext.vulkanRenderContext.vertexShader,
-                           renderContext.vulkanRenderContext.fragmentShader);
+                           renderContext.renderPassContext,
+                           renderContext.renderPassContext.pipelineLayouts[!renderContext.renderPassContext.activePipelineIndex],
+                           renderContext.renderPassContext.graphicsPipelines[!renderContext.renderPassContext.activePipelineIndex],
+                           renderContext.renderSetupDescription);
 }
 
 // Swaps to the secondary graphics pipeline if it is valid
 bool swapGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    if(renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex] != VK_NULL_HANDLE) {
-        renderContext.vulkanRenderContext.activePipelineIndex = !renderContext.vulkanRenderContext.activePipelineIndex;
+    if(renderContext.renderPassContext.graphicsPipelines[!renderContext.renderPassContext.activePipelineIndex] != VK_NULL_HANDLE) {
+        renderContext.renderPassContext.activePipelineIndex = !renderContext.renderPassContext.activePipelineIndex;
         return true;
     } else {
         return false;
     }
+}
+
+VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderType) {
+    VkDescriptorSetLayoutBinding layoutBinding{};
+    layoutBinding.binding = binding;
+    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBinding.descriptorCount = descriptorCount;
+    switch (shaderType) {
+        case VERTEX_SHADER: layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        case FRAGMENT_SHADER: layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        default: layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    }
+    return layoutBinding;
+}
+
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderType) {
+    VkPushConstantRange pushConstantRange;
+
+    pushConstantRange.offset = offset;
+    pushConstantRange.size = size;
+
+    switch (shaderType) {
+        case VERTEX_SHADER: pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        case FRAGMENT_SHADER: pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        default: pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    }
+
+    return pushConstantRange;
 }

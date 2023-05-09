@@ -5,22 +5,28 @@
 #include "RenderContext.h"
 #include "Shader.h"
 
-void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
-void createDescriptorSetLayout(const VulkanBaseContext &context, VulkanRenderContext &renderContext);
+// --- Sample Render Setups
 
-void initializeVulkanRenderContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext);
+void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext);
+// ---
 
-void cleanupRenderContext(const VulkanBaseContext &baseContext, VulkanRenderContext &renderContext);
+
+void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
+
+void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassContext &renderContext, const std::vector<VkDescriptorSetLayoutBinding> &bindings);
+
+void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
+
+void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderPassContext &renderContext);
 
 void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
 void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
-                            VulkanRenderContext &renderContext,
+                            RenderPassContext &renderContext,
                             VkPipelineLayout& pipelineLayout,
                             VkPipeline&       graphicsPipeline,
-                            const Shader &vertexShader,
-                            const Shader &fragmentShader);
+                            const RenderSetupDescription &renderSetupDescription);
 
 void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
@@ -28,5 +34,8 @@ void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext &appContext, 
 
 bool swapGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
+VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderType);
+
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderType);
 
 #endif //GRAPHICSPRAKTIKUM_RENDERSETUP_H

@@ -4,14 +4,14 @@
 #include <string>
 #include "vulkan/ApplicationContext.h"
 
-enum ShaderType {
+enum ShaderStage {
     VERTEX_SHADER,
     FRAGMENT_SHADER
 };
 
 typedef struct shader_s
 {
-    ShaderType type;
+    ShaderStage shaderStage;
     std::string shaderSourceName;
 
     std::string sourceDirectory; // Directories need trailing slash

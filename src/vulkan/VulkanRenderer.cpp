@@ -4,7 +4,6 @@
 #include "VulkanSetup.h"
 
 #include <iostream>
-#include <algorithm>
 #include "rendering/RenderContext.h"
 #include "rendering/RenderSetup.h"
 
@@ -102,7 +101,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = m_RenderContext.vulkanRenderContext.renderPass;
+    renderPassInfo.renderPass = m_RenderContext.renderPassContext.renderPass;
     renderPassInfo.framebuffer = m_Context.swapchainContext.swapChainFramebuffers[imageIndex];
 
     renderPassInfo.renderArea.offset = {0, 0};
@@ -118,7 +117,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      m_RenderContext.vulkanRenderContext.graphicsPipelines[m_RenderContext.vulkanRenderContext.activePipelineIndex]);
+                      m_RenderContext.renderPassContext.graphicsPipelines[m_RenderContext.renderPassContext.activePipelineIndex]);
 
 
 
@@ -163,7 +162,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
     vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            m_RenderContext.vulkanRenderContext.pipelineLayouts[m_RenderContext.vulkanRenderContext.activePipelineIndex],
+                            m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
                             0,
                             1,
                             scene.getDescriptorSet(),
@@ -184,7 +183,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
         glm::mat4 objectTransform = object.transformation.getMatrix();
 
         vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                           m_RenderContext.vulkanRenderContext.pipelineLayouts[m_RenderContext.vulkanRenderContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
+                           m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
                            0, // offset
                            sizeof(glm::mat4),
                            &objectTransform);

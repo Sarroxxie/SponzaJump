@@ -70,7 +70,7 @@ void Scene::createDescriptorSets(VulkanBaseContext &baseContext, RenderContext &
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &renderContext.vulkanRenderContext.descriptorSetLayout;
+    allocInfo.pSetLayouts = &renderContext.renderPassContext.descriptorSetLayout;
 
     if (vkAllocateDescriptorSets(baseContext.device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");

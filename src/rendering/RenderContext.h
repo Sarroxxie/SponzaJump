@@ -5,6 +5,7 @@
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "Shader.h"
+#include "RenderSetupDescription.h"
 
 typedef struct
 {
@@ -24,10 +25,7 @@ typedef struct
     bool activePipelineIndex = 0;
 
     VkDescriptorSetLayout descriptorSetLayout;
-
-    Shader vertexShader;
-    Shader fragmentShader;
-} VulkanRenderContext;
+} RenderPassContext;
 
 typedef struct {
     float fov;
@@ -40,8 +38,10 @@ static inline glm::mat4 getPerspectiveMatrix(RenderSettings renderSettings, size
 }
 
 typedef struct {
-    VulkanRenderContext vulkanRenderContext;
+    RenderPassContext renderPassContext;
     RenderSettings renderSettings;
+
+    RenderSetupDescription renderSetupDescription;
 } RenderContext;
 
 
