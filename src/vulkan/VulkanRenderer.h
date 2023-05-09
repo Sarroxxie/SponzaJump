@@ -8,7 +8,7 @@
 #include "ApplicationContext.h"
 #include "window.h"
 #include "scene/Scene.h"
-#include "RenderContext.h"
+#include "rendering/RenderContext.h"
 #include <vulkan/vulkan_core.h>
 
 class VulkanRenderer {

@@ -2,7 +2,7 @@
 //
 
 #include "Scene.h"
-#include "vulkan/RenderContext.h"
+#include "rendering/RenderContext.h"
 
 Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera)
         : m_Camera(camera) {

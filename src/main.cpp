@@ -5,6 +5,7 @@
 
 #include "utils/FileUtils.h"
 #include "scene/RenderableObject.h"
+#include "rendering/RenderSetup.h"
 
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600

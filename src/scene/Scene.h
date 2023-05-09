@@ -7,7 +7,7 @@
 #include "SceneSetup.h"
 #include "RenderableObject.h"
 #include "Camera.h"
-#include "vulkan/RenderContext.h"
+#include "rendering/RenderContext.h"
 
 
 class Scene {

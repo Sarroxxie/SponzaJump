@@ -3,7 +3,7 @@ project(GraphicsPraktikum)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h src/vulkan/ApplicationContext.h src/vulkan/VulkanRenderer.cpp src/vulkan/VulkanRenderer.h src/vulkan/BufferImage.cpp src/vulkan/BufferImage.h src/scene/Scene.cpp src/scene/Scene.h src/scene/SceneSetup.cpp src/scene/SceneSetup.h src/scene/RenderableObject.cpp src/scene/RenderableObject.h src/scene/Camera.cpp src/scene/Camera.h src/vulkan/RenderContext.h)
+add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h src/vulkan/ApplicationContext.h src/vulkan/VulkanRenderer.cpp src/vulkan/VulkanRenderer.h src/vulkan/BufferImage.cpp src/vulkan/BufferImage.h src/scene/Scene.cpp src/scene/Scene.h src/scene/SceneSetup.cpp src/scene/SceneSetup.h src/scene/RenderableObject.cpp src/scene/RenderableObject.h src/scene/Camera.cpp src/scene/Camera.h src/rendering/RenderContext.h src/rendering/RenderSetup.cpp src/rendering/RenderSetup.h)
 
 # add additional source code
 target_sources(GraphicsPraktikum PUBLIC src/window.h src/window.cpp)

@@ -130,4 +130,9 @@ VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext  &context, CommandCont
 void endSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext, VkCommandBuffer commandBuffer);
 
 uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+VkFormat findDepthFormat(const VulkanBaseContext &context);
+
+VkFormat findSupportedFormat(const VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
+                             VkFormatFeatureFlags features);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

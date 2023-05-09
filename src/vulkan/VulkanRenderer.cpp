@@ -5,7 +5,8 @@
 
 #include <iostream>
 #include <algorithm>
-#include "RenderContext.h"
+#include "rendering/RenderContext.h"
+#include "rendering/RenderSetup.h"
 
 VulkanRenderer::VulkanRenderer(ApplicationVulkanContext &context, RenderContext &renderContext)
         : m_Context(context), m_RenderContext(renderContext) {
