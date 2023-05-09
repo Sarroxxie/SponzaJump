@@ -4,6 +4,7 @@
 #include <vulkan/vulkan_core.h>
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "Shader.h"
 
 typedef struct
 {
@@ -23,6 +24,9 @@ typedef struct
     bool activePipelineIndex = 0;
 
     VkDescriptorSetLayout descriptorSetLayout;
+
+    Shader vertexShader;
+    Shader fragmentShader;
 } VulkanRenderContext;
 
 typedef struct {

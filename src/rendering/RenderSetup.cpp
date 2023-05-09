@@ -16,6 +16,27 @@ void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext
     settings.farPlane = 100;
 }
 
+void initializeVulkanRenderContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
+    createRenderPass(appContext, renderContext);
+
+    renderContext.vulkanRenderContext.vertexShader.type = VERTEX_SHADER;
+    renderContext.vulkanRenderContext.vertexShader.shaderSourceName = "simpleScene.vert";
+    renderContext.vulkanRenderContext.vertexShader.sourceDirectory = "res/shaders/source/";
+    renderContext.vulkanRenderContext.vertexShader.spvDirectory = "res/shaders/spv/";
+
+    renderContext.vulkanRenderContext.fragmentShader.type = FRAGMENT_SHADER;
+    renderContext.vulkanRenderContext.fragmentShader.shaderSourceName = "simpleScene.frag";
+    renderContext.vulkanRenderContext.fragmentShader.sourceDirectory = "res/shaders/source/";
+    renderContext.vulkanRenderContext.fragmentShader.spvDirectory = "res/shaders/spv/";
+
+    createGraphicsPipeline(appContext,
+                           renderContext.vulkanRenderContext,
+                           renderContext.vulkanRenderContext.pipelineLayouts[0],
+                           renderContext.vulkanRenderContext.graphicsPipelines[0],
+                           renderContext.vulkanRenderContext.vertexShader,
+                           renderContext.vulkanRenderContext.fragmentShader);
+}
+
 void createDescriptorSetLayout(const VulkanBaseContext &context, VulkanRenderContext &renderContext) {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
@@ -45,17 +66,6 @@ void createDescriptorSetLayout(const VulkanBaseContext &context, VulkanRenderCon
     if (vkCreateDescriptorSetLayout(context.device, &layoutInfo, nullptr, &renderContext.descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout!");
     }
-}
-
-void initializeVulkanRenderContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    createRenderPass(appContext, renderContext);
-
-    createGraphicsPipeline(appContext,
-                           renderContext.vulkanRenderContext,
-                           renderContext.vulkanRenderContext.pipelineLayouts[0],
-                           renderContext.vulkanRenderContext.graphicsPipelines[0],
-                           "res/shaders/spv/simpleScene.vert.spv",
-                           "res/shaders/spv/simpleScene.frag.spv");
 }
 
 void cleanupRenderContext(const VulkanBaseContext &baseContext, VulkanRenderContext &renderContext) {
@@ -172,28 +182,11 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
                             VulkanRenderContext &renderContext,
                             VkPipelineLayout& pipelineLayout,
                             VkPipeline&       graphicsPipeline,
-                            std::string       vertexShaderPath,
-                            std::string       fragmentShaderPath) {
-    std::vector<char> vertexShaderCode;
-    std::vector<char> fragmentShaderCode;
+                            const Shader &vertexShader,
+                            const Shader &fragmentShader) {
 
-    if (!std::filesystem::exists(vertexShaderPath)) {
-        // TODO delete compileShader from this file, add it to file containing shader stuff
-        compileShader("simpleScene.vert");
-    }
-    if (!readFile(vertexShaderPath, vertexShaderCode)) {
-        throw std::runtime_error("failed to open vertex shader code!");
-    }
-
-    if (!std::filesystem::exists(fragmentShaderPath)) {
-        compileShader("simpleScene.frag");
-    }
-    if(!readFile(fragmentShaderPath, fragmentShaderCode)) {
-        throw std::runtime_error("failed to open fragment shader code!");
-    }
-
-    VkShaderModule vertShaderModule = createShaderModule(appContext.baseContext, vertexShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(appContext.baseContext, fragmentShaderCode);
+    VkShaderModule vertShaderModule = createShaderModule(appContext.baseContext, vertexShader);
+    VkShaderModule fragShaderModule = createShaderModule(appContext.baseContext, fragmentShader);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -389,41 +382,10 @@ void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &ren
 
 }
 
-VkShaderModule createShaderModule(const VulkanBaseContext &context, const std::vector<char> &code) {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
-
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(context.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create shader module!");
-    }
-
-    return shaderModule;
-}
-
-
-// Compiles a shader to SPIR-V format using a systemcall for "glslangValidator.exe".
-// The shader path has to be relative to the shaderDirectoryPath.
-void compileShader(const std::string &relativeShaderPath, const std::string &shaderDirectoryPath) {
-    std::string command = std::string(VULKAN_GLSLANG_VALIDATOR_PATH)
-                          + " -g --target-env vulkan1.1 -o \"" + shaderDirectoryPath
-                          + "../spv/" + relativeShaderPath + ".spv\" \""
-                          + shaderDirectoryPath + relativeShaderPath + "\"";
-    // this suppresses the console output from the command (command differs on windows and unix)
-    /*#if defined(_WIN32) || defined(_WIN64)
-        command += " > nul";
-    #else
-        command += " > /dev/null";
-    #endif*/
-    system(command.c_str());
-}
-
 // Builds a graphics pipeline and stores it in the secondary slot
 void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    compileShader("simpleScene.frag");
-    compileShader("simpleScene.vert");
+    compileShader(renderContext.vulkanRenderContext.vertexShader);
+    compileShader(renderContext.vulkanRenderContext.fragmentShader);
     if(renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex] != VK_NULL_HANDLE) {
         vkDestroyPipeline(appContext.baseContext.device,
                           renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex], nullptr);
@@ -436,8 +398,8 @@ void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext &appContext, 
                            renderContext.vulkanRenderContext,
                            renderContext.vulkanRenderContext.pipelineLayouts[!renderContext.vulkanRenderContext.activePipelineIndex],
                            renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex],
-                           "res/shaders/spv/simpleScene.vert.spv",
-                           "res/shaders/spv/simpleScene.frag.spv");
+                           renderContext.vulkanRenderContext.vertexShader,
+                           renderContext.vulkanRenderContext.fragmentShader);
 }
 
 // Swaps to the secondary graphics pipeline if it is valid
