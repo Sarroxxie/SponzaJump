@@ -46,10 +46,9 @@ void VulkanRenderer::render(Scene &scene) {
     // TODO remove once debug code is no longer needed
     frameNumber++;
     float angle = static_cast<float>(frameNumber) / 10000;
-    for (auto &object: scene.getObjects()) {
-        object.transformation.rotation = glm::vec3(0, angle, 0);
+    for (size_t i = 0; i < scene.getObjects().size(); i++) {
+        scene.getObjects()[i].transformation.rotation = glm::vec3(0, angle * (i % 2 == 0 ? 1 : -1), 0);
     }
-    // scene.getCameraRef().setViewDir(glm::vec3(-glm::sin(angle), 0, -glm::cos(angle)));
 
     updateUniformBuffer(scene);
 
@@ -239,7 +238,9 @@ void VulkanRenderer::createSyncObjects(VulkanBaseContext &baseContext) {
 void VulkanRenderer::updateUniformBuffer(Scene &scene) {
     SceneTransform sceneTransform;
 
-    sceneTransform.perspectiveTransform = getPerspectiveMatrix(m_RenderContext.renderSettings, m_Context.window->getWidth(), m_Context.window->getHeight());
+    sceneTransform.perspectiveTransform = getPerspectiveMatrix(m_RenderContext.renderSettings,
+                                                               m_Context.swapchainContext.swapChainExtent.width,
+                                                               m_Context.swapchainContext.swapChainExtent.height);
 
     // one tutorial says openGL has different convention for Y coordinates in clip space than vulkan, need to flip it
     sceneTransform.perspectiveTransform[1][1] *= -1;
