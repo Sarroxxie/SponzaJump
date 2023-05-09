@@ -3,6 +3,14 @@
 #include "Shader.h"
 #include "utils/FileUtils.h"
 
+VkShaderStageFlags getStageFlag(ShaderStage stage) {
+    switch (stage) {
+        case ShaderStage::VERTEX_SHADER: return VK_SHADER_STAGE_VERTEX_BIT;
+        case ShaderStage::FRAGMENT_SHADER: return VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+    return 0;
+}
+
 VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader &shader) {
     std::vector<char> shaderCode;
 

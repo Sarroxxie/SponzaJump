@@ -34,8 +34,8 @@ void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext &appContext, 
 
 bool swapGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
-VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderType);
+VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderStage);
 
-VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderType);
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage);
 
 #endif //GRAPHICSPRAKTIKUM_RENDERSETUP_H

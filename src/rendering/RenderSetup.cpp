@@ -12,17 +12,17 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
 
     RenderSetupDescription renderSetupDescription;
 
-    renderSetupDescription.vertexShader.shaderStage = VERTEX_SHADER;
+    renderSetupDescription.vertexShader.shaderStage = ShaderStage::VERTEX_SHADER;
     renderSetupDescription.vertexShader.shaderSourceName = "simpleScene.vert";
     renderSetupDescription.vertexShader.sourceDirectory = "res/shaders/source/";
     renderSetupDescription.vertexShader.spvDirectory = "res/shaders/spv/";
 
-    renderSetupDescription.fragmentShader.shaderStage = FRAGMENT_SHADER;
+    renderSetupDescription.fragmentShader.shaderStage = ShaderStage::FRAGMENT_SHADER;
     renderSetupDescription.fragmentShader.shaderSourceName = "simpleScene.frag";
     renderSetupDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
     renderSetupDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
-    renderSetupDescription.bindings.push_back(createUniformBufferLayoutBinding(0, 1, VERTEX_SHADER));
+    renderSetupDescription.bindings.push_back(createUniformBufferLayoutBinding(0, 1, ShaderStage::VERTEX_SHADER));
     /*
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
@@ -33,7 +33,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
     bindings.push_back(samplerLayoutBinding);
     */
 
-    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(0, sizeof(glm::mat4), VERTEX_SHADER));
+    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(0, sizeof(glm::mat4), ShaderStage::VERTEX_SHADER));
 
     initializeRenderContext(appContext, renderContext, renderSetupDescription);
 }
@@ -414,30 +414,24 @@ bool swapGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderCont
     }
 }
 
-VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderType) {
+VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderStage) {
     VkDescriptorSetLayoutBinding layoutBinding{};
     layoutBinding.binding = binding;
     layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layoutBinding.descriptorCount = descriptorCount;
-    switch (shaderType) {
-        case VERTEX_SHADER: layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        case FRAGMENT_SHADER: layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        default: layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    }
+
+    layoutBinding.stageFlags = getStageFlag(shaderStage);
+
     return layoutBinding;
 }
 
-VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderType) {
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage) {
     VkPushConstantRange pushConstantRange;
 
     pushConstantRange.offset = offset;
     pushConstantRange.size = size;
 
-    switch (shaderType) {
-        case VERTEX_SHADER: pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        case FRAGMENT_SHADER: pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        default: pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    }
+    pushConstantRange.stageFlags = getStageFlag(shaderStage);
 
     return pushConstantRange;
 }

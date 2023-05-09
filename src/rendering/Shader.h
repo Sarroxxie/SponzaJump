@@ -4,10 +4,12 @@
 #include <string>
 #include "vulkan/ApplicationContext.h"
 
-enum ShaderStage {
+enum class ShaderStage {
     VERTEX_SHADER,
-    FRAGMENT_SHADER
+    FRAGMENT_SHADER,
 };
+
+VkShaderStageFlags getStageFlag(ShaderStage stage);
 
 typedef struct shader_s
 {
