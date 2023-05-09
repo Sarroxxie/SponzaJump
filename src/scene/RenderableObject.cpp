@@ -47,3 +47,20 @@ const ObjectDef COLORED_CUBE_DEF = { std::vector<Vertex>({
                                                 1, 5, 7, 7, 3, 1 // right
                                                 }
                                        )};
+
+const ObjectDef COLORED_PYRAMID = { std::vector<Vertex>({
+                                                                   {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 0.0f}},
+                                                                   {{-1.0f, -1.0f,  1.0f}, {1.0f, 0.0f, 0.0f}},
+                                                                   {{ 1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+                                                                   {{ 1.0f, -1.0f,  1.0f}, {1.0f, 0.0f, 1.0f}},
+
+                                                                   {{ 0.0f,  0.0f,  0.0f}, {1.0f, 1.0f, 1.0f}},
+                                                           }),
+                                       std::vector<uint32_t>(
+                                               {0, 1, 3, 3, 2, 0, // bottom
+                                                0, 1, 4,
+                                                1, 3, 4,
+                                                3, 2, 4,
+                                                2, 0, 4
+                                                }
+                                       )};

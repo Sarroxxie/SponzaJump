@@ -29,7 +29,7 @@ int main() {
     scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(-0.5, 0.5, 0)));
     scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(0.5, -0.5, 0)));
      */
-    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, { glm::vec3(1, 0, 0), glm::vec3(0), glm::vec3(1)}));
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_PYRAMID, { glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0.5)}));
 
     scene.addObject(createObject(appContext.baseContext,
                                  appContext.commandContext,

@@ -48,5 +48,6 @@ typedef struct objectDef_s {
 extern const ObjectDef COLORED_TRIANGLE_DEF;
 extern const ObjectDef COLORED_SQUARE_DEF;
 extern const ObjectDef COLORED_CUBE_DEF;
+extern const ObjectDef COLORED_PYRAMID;
 
 #endif //GRAPHICSPRAKTIKUM_RENDERABLEOBJECT_H

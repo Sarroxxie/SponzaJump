@@ -43,10 +43,12 @@ void VulkanRenderer::render(Scene &scene) {
     vkResetCommandBuffer(m_Context.commandContext.commandBuffer, 0);
 
     // Slowly Rotating Camera/objects for testing
-    // might crash if scene is changed
+    // TODO remove once debug code is no longer needed
     frameNumber++;
     float angle = static_cast<float>(frameNumber) / 10000;
-    // scene.getObjects()[1].transformation.rotation = glm::vec3(0, angle, 0);
+    for (auto &object: scene.getObjects()) {
+        object.transformation.rotation = glm::vec3(0, angle, 0);
+    }
     // scene.getCameraRef().setViewDir(glm::vec3(-glm::sin(angle), 0, -glm::cos(angle)));
 
     updateUniformBuffer(scene);
