@@ -26,6 +26,9 @@ class Window
     void setResized(bool resized);
     bool wasResized();
 
+    int getWidth();
+    int getHeight();
+
     GLFWwindow *getWindowHandle();
 };
 

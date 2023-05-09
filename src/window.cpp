@@ -59,3 +59,11 @@ void Window::setResized(bool resized) {
 bool Window::wasResized() {
     return m_resized;
 }
+
+int Window::getWidth() {
+    return width;
+}
+
+int Window::getHeight() {
+    return height;
+}

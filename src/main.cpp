@@ -21,7 +21,7 @@ int main() {
     RenderContext renderContext;
     initializeRenderContext(appContext, renderContext);
 
-    Scene scene;
+    Scene scene(appContext.baseContext, renderContext);
 
     /*
     scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_SQUARE_DEF, glm::vec3(0.5, 0.5, 0.0)));
@@ -29,7 +29,12 @@ int main() {
     scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(-0.5, 0.5, 0)));
     scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(0.5, -0.5, 0)));
      */
-    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, glm::vec3(0.0, 0, 0.1)));
+    scene.addObject(createObject(appContext.baseContext, appContext.commandContext, COLORED_TRIANGLE_DEF, { glm::vec3(1, 0, 0), glm::vec3(0), glm::vec3(1)}));
+
+    scene.addObject(createObject(appContext.baseContext,
+                                 appContext.commandContext,
+                                 COLORED_CUBE_DEF,
+                                 { glm::vec3(-1, 0, 0), glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
 
     VulkanRenderer renderer(appContext, renderContext);
 

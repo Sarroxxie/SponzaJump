@@ -5,9 +5,9 @@
 
 #include <iostream>
 #include <algorithm>
+#include "RenderContext.h"
 
-
-VulkanRenderer::VulkanRenderer(ApplicationVulkanContext &context, RenderContext renderContext)
+VulkanRenderer::VulkanRenderer(ApplicationVulkanContext &context, RenderContext &renderContext)
         : m_Context(context), m_RenderContext(renderContext) {
     createSyncObjects(context.baseContext);
 }
@@ -41,6 +41,15 @@ void VulkanRenderer::render(Scene &scene) {
     vkResetFences(m_Context.baseContext.device, 1, &m_InFlightFence);
 
     vkResetCommandBuffer(m_Context.commandContext.commandBuffer, 0);
+
+    // Slowly Rotating Camera/objects for testing
+    // might crash if scene is changed
+    frameNumber++;
+    float angle = static_cast<float>(frameNumber) / 10000;
+    // scene.getObjects()[1].transformation.rotation = glm::vec3(0, angle, 0);
+    // scene.getCameraRef().setViewDir(glm::vec3(-glm::sin(angle), 0, -glm::cos(angle)));
+
+    updateUniformBuffer(scene);
 
     recordCommandBuffer(scene, imageIndex);
 
@@ -148,16 +157,16 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     // Without Index Buffer
     // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
 
-    /*
-    vkCmdBindDescriptorSets(commandBuffer,
+
+    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipelineLayout,
+                            m_RenderContext.vulkanRenderContext.pipelineLayouts[m_RenderContext.vulkanRenderContext.activePipelineIndex],
                             0,
                             1,
-                            &descriptorSets[currentFrame],
+                            scene.getDescriptorSet(),
                             0,
                             nullptr);
-    */
+
 
     auto sceneObjects = scene.getObjects();
 
@@ -168,6 +177,14 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
         vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
 
         vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        glm::mat4 objectTransform = object.transformation.getMatrix();
+
+        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                           m_RenderContext.vulkanRenderContext.pipelineLayouts[m_RenderContext.vulkanRenderContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
+                           0, // offset
+                           sizeof(glm::mat4),
+                           &objectTransform);
 
         vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, object.indicesCount, 1, 0, 0, 0);
     }
@@ -216,6 +233,21 @@ void VulkanRenderer::createSyncObjects(VulkanBaseContext &baseContext) {
     }
 
 }
+
+void VulkanRenderer::updateUniformBuffer(Scene &scene) {
+    SceneTransform sceneTransform;
+
+    sceneTransform.perspectiveTransform = getPerspectiveMatrix(m_RenderContext.renderSettings, m_Context.window->getWidth(), m_Context.window->getHeight());
+
+    // one tutorial says openGL has different convention for Y coordinates in clip space than vulkan, need to flip it
+    sceneTransform.perspectiveTransform[1][1] *= -1;
+
+    sceneTransform.cameraTransform = scene.getCameraRef().getCameraMatrix();
+
+    // PushConstants would be more efficient for often changing small data buffers
+    memcpy(scene.getUniformBufferMapping(), &sceneTransform, sizeof(sceneTransform));
+}
+
 
 void VulkanRenderer::recompileToSecondaryPipeline() {
     buildSecondaryGraphicsPipeline(m_Context, m_RenderContext);

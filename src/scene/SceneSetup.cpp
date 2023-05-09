@@ -2,28 +2,20 @@
 #include "SceneSetup.h"
 #include "vulkan/VulkanUtils.h"
 
-RenderableObject createObject(VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, glm::vec3 offset) {
+RenderableObject createObject(VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, Transformation transformation) {
     RenderableObject object;
+    object.transformation = transformation;
 
-    createSampleVertexBuffer(context, commandContext, objectDef, object, offset);
+    createSampleVertexBuffer(context, commandContext, objectDef, object);
     createSampleIndexBuffer(context, commandContext, objectDef, object);
 
     return object;
 }
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object, glm::vec3 offset) {
-    std::vector<Vertex> shiftedVertices(objectDef.vertices.size());
+void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object) {
+    object.verticesCount = objectDef.vertices.size();
 
-    object.offset = offset;
-
-    std::transform(objectDef.vertices.begin(),
-                   objectDef.vertices.end(),
-                   shiftedVertices.begin(),
-                   [offset](Vertex v) -> Vertex { return {v.pos + offset, v.color}; });
-
-    object.verticesCount = shiftedVertices.size();
-
-    VkDeviceSize bufferSize = sizeof(shiftedVertices[0]) * object.verticesCount;
+    VkDeviceSize bufferSize = sizeof(objectDef.vertices[0]) * object.verticesCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -39,7 +31,7 @@ void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &comman
     vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
     // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, shiftedVertices.data(), (size_t) bufferSize);
+    memcpy(data, objectDef.vertices.data(), (size_t) bufferSize);
     vkUnmapMemory(context.device, stagingBufferMemory);
 
     createBuffer(context,

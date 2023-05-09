@@ -19,15 +19,15 @@ void initializeGraphicsApplication(ApplicationVulkanContext &appContext) {
 }
 
 void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
+    createDescriptorSetLayout(appContext.baseContext, renderContext.vulkanRenderContext);
+
     initializeVulkanRenderContext(appContext, renderContext);
     createFrameBuffers(appContext, renderContext);
 
-    createDescriptorSetLayout(appContext, renderContext);
-    /*
-    createUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
-     */
+    auto &settings = renderContext.renderSettings;
+    settings.fov = glm::radians(45.0f);
+    settings.nearPlane = 0.1;
+    settings.farPlane = 100;
 }
 
 void initializeBaseVulkan(ApplicationVulkanContext &appContext) {
@@ -53,7 +53,9 @@ void initializeVulkanRenderContext(ApplicationVulkanContext &appContext, RenderC
     createGraphicsPipeline(appContext,
                            renderContext.vulkanRenderContext,
                            renderContext.vulkanRenderContext.pipelineLayouts[0],
-                           renderContext.vulkanRenderContext.graphicsPipelines[0]);
+                           renderContext.vulkanRenderContext.graphicsPipelines[0],
+                           "res/shaders/spv/simpleScene.vert.spv",
+                           "res/shaders/spv/simpleScene.frag.spv");
 }
 
 
@@ -118,9 +120,12 @@ void cleanupBaseVulkanRessources(VulkanBaseContext &baseContext) {
 }
 
 void cleanupRenderContext(VulkanBaseContext &baseContext, VulkanRenderContext &renderContext) {
+    vkDestroyDescriptorSetLayout(baseContext.device, renderContext.descriptorSetLayout, nullptr);
+
     // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
     vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[0], nullptr);
     vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[0], nullptr);
+
     if(renderContext.graphicsPipelines[1] != VK_NULL_HANDLE) {
         vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[1], nullptr);
         vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[1], nullptr);
@@ -525,33 +530,35 @@ VkFormat findSupportedFormat(VulkanBaseContext &context, const std::vector<VkFor
     throw std::runtime_error("failed to find supported format!");
 }
 
-void createDescriptorSetLayout(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    // TODO: currently empty, this is used to create descriptors for shaders, so we can pass data -> Maybe use some sort of struct to define what we want, so we don't have to hardcode it.
-    // -> currently setting DescriptorSetLayouts for pipelineLayoutInfo in createGraphicsPipeline is commented out
-    /*
+void createDescriptorSetLayout(VulkanBaseContext &context, VulkanRenderContext &renderContext) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings.push_back(uboLayoutBinding);
 
+    /*
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
     samplerLayoutBinding.descriptorCount = 2;
     samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerLayoutBinding.pImmutableSamplers = nullptr;
     samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings.push_back(samplerLayoutBinding);
+    */
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    if (vkCreateDescriptorSetLayout(context.device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(context.device, &layoutInfo, nullptr, &renderContext.descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout!");
     }
-     */
 }
 
 void createGraphicsPipeline(ApplicationVulkanContext &appContext,
@@ -560,19 +567,18 @@ void createGraphicsPipeline(ApplicationVulkanContext &appContext,
                             VkPipeline&       graphicsPipeline,
                             std::string       vertexShaderPath,
                             std::string       fragmentShaderPath) {
-    // TODO hardcoded shaders to display triangle
     std::vector<char> vertexShaderCode;
     std::vector<char> fragmentShaderCode;
 
     if (!std::filesystem::exists(vertexShaderPath)) {
-        compileShader("triangle.vert");
+        compileShader("simpleScene.vert");
     }
     if (!readFile(vertexShaderPath, vertexShaderCode)) {
         throw std::runtime_error("failed to open vertex shader code!");
     }
 
     if (!std::filesystem::exists(fragmentShaderPath)) {
-        compileShader("triangle.frag");
+        compileShader("simpleScene.frag");
     }
     if(!readFile(fragmentShaderPath, fragmentShaderCode)) {
         throw std::runtime_error("failed to open fragment shader code!");
@@ -686,11 +692,20 @@ void createGraphicsPipeline(ApplicationVulkanContext &appContext,
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0; // Optional
 
-    //pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout; // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &renderContext.descriptorSetLayout;
+
+    VkPushConstantRange pushConstantRange;
+    //this push constant range starts at the beginning
+    pushConstantRange.offset = 0;
+    //this push constant range takes up the size of a MeshPushConstants struct
+    pushConstantRange.size = sizeof(glm::mat4);
+    //this push constant range is accessible only in the vertex shader
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo, nullptr,
                               &pipelineLayout)
@@ -845,8 +860,8 @@ void createCommandBuffers(VulkanBaseContext &baseContext, CommandContext &comman
 
 // Builds a graphics pipeline and stores it in the secondary slot
 void buildSecondaryGraphicsPipeline(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    compileShader("triangle.frag");
-    compileShader("triangle.vert");
+    compileShader("simpleScene.frag");
+    compileShader("simpleScene.vert");
     if(renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex] != VK_NULL_HANDLE) {
         vkDestroyPipeline(appContext.baseContext.device,
                           renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex], nullptr);
@@ -858,7 +873,9 @@ void buildSecondaryGraphicsPipeline(ApplicationVulkanContext &appContext, Render
     createGraphicsPipeline(appContext,
                            renderContext.vulkanRenderContext,
                            renderContext.vulkanRenderContext.pipelineLayouts[!renderContext.vulkanRenderContext.activePipelineIndex],
-                           renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex]);
+                           renderContext.vulkanRenderContext.graphicsPipelines[!renderContext.vulkanRenderContext.activePipelineIndex],
+                           "res/shaders/spv/simpleScene.vert.spv",
+                           "res/shaders/spv/simpleScene.frag.spv");
 }
 
 // Swaps to the secondary graphics pipeline if it is valid

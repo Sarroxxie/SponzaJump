@@ -5,7 +5,8 @@
 #include <vector>
 #include "window.h"
 #include "VulkanSettings.h"
-#include "VulkanContext.h"
+#include "ApplicationContext.h"
+#include "RenderContext.h"
 
 void initializeGraphicsApplication(ApplicationVulkanContext &appContext);
 
@@ -58,7 +59,7 @@ VkFormat findDepthFormat(VulkanBaseContext &context);
 VkFormat findSupportedFormat(VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features);
 
-void createDescriptorSetLayout(ApplicationVulkanContext &appContext, RenderContext &renderContext);
+void createDescriptorSetLayout(VulkanBaseContext &context, VulkanRenderContext &renderContext);
 
 void createGraphicsPipeline(ApplicationVulkanContext &appContext,
                             VulkanRenderContext &renderContext,

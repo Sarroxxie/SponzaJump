@@ -5,9 +5,10 @@
 #define GRAPHICSPRAKTIKUM_VULKANRENDERER_H
 
 
-#include "VulkanContext.h"
+#include "ApplicationContext.h"
 #include "window.h"
 #include "scene/Scene.h"
+#include "RenderContext.h"
 #include <vulkan/vulkan_core.h>
 
 class VulkanRenderer {
@@ -20,8 +21,10 @@ private:
     ApplicationVulkanContext &m_Context;
     RenderContext &m_RenderContext;
 
+    int frameNumber = 0;
+
 public:
-    VulkanRenderer(ApplicationVulkanContext &context, RenderContext renderContext);
+    VulkanRenderer(ApplicationVulkanContext &context, RenderContext &renderContext);
 
     void cleanVulkanRessources();
 
@@ -38,6 +41,8 @@ private:
     void recordCommandBuffer(Scene &scene, uint32_t imageIndex);
 
     void createSyncObjects(VulkanBaseContext &baseContext);
+
+    void updateUniformBuffer(Scene &scene);
 };
 
 
