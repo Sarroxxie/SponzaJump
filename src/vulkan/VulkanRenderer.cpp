@@ -160,6 +160,11 @@ void VulkanRenderer::recordCommandBuffer(SwapchainContext &swapchainContext, Ren
 
     vkCmdDrawIndexed(renderContext.commandBuffer, 3, 1, 0, 0, 0);
 
+    // @IMGUI
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
+                                    m_Context.renderContext.commandBuffer);
+
     vkCmdEndRenderPass(renderContext.commandBuffer);
 
     if (vkEndCommandBuffer(renderContext.commandBuffer) != VK_SUCCESS) {

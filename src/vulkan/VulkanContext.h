@@ -55,6 +55,9 @@ typedef struct
 
     VkCommandPool commandPool;
 
+    // @IMGUI
+    VkDescriptorPool imGuiDescriptorPool = VK_NULL_HANDLE;
+
     // TODO might want a vector of commandBuffers here later, so we can record
     // another one while the previous frame is still rendering, that way we can
     // have multiple frames in flight

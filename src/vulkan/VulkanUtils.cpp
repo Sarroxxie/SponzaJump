@@ -4,6 +4,7 @@
 #include "VulkanUtils.h"
 #include "VulkanSettings.h"
 #include "VulkanSetup.h"
+#include <algorithm>
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
                                       const VkAllocationCallbacks *pAllocator,

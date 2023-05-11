@@ -23,6 +23,8 @@ void cleanupSwapChain(VulkanBaseContext &baseContext, SwapchainContext &swapchai
 
 void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderContext);
 
+void cleanupImGuiContext(VulkanBaseContext& baseContext, RenderContext& renderContext);
+
 void createInstance(VulkanBaseContext &context);
 
 std::vector<const char *> getRequiredExtensions();
@@ -83,4 +85,5 @@ bool swapGraphicsPipeline(ApplicationContext &appContext);
 
 void compileShader(std::string path, std::string shaderDirectoryPath = "res/shaders/source/");
 
+void initializeImGui(ApplicationContext& appContext);
 #endif  // GRAPHICSPRAKTIKUM_VULKANSETUP_H

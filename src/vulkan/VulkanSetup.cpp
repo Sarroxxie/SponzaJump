@@ -18,6 +18,8 @@ void initializeGraphicsApplication(ApplicationContext &appContext) {
     initializeSwapChain(appContext);
     initializeRenderContext(appContext);
 
+    initializeImGui(appContext);
+
     createFrameBuffers(appContext);
 
     createVertexBuffer(appContext);
@@ -100,6 +102,8 @@ void cleanupVulkan(ApplicationContext &appContext) {
     cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
 
     cleanupRenderContext(appContext.baseContext, appContext.renderContext);
+    // TODO: create own context for imgui maybe
+    cleanupImGuiContext(appContext.baseContext, appContext.renderContext);
 
     cleanupBaseVulkanRessources(appContext.baseContext);
 }
@@ -134,6 +138,14 @@ void cleanupRenderContext(VulkanBaseContext &baseContext, RenderContext &renderC
 
     vkDestroyBuffer(baseContext.device, renderContext.object.vertexBuffer, nullptr);
     vkFreeMemory(baseContext.device, renderContext.object.vertexBufferMemory, nullptr);
+}
+
+// @IMGUI
+void cleanupImGuiContext(VulkanBaseContext& baseContext, RenderContext& renderContext) {
+    vkDestroyDescriptorPool(baseContext.device, renderContext.imGuiDescriptorPool, nullptr);
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 std::vector<const char *> getRequiredExtensions() {
@@ -341,6 +353,14 @@ void recreateSwapChain(ApplicationContext &appContext) {
         glfwWaitEvents();
     }
 
+    // @IMGUI
+    if(ImGui::GetCurrentContext() != nullptr) {
+        ImGui::EndFrame();
+        auto& imguiIO = ImGui::GetIO();
+        imguiIO.DisplaySize =
+            ImVec2(static_cast<float>(width), static_cast<float>(height));
+    }
+
     vkDeviceWaitIdle(appContext.baseContext.device);
 
     cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
@@ -466,7 +486,7 @@ void createRenderPass(ApplicationContext &appContext) {
         colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference colorAttachmentResolveRef{};
         colorAttachmentResolveRef.attachment = 2;
@@ -488,11 +508,13 @@ void createRenderPass(ApplicationContext &appContext) {
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
 
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.srcAccessMask = 0;
+    // @IMGUI
+    dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT; // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
+    // @IMGUI
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
@@ -572,7 +594,6 @@ void createGraphicsPipeline(ApplicationContext &appContext,
     if (!readFile(vertexShaderPath, vertexShaderCode)) {
         throw std::runtime_error("failed to open vertex shader code!");
     }
-
     if (!std::filesystem::exists(fragmentShaderPath)) {
         compileShader("triangle.frag");
     }
@@ -951,7 +972,7 @@ bool swapGraphicsPipeline(ApplicationContext &appContext) {
 // The shader path has to be relative to the shaderDirectoryPath.
 void compileShader(std::string relativeShaderPath, std::string shaderDirectoryPath) {
     std::string command = std::string(VULKAN_GLSLANG_VALIDATOR_PATH)
-                          + " -g --target-env vulkan1.1 -o \"" + shaderDirectoryPath
+                          + " -g --target-env vulkan1.0 -o \"" + shaderDirectoryPath
                           + "../spv/" + relativeShaderPath + ".spv\" \""
                           + shaderDirectoryPath + relativeShaderPath + "\"";
     // this suppresses the console output from the command (command differs on windows and unix)
@@ -961,4 +982,71 @@ void compileShader(std::string relativeShaderPath, std::string shaderDirectoryPa
         command += " > /dev/null";
     #endif*/
     system(command.c_str());
+}
+
+// @IMGUI
+// Heavily inspired by "https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/main.cpp"
+void initializeImGui(ApplicationContext& appContext) {
+    // Create ImGui Context and set style
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    // TODO: is this line necessary?
+    //io.IniFilename = nullptr;
+    //io.LogFilename = nullptr;
+    ImGui::StyleColorsDark();
+
+    // Create Descriptor Pool for ImGui
+    //ImGui_ImplGlfw_InitForVulkan(appContext.window->getWindowHandle(), true);
+    // TODO: need to call 
+    // "vkDestroyDescriptorPool(g_Device, g_DescriptorPool, nullptr);" somewhere!!
+    //       -> save handle to descriptor pool somewhere
+    VkDescriptorPoolSize poolSizes[]    = {
+        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    poolInfo.maxSets       = 1000 * IM_ARRAYSIZE(poolSizes);
+    poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
+    poolInfo.pPoolSizes    = poolSizes;
+    vkCreateDescriptorPool(appContext.baseContext.device, &poolInfo, nullptr,
+                           &appContext.renderContext.imGuiDescriptorPool);
+
+    // initializes ImGui
+    uint32_t imageCount;
+    vkGetSwapchainImagesKHR(appContext.baseContext.device,
+                            appContext.swapchainContext.swapChain, &imageCount, nullptr);
+    ImGui_ImplVulkan_InitInfo initInfo = {};
+    initInfo.Instance                  = appContext.baseContext.instance;
+    initInfo.PhysicalDevice            = appContext.baseContext.physicalDevice;
+    initInfo.Device                    = appContext.baseContext.device;
+    initInfo.QueueFamily    = appContext.baseContext.graphicsQueueFamily;
+    initInfo.Queue          = appContext.baseContext.graphicsQueue;
+    initInfo.PipelineCache  = VK_NULL_HANDLE;
+    initInfo.DescriptorPool = appContext.renderContext.imGuiDescriptorPool;
+    // TODO: check for interference here
+    initInfo.Subpass        = 0;
+    initInfo.Allocator      = VK_NULL_HANDLE;
+    // TODO: find out if these are the correct values
+    initInfo.MinImageCount = 2;
+    initInfo.ImageCount = imageCount;
+    // TODO: could implement to check for errors
+    initInfo.CheckVkResultFn = nullptr;
+    ImGui_ImplVulkan_Init(&initInfo, appContext.renderContext.renderPass);
+
+        // Upload fonts to GPU
+    VkCommandBuffer commandBuffer =
+        beginSingleTimeCommands(appContext.baseContext, appContext.renderContext);
+    ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+    endSingleTimeCommands(appContext.baseContext, appContext.renderContext, commandBuffer);
 }
