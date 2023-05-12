@@ -17,7 +17,7 @@ VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader
     std::string fullCompiledName = shader.spvDirectory + shader.getCompiledName();
 
     if (!std::filesystem::exists(fullCompiledName)) {
-        compileShader(shader);
+        compileShader(shader, context.maxSupportedMinorVersion);
     }
 
     if (!readFile(fullCompiledName, shaderCode)) {
@@ -37,11 +37,11 @@ VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader
     return shaderModule;
 }
 
-void compileShader(const Shader &shader) {
+void compileShader(const Shader &shader, uint32_t minorVersionTarget) {
     std::string command = std::string(VULKAN_GLSLANG_VALIDATOR_PATH)
-                          + " -g --target-env vulkan1.1 -o \""
-                          + shader.spvDirectory + shader.getCompiledName() + "\" \""
-                          + shader.sourceDirectory + shader.shaderSourceName + "\"";
+                          + " -g --target-env vulkan1." + std::to_string(minorVersionTarget) + " -o "
+                          + shader.spvDirectory + shader.getCompiledName() + " "
+                          + shader.sourceDirectory + shader.shaderSourceName;
     // this suppresses the console output from the command (command differs on windows and unix)
     /*#if defined(_WIN32) || defined(_WIN64)
         command += " > nul";

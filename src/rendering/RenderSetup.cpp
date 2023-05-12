@@ -387,8 +387,8 @@ void createFrameBuffers(ApplicationVulkanContext &appContext, RenderContext &ren
 
 // Builds a graphics pipeline and stores it in the secondary slot
 void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
-    compileShader(renderContext.renderSetupDescription.vertexShader);
-    compileShader(renderContext.renderSetupDescription.fragmentShader);
+    compileShader(renderContext.renderSetupDescription.vertexShader, appContext.baseContext.maxSupportedMinorVersion);
+    compileShader(renderContext.renderSetupDescription.fragmentShader, appContext.baseContext.maxSupportedMinorVersion);
     if(renderContext.renderPassContext.graphicsPipelines[!renderContext.renderPassContext.activePipelineIndex] != VK_NULL_HANDLE) {
         vkDestroyPipeline(appContext.baseContext.device,
                           renderContext.renderPassContext.graphicsPipelines[!renderContext.renderPassContext.activePipelineIndex], nullptr);

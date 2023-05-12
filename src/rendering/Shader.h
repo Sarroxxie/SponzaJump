@@ -26,6 +26,6 @@ typedef struct shader_s
 
 VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader &shader);
 
-void compileShader(const Shader &shader);
+void compileShader(const Shader &shader, uint32_t minorVersionTarget);
 
 #endif //GRAPHICSPRAKTIKUM_SHADER_H

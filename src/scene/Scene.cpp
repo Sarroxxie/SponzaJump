@@ -98,6 +98,7 @@ void Scene::createDescriptorSets(VulkanBaseContext &baseContext, RenderContext &
 
     VkWriteDescriptorSet descriptorWrite;
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.pNext = nullptr;
     descriptorWrite.dstSet = descriptorSet;
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;

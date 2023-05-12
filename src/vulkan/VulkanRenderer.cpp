@@ -27,6 +27,7 @@ void VulkanRenderer::render(Scene &scene) {
 
     vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
 
+    // TODO this causes validation layer errors on some machines because semaphore is signalled after recreation
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(m_Context.baseContext.device, m_Context.swapchainContext.swapChain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
@@ -45,7 +46,7 @@ void VulkanRenderer::render(Scene &scene) {
     // Slowly Rotating Camera/objects for testing
     // TODO remove once debug code is no longer needed
     frameNumber++;
-    float angle = static_cast<float>(frameNumber) / 10000;
+    float angle = static_cast<float>(frameNumber) / 4000;
     for (size_t i = 0; i < scene.getObjects().size(); i++) {
         scene.getObjects()[i].transformation.rotation = glm::vec3(0, angle * (i % 2 == 0 ? 1 : -1), 0);
     }
@@ -66,6 +67,7 @@ void VulkanRenderer::render(Scene &scene) {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_Context.commandContext.commandBuffer;
 
+    // TODO Vulkan Layers throw error one reisze to very small window ?
     VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;

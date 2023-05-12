@@ -16,6 +16,8 @@ typedef struct {
     uint32_t graphicsQueueFamily;
     VkQueue graphicsQueue;
     VkQueue presentQueue;
+
+    uint32_t maxSupportedMinorVersion = 0;
 } VulkanBaseContext;
 
 typedef struct {

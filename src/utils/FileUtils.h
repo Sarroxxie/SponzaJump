@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <fstream>
+#include <filesystem>
 
 static bool readFile(const std::string& filename, std::vector<char> &result) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
