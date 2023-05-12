@@ -200,8 +200,18 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, sceneObjects[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 
+    vkCmdEndRenderPass(renderContext.commandBuffer);
+
     vkCmdDrawIndexed(appContext.commandContext.commandBuffer, 3, 1, 0, 0, 0);
 */
+
+    if (m_RenderContext.usesImgui) {
+        // @IMGUI
+        ImGui::Render();
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
+                                        m_Context.commandContext.commandBuffer);
+    }
+
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 
     if (vkEndCommandBuffer(m_Context.commandContext.commandBuffer) != VK_SUCCESS) {

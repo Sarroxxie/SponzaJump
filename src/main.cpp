@@ -28,20 +28,35 @@ int main() {
     scene.addObject(createObject(appContext.baseContext,
                                  appContext.commandContext,
                                  COLORED_PYRAMID,
-                                 { glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0.5) }));
+                                 {glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0.5)}));
 
     scene.addObject(createObject(appContext.baseContext,
                                  appContext.commandContext,
                                  COLORED_CUBE_DEF,
-                                 { glm::vec3(-1, 0, 0), glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
+                                 {glm::vec3(-1, 0, 0), glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
 
     VulkanRenderer renderer(appContext, renderContext);
 
     // passes reference to the renderer to the key callback function
-    glfwSetWindowUserPointer(window.getWindowHandle(), (void*) &renderer);
+    glfwSetWindowUserPointer(window.getWindowHandle(), (void *) &renderer);
 
-    while(!glfwWindowShouldClose(window.getWindowHandle())) {
+    if (renderContext.usesImgui) {
+        ImGui_ImplGlfw_InitForVulkan(window.getWindowHandle(), true);
+    }
+
+    while (!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();
+
+        if (renderContext.usesImgui) {
+            // @IMGUI
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            ImGui::Begin("Debug");
+            ImGui::Text("Average Frametime: %.3f ms", 1000.0f / ImGui::GetIO().Framerate);
+            ImGui::Text("Average Framerate: %.1f FPS", ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
 
         renderer.render(scene);
     }
@@ -49,7 +64,7 @@ int main() {
 
     scene.cleanup(appContext.baseContext);
     renderer.cleanVulkanRessources();
-    cleanupRenderContext(appContext.baseContext, renderContext.renderPassContext);
+    cleanupRenderContext(appContext.baseContext, renderContext);
     cleanupVulkanApplication(appContext);
 
     return 0;

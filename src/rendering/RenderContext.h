@@ -28,6 +28,10 @@ typedef struct
 } RenderPassContext;
 
 typedef struct {
+    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+} ImguiContext;
+
+typedef struct {
     float fov;
     float nearPlane;
     float farPlane;
@@ -39,6 +43,10 @@ static inline glm::mat4 getPerspectiveMatrix(RenderSettings renderSettings, size
 
 typedef struct {
     RenderPassContext renderPassContext;
+
+    bool usesImgui;
+    ImguiContext imguiContext;
+
     RenderSettings renderSettings;
 
     RenderSetupDescription renderSetupDescription;

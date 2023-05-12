@@ -11,6 +11,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
     settings.farPlane = 100;
 
     RenderSetupDescription renderSetupDescription;
+    renderSetupDescription.enableImgui = true;
 
     renderSetupDescription.vertexShader.shaderStage = ShaderStage::VERTEX_SHADER;
     renderSetupDescription.vertexShader.shaderSourceName = "simpleScene.vert";
@@ -44,6 +45,11 @@ void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext
     initializeRenderPassContext(appContext, renderContext, renderSetupDescription);
     createFrameBuffers(appContext, renderContext);
     renderContext.renderSetupDescription = renderSetupDescription;
+
+    renderContext.usesImgui = renderSetupDescription.enableImgui;
+    if (renderContext.usesImgui) {
+        initializeImGui(appContext, renderContext);
+    }
 }
 
 void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription) {
@@ -67,21 +73,31 @@ void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassConte
     }
 }
 
-void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderPassContext &renderContext) {
-    vkDestroyDescriptorSetLayout(baseContext.device, renderContext.descriptorSetLayout, nullptr);
-
-    // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
-    vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[0], nullptr);
-    vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[0], nullptr);
-
-    if(renderContext.graphicsPipelines[1] != VK_NULL_HANDLE) {
-        vkDestroyPipeline(baseContext.device, renderContext.graphicsPipelines[1], nullptr);
-        vkDestroyPipelineLayout(baseContext.device, renderContext.pipelineLayouts[1], nullptr);
+void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderContext &renderContext) {
+    if (renderContext.usesImgui) {
+        cleanupImGuiContext(baseContext, renderContext);
     }
 
-    vkDestroyRenderPass(baseContext.device, renderContext.renderPass, nullptr);
+    vkDestroyDescriptorSetLayout(baseContext.device, renderContext.renderPassContext.descriptorSetLayout, nullptr);
+
+    // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
+    vkDestroyPipeline(baseContext.device, renderContext.renderPassContext.graphicsPipelines[0], nullptr);
+    vkDestroyPipelineLayout(baseContext.device, renderContext.renderPassContext.pipelineLayouts[0], nullptr);
+
+    if(renderContext.renderPassContext.graphicsPipelines[1] != VK_NULL_HANDLE) {
+        vkDestroyPipeline(baseContext.device, renderContext.renderPassContext.graphicsPipelines[1], nullptr);
+        vkDestroyPipelineLayout(baseContext.device, renderContext.renderPassContext.pipelineLayouts[1], nullptr);
+    }
+
+    vkDestroyRenderPass(baseContext.device, renderContext.renderPassContext.renderPass, nullptr);
 }
 
+void cleanupImGuiContext(const VulkanBaseContext& baseContext, RenderContext& renderContext) {
+    vkDestroyDescriptorPool(baseContext.device, renderContext.imguiContext.descriptorPool, nullptr);
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
 
 void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     VkAttachmentDescription colorAttachment{};
@@ -434,4 +450,72 @@ VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, Shad
     pushConstantRange.stageFlags = getStageFlag(shaderStage);
 
     return pushConstantRange;
+}
+
+
+// @IMGUI
+// Heavily inspired by "https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/main.cpp"
+void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext &renderContext) {
+    // Create ImGui Context and set style
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    // TODO: is this line necessary?
+    //io.IniFilename = nullptr;
+    //io.LogFilename = nullptr;
+    ImGui::StyleColorsDark();
+
+    // Create Descriptor Pool for ImGui
+    //ImGui_ImplGlfw_InitForVulkan(appContext.window->getWindowHandle(), true);
+    // TODO: need to call
+    // "vkDestroyDescriptorPool(g_Device, g_DescriptorPool, nullptr);" somewhere!!
+    //       -> save handle to descriptor pool somewhere
+    VkDescriptorPoolSize poolSizes[]    = {
+            {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    poolInfo.maxSets       = 1000 * IM_ARRAYSIZE(poolSizes);
+    poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
+    poolInfo.pPoolSizes    = poolSizes;
+    vkCreateDescriptorPool(appContext.baseContext.device, &poolInfo, nullptr,
+                           &renderContext.imguiContext.descriptorPool);
+
+    // initializes ImGui
+    uint32_t imageCount;
+    vkGetSwapchainImagesKHR(appContext.baseContext.device,
+                            appContext.swapchainContext.swapChain, &imageCount, nullptr);
+    ImGui_ImplVulkan_InitInfo initInfo = {};
+    initInfo.Instance                  = appContext.baseContext.instance;
+    initInfo.PhysicalDevice            = appContext.baseContext.physicalDevice;
+    initInfo.Device                    = appContext.baseContext.device;
+    initInfo.QueueFamily    = appContext.baseContext.graphicsQueueFamily;
+    initInfo.Queue          = appContext.baseContext.graphicsQueue;
+    initInfo.PipelineCache  = VK_NULL_HANDLE;
+    initInfo.DescriptorPool = renderContext.imguiContext.descriptorPool;
+    // TODO: check for interference here
+    initInfo.Subpass        = 0;
+    initInfo.Allocator      = VK_NULL_HANDLE;
+    // TODO: find out if these are the correct values
+    initInfo.MinImageCount = 2;
+    initInfo.ImageCount = imageCount;
+    // TODO: could implement to check for errors
+    initInfo.CheckVkResultFn = nullptr;
+    ImGui_ImplVulkan_Init(&initInfo, renderContext.renderPassContext.renderPass);
+
+    // Upload fonts to GPU
+    VkCommandBuffer commandBuffer =
+            beginSingleTimeCommands(appContext.baseContext, appContext.commandContext);
+    ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+    endSingleTimeCommands(appContext.baseContext, appContext.commandContext, commandBuffer);
 }

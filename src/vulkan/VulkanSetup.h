@@ -53,5 +53,4 @@ void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swap
 void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings);
 
 void createCommandBuffers(VulkanBaseContext &baseContext, CommandContext &commandContext);
-
 #endif  // GRAPHICSPRAKTIKUM_VULKANSETUP_H

@@ -13,6 +13,8 @@ typedef struct
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
     std::vector<VkPushConstantRange> pushConstantRanges;
+
+    bool enableImgui;
 } RenderSetupDescription;
 
 #endif //GRAPHICSPRAKTIKUM_RENDERSETUPDESCRIPTION_H

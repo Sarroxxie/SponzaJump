@@ -16,7 +16,6 @@ void initializeGraphicsApplication(ApplicationVulkanContext &appContext) {
     initializeBaseVulkan(appContext);
     initializeSwapChain(appContext);
     initializeCommandContext(appContext);
-
 }
 
 void initializeBaseVulkan(ApplicationVulkanContext &appContext) {
@@ -312,6 +311,14 @@ void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &rend
     while (width == 0 || height == 0) {
         glfwGetFramebufferSize(appContext.window->getWindowHandle(), &width, &height);
         glfwWaitEvents();
+    }
+
+    // @IMGUI
+    if(ImGui::GetCurrentContext() != nullptr) {
+        ImGui::EndFrame();
+        auto& imguiIO = ImGui::GetIO();
+        imguiIO.DisplaySize =
+            ImVec2(static_cast<float>(width), static_cast<float>(height));
     }
 
     vkDeviceWaitIdle(appContext.baseContext.device);

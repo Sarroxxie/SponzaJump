@@ -4,6 +4,7 @@
 #include "VulkanUtils.h"
 #include "VulkanSettings.h"
 #include "VulkanSetup.h"
+#include <algorithm>
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
                                       const VkAllocationCallbacks *pAllocator,
@@ -258,7 +259,7 @@ void copyBuffer(VulkanBaseContext &context, CommandContext &commandContext, VkBu
     endSingleTimeCommands(context, commandContext, commandBuffer);
 }
 
-VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext) {
+VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext &context, const CommandContext &commandContext) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -277,7 +278,7 @@ VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext &context, CommandConte
     return commandBuffer;
 }
 
-void endSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext, VkCommandBuffer commandBuffer) {
+void endSingleTimeCommands(const VulkanBaseContext &context, const CommandContext &commandContext, VkCommandBuffer commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};

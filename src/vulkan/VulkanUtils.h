@@ -125,9 +125,9 @@ void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFl
 
 void copyBuffer(VulkanBaseContext &context, CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-VkCommandBuffer beginSingleTimeCommands(VulkanBaseContext  &context, CommandContext &commandContext);
+VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext  &context, const CommandContext &commandContext);
 
-void endSingleTimeCommands(VulkanBaseContext &context, CommandContext &commandContext, VkCommandBuffer commandBuffer);
+void endSingleTimeCommands(const VulkanBaseContext &context, const CommandContext &commandContext, VkCommandBuffer commandBuffer);
 
 uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

@@ -18,7 +18,9 @@ void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassConte
 
 void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
 
-void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderPassContext &renderContext);
+void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderContext &renderContext);
+
+void cleanupImGuiContext(const VulkanBaseContext& baseContext, RenderContext& renderContext);
 
 void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext &renderContext);
 
@@ -37,5 +39,7 @@ bool swapGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderCont
 VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderStage);
 
 VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage);
+
+void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext &renderContext);
 
 #endif //GRAPHICSPRAKTIKUM_RENDERSETUP_H
