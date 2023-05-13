@@ -43,12 +43,14 @@ void VulkanRenderer::render(Scene &scene) {
 
     vkResetCommandBuffer(m_Context.commandContext.commandBuffer, 0);
 
+    if (m_RenderContext.usesImgui) {
+        scene.registerSceneImgui();
+    }
+
     // Slowly Rotating Camera/objects for testing
-    // TODO remove once debug code is no longer needed
     frameNumber++;
-    float angle = static_cast<float>(frameNumber) / 4000;
     for (size_t i = 0; i < scene.getObjects().size(); i++) {
-        scene.getObjects()[i].transformation.rotation = glm::vec3(0, angle * (i % 2 == 0 ? 1 : -1), 0);
+        scene.getObjects()[i].transformation.rotation = glm::vec3(scene.currentAngleX, scene.currentAngleY, 0);
     }
 
     updateUniformBuffer(scene);

@@ -48,6 +48,13 @@ void Scene::createUniformBuffers(VulkanBaseContext vulkanBaseContext) {
     vkMapMemory(vulkanBaseContext.device, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
 }
 
+void Scene::registerSceneImgui() {
+    ImGui::Begin("Scene");
+    ImGui::SliderFloat("Object Angle X", &currentAngleX, 0, glm::two_pi<float>());
+    ImGui::SliderFloat("Object Angle Y", &currentAngleY, 0, glm::two_pi<float>());
+    ImGui::End();
+}
+
 void Scene::createDescriptorPool(VulkanBaseContext &baseContext) {
     std::array<VkDescriptorPoolSize, 1> poolSizes{};
 

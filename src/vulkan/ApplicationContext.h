@@ -49,7 +49,7 @@ typedef struct {
 
 typedef struct {
     bool useMsaa = false;
-    uint8_t maxMsaaSamples = 1;
+    VkSampleCountFlagBits maxMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 } GraphicSettings;
 

@@ -39,6 +39,11 @@ public:
 
     VkDescriptorSet *getDescriptorSet();
 
+    void registerSceneImgui();
+
+    float currentAngleY;
+    float currentAngleX;
+
 private:
     void createUniformBuffers(VulkanBaseContext vulkanBaseContext);
 

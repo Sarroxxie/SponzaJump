@@ -102,7 +102,8 @@ void cleanupImGuiContext(const VulkanBaseContext& baseContext, RenderContext& re
 void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = appContext.swapchainContext.swapChainImageFormat;
-    colorAttachment.samples = appContext.graphicSettings.msaaSamples;
+
+    colorAttachment.samples = appContext.graphicSettings.useMsaa ? appContext.graphicSettings.msaaSamples : VK_SAMPLE_COUNT_1_BIT;
 
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -120,7 +121,7 @@ void createRenderPass(const ApplicationVulkanContext &appContext, RenderContext 
 
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = findDepthFormat(appContext.baseContext);
-    depthAttachment.samples = appContext.graphicSettings.msaaSamples;
+    depthAttachment.samples = appContext.graphicSettings.useMsaa ? appContext.graphicSettings.msaaSamples : VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -279,7 +280,7 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_TRUE;
     multisampling.minSampleShading = .2f;
-    multisampling.rasterizationSamples = appContext.graphicSettings.msaaSamples;
+    multisampling.rasterizationSamples = appContext.graphicSettings.useMsaa ? appContext.graphicSettings.msaaSamples : VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask =
@@ -499,6 +500,7 @@ void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext &
     poolInfo.maxSets       = 1000 * IM_ARRAYSIZE(poolSizes);
     poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
     poolInfo.pPoolSizes    = poolSizes;
+
     vkCreateDescriptorPool(appContext.baseContext.device, &poolInfo, nullptr,
                            &renderContext.imguiContext.descriptorPool);
 
@@ -522,6 +524,11 @@ void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext &
     initInfo.ImageCount = imageCount;
     // TODO: could implement to check for errors
     initInfo.CheckVkResultFn = nullptr;
+
+    if (appContext.graphicSettings.useMsaa) {
+        initInfo.MSAASamples = appContext.graphicSettings.msaaSamples;
+    }
+
     ImGui_ImplVulkan_Init(&initInfo, renderContext.renderPassContext.renderPass);
 
     // Upload fonts to GPU

@@ -191,6 +191,8 @@ void pickPhysicalDevice(VulkanBaseContext &context, GraphicSettings &graphicSett
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(context.physicalDevice, &deviceProperties);
 
+    graphicSettings.msaaSamples = graphicSettings.maxMsaaSamples;
+    std::cout << "Using " << graphicSettings.msaaSamples << " msaa samples" << std::endl;
 
     context.maxSupportedMinorVersion = VK_API_VERSION_MINOR(deviceProperties.apiVersion);
 
@@ -404,11 +406,13 @@ void createCommandPool(VulkanBaseContext &baseContext, CommandContext &commandCo
 void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings) {
     VkFormat colorFormat = swapchainContext.swapChainImageFormat;
 
+    auto numSamples = graphicSettings.useMsaa ? graphicSettings.msaaSamples : VK_SAMPLE_COUNT_1_BIT;
+
     createImage(baseContext,
                 swapchainContext.swapChainExtent.width,
                 swapchainContext.swapChainExtent.height,
                 1,
-                graphicSettings.msaaSamples,
+                numSamples,
                 colorFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -422,11 +426,13 @@ void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swap
 void createDepthResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings) {
     VkFormat depthFormat = findDepthFormat(baseContext);
 
+    auto numSamples = graphicSettings.useMsaa ? graphicSettings.msaaSamples : VK_SAMPLE_COUNT_1_BIT;
+
     createImage(baseContext,
                 swapchainContext.swapChainExtent.width,
                 swapchainContext.swapChainExtent.height,
                 1,
-                graphicSettings.msaaSamples,
+                numSamples,
                 depthFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
