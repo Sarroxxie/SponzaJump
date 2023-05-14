@@ -45,6 +45,14 @@ void VulkanRenderer::render(Scene &scene) {
 
     if (m_RenderContext.usesImgui) {
         scene.registerSceneImgui();
+        ImGui::Begin("Renderer");
+        if(ImGui::Button("Recompile Shaders")) {
+            recompileToSecondaryPipeline();
+        }
+        if(ImGui::Button("Swap Pipeline")) {
+            swapToSecondaryPipeline();
+        }
+        ImGui::End();
     }
 
     // Slowly Rotating Camera/objects for testing

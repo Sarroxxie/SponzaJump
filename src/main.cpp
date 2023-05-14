@@ -67,9 +67,14 @@ int main() {
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            ImGui::Begin("Debug");
-            ImGui::Text("Average Frametime: %.3f ms", 1000.0f / ImGui::GetIO().Framerate);
-            ImGui::Text("Average Framerate: %.1f FPS", ImGui::GetIO().Framerate);
+            ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+            ImGui::Begin("Statistics", 0,
+                         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
+                             | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMouseInputs
+                             | ImGuiWindowFlags_NoTitleBar);
+            ImGui::Text("%.3f ms", 1000.0f / ImGui::GetIO().Framerate);
+            ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
+            ImGui::SetWindowSize(ImVec2(0,0), ImGuiCond_Once);
             ImGui::End();
         }
 
