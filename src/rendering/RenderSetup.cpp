@@ -8,7 +8,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
     auto &settings = renderContext.renderSettings;
     settings.fov = glm::radians(45.0f);
     settings.nearPlane = 0.1;
-    settings.farPlane = 100;
+    settings.farPlane = 1000;
 
     RenderSetupDescription renderSetupDescription;
     renderSetupDescription.enableImgui = true;

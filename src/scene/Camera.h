@@ -17,6 +17,8 @@ public:
     explicit Camera(glm::vec3 worldPos = glm::vec3(0, 0, 5), glm::vec3 viewDir = glm::vec3(0, 0, -1), glm::vec3 upVector = glm::vec3(0, 1, 0));
 
     void setViewDir(glm::vec3 newViewDir);
+    void setPosition(glm::vec3 newPosition);
+    void setLookAt(glm::vec3 newCenter);
 
     glm::mat4 getCameraMatrix();
 

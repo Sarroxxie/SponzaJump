@@ -53,6 +53,9 @@ void VulkanRenderer::render(Scene &scene) {
         scene.getObjects()[i].transformation.rotation = glm::vec3(scene.currentAngleX, scene.currentAngleY, 0);
     }
 
+    scene.getCameraRef().setPosition(glm::vec3(glm::sin(scene.cameraAngleY) * scene.cameraDist, 0, glm::cos(scene.cameraAngleY) * scene.cameraDist));
+    scene.getCameraRef().setLookAt(glm::vec3(0));
+
     updateUniformBuffer(scene);
 
     recordCommandBuffer(scene, imageIndex);

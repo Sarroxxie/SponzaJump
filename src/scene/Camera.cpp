@@ -17,3 +17,11 @@ glm::mat4 Camera::getCameraMatrix() {
 void Camera::setViewDir(glm::vec3 newViewDir) {
     m_ViewDir = newViewDir;
 }
+
+void Camera::setPosition(glm::vec3 newPosition) {
+    m_WorldPos = newPosition;
+}
+
+void Camera::setLookAt(glm::vec3 newCenter) {
+    m_ViewDir = glm::normalize(newCenter - m_WorldPos);
+}

@@ -41,8 +41,11 @@ public:
 
     void registerSceneImgui();
 
-    float currentAngleY;
-    float currentAngleX;
+    float currentAngleY = 0;
+    float currentAngleX = 0;
+
+    float cameraAngleY = 0;
+    float cameraDist = 45;
 
 private:
     void createUniformBuffers(VulkanBaseContext vulkanBaseContext);
