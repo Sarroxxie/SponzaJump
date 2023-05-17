@@ -7,6 +7,8 @@
 #include "scene/RenderableObject.h"
 #include "rendering/RenderSetup.h"
 
+#include "tiny_gltf.h"
+
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
@@ -14,6 +16,32 @@
 int main() {
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
+
+    // tinygltf test code
+    const std::string  modelPath = "res/assets/debug_model/debug_model.gltf";
+    const std::string modelPath2 =
+        "X:/Bibliotheken/Dokumente/documents/programming/GitHub/graphicspraktikum/res/assets/debug_model/debug_model.gltf";
+    tinygltf::Model    model;
+    tinygltf::TinyGLTF loader;
+    std::string        errors;
+    std::string        warnings;
+    bool               success;
+
+    success = loader.LoadASCIIFromFile(&model, &errors, &warnings, modelPath);
+
+    if(!warnings.empty()) {
+        printf("Warn: %s\n", warnings.c_str());
+    }
+
+    if(!errors.empty()) {
+        printf("Err: %s\n", errors.c_str());
+    }
+
+    if(!success) {
+        printf("Failed to parse glTF\n");
+    }
+
+    return 0;
 
     ApplicationVulkanContext appContext;
     appContext.window = &window;
@@ -36,7 +64,7 @@ int main() {
                                  {glm::vec3(-1, 0, 0), glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
     */
 
-    int halfCountPerDimension = 2;
+    int halfCountPerDimension = 8;
     int spacing = 5;
     for (int i = -halfCountPerDimension; i <= halfCountPerDimension; i++) {
         for (int j = -halfCountPerDimension; j <= halfCountPerDimension; j++) {
