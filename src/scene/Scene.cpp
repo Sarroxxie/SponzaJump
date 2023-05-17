@@ -140,3 +140,25 @@ void *Scene::getUniformBufferMapping() {
 VkDescriptorSet *Scene::getDescriptorSet() {
     return &descriptorSet;
 }
+
+EntityId Scene::addEntity() {
+    if (freeEntities.empty()) {
+        entities.push_back(true);
+        return entities.size() - 1;
+    }
+    EntityId id = freeEntities.back();
+    freeEntities.pop_back();
+    entities[id] = true;
+    return id;
+}
+
+bool Scene::removeEntity(EntityId id) {
+    // TODO add Version so that a reused entity does not have access to Components anymore ?
+
+    if (entities.size() <= id || !entities[id]) {
+        return false;
+    }
+
+    entities[id] = false;
+    freeEntities.push_back(id);
+}

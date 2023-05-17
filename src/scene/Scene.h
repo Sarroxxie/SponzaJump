@@ -9,9 +9,13 @@
 #include "Camera.h"
 #include "rendering/RenderContext.h"
 
+typedef uint32_t EntityId;
 
 class Scene {
 private:
+    std::vector<bool> entities;
+    std::vector<EntityId> freeEntities;
+
     std::vector<RenderableObject> objects;
 
     Camera m_Camera;
@@ -25,6 +29,10 @@ private:
 
 public:
     Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera());
+
+    EntityId addEntity();
+
+    bool removeEntity(EntityId id);
 
     void addObject(RenderableObject object);
 
