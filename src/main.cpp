@@ -8,26 +8,51 @@
 #include "rendering/RenderSetup.h"
 
 #include "tiny_gltf.h"
+#include "stb_image.h"
 
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
 
-int main() {
-    Window window = Window(DEFAULT_APPLICATION_WIDTH,
-                           DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
+/**
+* TODO: keep track of uploaded textures somewhere in a map (uri + TextureStruct)
+*       -> probably create a class to handle all model loading
+*       -> will need to create a proper desriptor for objects and textures so the data can get stored
+*       -> use tinygltf only for initial loading, scrap the "tinygltf::model" after loading
+*       -> maybe name class "sceneResourceManager"
+*/
+bool gpuImageLoading(tinygltf::Image*     image,
+              const int            image_idx,
+              std::string*         err,
+              std::string*         warn,
+              int                  req_width,
+              int                  req_height,
+              const unsigned char* bytes,
+              int                  size,
+              void* user_data) {
+    // TODO:
+    // 1. check if the uri is already registered (image->uri is already set at this point)
 
-    // tinygltf test code
-    const std::string  modelPath = "res/assets/debug_model/debug_model.gltf";
-    const std::string modelPath2 =
-        "X:/Bibliotheken/Dokumente/documents/programming/GitHub/graphicspraktikum/res/assets/debug_model/debug_model.gltf";
-    tinygltf::Model    model;
+    // 2. use stbi_load_from_memory() -> use the memory content from "bytes"
+
+    // 3. upload the image to the GPU and register it (with URI as identifier) -> same structure as noted in the todo above
+
+    // 4. use stbi_image_free() to free image from CPU RAM
+
+    //tinygltf::LoadImageData(image, image_idx, err, warn, req_width, req_height, bytes, size, user_data);
+    return true;
+}
+
+// TODO: pass flags like "NO_WARNINGS" and "NO_ERRORS" to disable console output
+bool loadModel(tinygltf::Model &model, const char *filename) {
     tinygltf::TinyGLTF loader;
     std::string        errors;
     std::string        warnings;
     bool               success;
 
-    success = loader.LoadASCIIFromFile(&model, &errors, &warnings, modelPath);
+    // set custom image loading function
+    loader.SetImageLoader(gpuImageLoading, nullptr);
+    success = loader.LoadASCIIFromFile(&model, &errors, &warnings, filename);
 
     if(!warnings.empty()) {
         printf("Warn: %s\n", warnings.c_str());
@@ -40,8 +65,37 @@ int main() {
     if(!success) {
         printf("Failed to parse glTF\n");
     }
+    return success;
+}
+
+
+int main() {
+    // tinygltf test code
+    const char*  modelPath = "res/assets/models/debug_model/debug_model.gltf";
+    tinygltf::Model    model;
+    loadModel(model, modelPath);
+    
+    /* for(tinygltf::Image image : model.images) {
+        // manually load images this way
+        int    w, h, c;
+        std::string path      = "res/assets/debug_model/" + image.uri;
+        stbi_uc* stbiImage = stbi_load(path.c_str(),
+                                       &w, &h, &c, 4);
+        std::cout << "image name: " << image.name << "\n";
+        std::cout << "image component: " << image.component << "\n";
+        image.width = w;
+        image.height = h;
+        image.component = c;
+        std::cout << "image width: " << image.width << "\n";
+
+        stbi_image_free(stbiImage);
+        std::cout << "\n";
+    }*/
 
     return 0;
+
+    Window window = Window(DEFAULT_APPLICATION_WIDTH,
+                           DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
 
     ApplicationVulkanContext appContext;
     appContext.window = &window;
@@ -64,7 +118,7 @@ int main() {
                                  {glm::vec3(-1, 0, 0), glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
     */
 
-    int halfCountPerDimension = 8;
+    int halfCountPerDimension = 2;
     int spacing = 5;
     for (int i = -halfCountPerDimension; i <= halfCountPerDimension; i++) {
         for (int j = -halfCountPerDimension; j <= halfCountPerDimension; j++) {

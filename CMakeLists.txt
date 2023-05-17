@@ -14,6 +14,7 @@ message(${PROJECT_ROOT_DIR})
 set(GLFW_DIR libs/glfw/)
 set(IMGUI_DIR libs/imgui/)
 set(GLM_DIR libs/glm/)
+set(TINY_GLTF_DIR libs/tiny_gltf/)
 
 # VulkanSDK
 find_package(Vulkan REQUIRED)
@@ -48,6 +49,9 @@ target_link_libraries(GraphicsPraktikum Vulkan::Vulkan)
 
 add_subdirectory(${GLM_DIR})
 target_link_libraries(GraphicsPraktikum glm)
+
+add_subdirectory(${TINY_GLTF_DIR})
+target_link_libraries(GraphicsPraktikum tinygltf)
 
 # Pass path to the Vulkan glslangValidator.exe as definition to C++
 add_definitions(-DVULKAN_GLSLANG_VALIDATOR_PATH=\"${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}\")

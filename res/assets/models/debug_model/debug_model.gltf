@@ -72,17 +72,17 @@
 		{
 			"mimeType":"image/png",
 			"name":"fleshy_granite1_Normal-ogl",
-			"uri":"fleshy_granite1_Normal-ogl.png"
+			"uri":"../../textures/fleshy_granite1_Normal-ogl.png"
 		},
 		{
 			"mimeType":"image/png",
 			"name":"ao-roughness-metallic",
-			"uri":"ao-roughness-metallic.png"
+			"uri":"../../textures/ao-roughness-metallic.png"
 		},
 		{
 			"mimeType":"image/png",
 			"name":"fleshy_granite1_albedo",
-			"uri":"fleshy_granite1_albedo.png"
+			"uri":"../../textures/fleshy_granite1_albedo.png"
 		}
 	],
 	"accessors":[
