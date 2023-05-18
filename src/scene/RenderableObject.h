@@ -7,7 +7,6 @@
 #include "vulkan/VulkanUtils.h"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
-#include "Component.h"
 #include <glm/gtx/euler_angles.hpp>
 
 typedef struct transformation_s

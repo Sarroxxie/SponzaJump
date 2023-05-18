@@ -50,6 +50,7 @@ struct ComponentPool {
         }
     }
 
+    /*
     ComponentPool(ComponentPool &&other) noexcept {
         componentSize = other.componentSize;
         currentSize = other.currentSize;
@@ -77,8 +78,9 @@ struct ComponentPool {
 
         return *this;
     }
+    */
 
-    ~ComponentPool() {
+    void clean() {
         delete []data;
     }
 

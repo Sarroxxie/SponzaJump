@@ -30,6 +30,10 @@ void Scene::cleanup() {
             cleanRenderableObject(m_baseContext, *object);
         }
     }
+
+    for (auto pair: componentPools) {
+        pair.second.clean();
+    }
 }
 
 Camera &Scene::getCameraRef() {
@@ -169,8 +173,4 @@ bool Scene::removeEntity(EntityId id) {
 
 std::vector<Entity> &Scene::getEntities() {
     return entities;
-}
-
-std::map<ComponentId, ComponentPool> *Scene::getComponentPools() {
-    return &componentPools;
 }
