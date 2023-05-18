@@ -173,9 +173,9 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
     for (size_t i = 0; i < entities.size(); i++) {
         // skip if entity is not valid
-        if (!entities[i]) continue;
+        if (!entities[i].active) continue;
 
-        if (renderablePool.hasComponent(i)) {
+        if (entities[i].componentMask.test(getComponentTypeId<RenderableObject>())) {
             auto *object = (RenderableObject *) renderablePool.getComponent(i);
 
             VkBuffer vertexBuffers[] = { object->vertexBuffer };

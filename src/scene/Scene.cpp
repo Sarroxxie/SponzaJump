@@ -17,13 +17,14 @@ void Scene::cleanup() {
 
     vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
 
+    ComponentPool &renderablePool = componentPools[getComponentTypeId<RenderableObject>()];
+
     // TODO use SceneView
     for (size_t i = 0; i < entities.size(); i++) {
-        if (!entities[i]) continue;
+        if (!entities[i].active) continue;
 
-        ComponentPool &renderablePool = componentPools[getComponentTypeId<RenderableObject>()];
 
-        if (renderablePool.hasComponent(i)) {
+        if (entities[i].componentMask.test(getComponentTypeId<RenderableObject>())) {
             auto *object = (RenderableObject *) renderablePool.getComponent(i);
 
             cleanRenderableObject(m_baseContext, *object);
@@ -140,35 +141,33 @@ VkDescriptorSet *Scene::getDescriptorSet() {
 
 EntityId Scene::addEntity() {
     if (freeEntities.empty()) {
-        entities.push_back(true);
+        entities.emplace_back();
         return static_cast<EntityId>(entities.size() - 1);
     }
     EntityId id = freeEntities.back();
     freeEntities.pop_back();
-    entities[id] = true;
+    entities[id] = { true, ComponentMask () };
     return id;
 }
 
 bool Scene::removeEntity(EntityId id) {
-    // TODO add Version so that a reused entity does not have access to Components anymore ?
-
-    if (entities.size() <= id || !entities[id]) {
+    if (entities.size() <= id || !entities[id].active) {
         return false;
     }
 
     ComponentTypeId renderableCompId = getComponentTypeId<RenderableObject>();
-    if (componentPools[renderableCompId].hasComponent(id)) {
+    if (entities[id].componentMask.test(getComponentTypeId<RenderableObject>())) {
         auto *object = (RenderableObject *) componentPools[renderableCompId].getComponent(id);
         cleanRenderableObject(m_baseContext, *object);
     }
 
-    entities[id] = false;
+    entities[id] = { false, ComponentMask() };
     freeEntities.push_back(id);
 
     return true;
 }
 
-std::vector<bool> &Scene::getEntities() {
+std::vector<Entity> &Scene::getEntities() {
     return entities;
 }
 

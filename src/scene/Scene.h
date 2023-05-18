@@ -85,7 +85,7 @@ struct SceneView {
 
 class Scene {
 private:
-    std::vector<bool> entities;
+    std::vector<Entity> entities;
     std::vector<EntityId> freeEntities;
 
     std::map<ComponentId, ComponentPool> componentPools;
@@ -109,7 +109,7 @@ public:
 
     bool removeEntity(EntityId id);
 
-    std::vector<bool> &getEntities();
+    std::vector<Entity> &getEntities();
 
     std::map<ComponentId, ComponentPool> *getComponentPools();
 
@@ -125,6 +125,7 @@ public:
         ComponentId componentId = pool.getNewComponentId();
 
         pool.mapComponent(entityId, componentId);
+        entities[entityId].componentMask.set(componentTypeId);
 
         return (T*) pool.getComponent(entityId);
     }

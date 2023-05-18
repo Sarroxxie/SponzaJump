@@ -18,6 +18,9 @@ extern int s_componentCounter;
 template <class T>
 int getComponentTypeId()
 {
+    // can only have MAX_COMPONENT_TYPES different types of components
+    // can change that constant in Entity.h if needed
+    assert(s_componentCounter < MAX_COMPONENT_TYPES - 1);
     static int s_componentId = s_componentCounter++;
     return s_componentId;
 }
