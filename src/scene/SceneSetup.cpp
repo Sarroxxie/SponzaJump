@@ -12,6 +12,14 @@ RenderableObject createObject(VulkanBaseContext context, CommandContext commandC
     return object;
 }
 
+void createObject(RenderableObject *object, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, Transformation transformation) {
+    object->transformation = transformation;
+
+    createSampleVertexBuffer(context, commandContext, objectDef, *object);
+    createSampleIndexBuffer(context, commandContext, objectDef, *object);
+
+}
+
 void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object) {
     object.verticesCount = objectDef.vertices.size();
 

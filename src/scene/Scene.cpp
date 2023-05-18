@@ -5,47 +5,44 @@
 #include "rendering/RenderContext.h"
 
 Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera)
-        : m_Camera(camera) {
-    createUniformBuffers(vulkanBaseContext);
-    createDescriptorPool(vulkanBaseContext);
-    createDescriptorSets(vulkanBaseContext, renderContext);
+        : m_Camera(camera), m_baseContext(vulkanBaseContext) {
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets(renderContext);
 }
 
-void Scene::addObject(RenderableObject object) {
-    objects.push_back(object);
-}
+void Scene::cleanup() {
+    vkDestroyBuffer(m_baseContext.device, uniformBuffer, nullptr);
+    vkFreeMemory(m_baseContext.device, uniformBufferMemory, nullptr);
 
-void Scene::cleanup(VulkanBaseContext &baseContext) {
-    vkDestroyBuffer(baseContext.device, uniformBuffer, nullptr);
-    vkFreeMemory(baseContext.device, uniformBufferMemory, nullptr);
+    vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
 
-    vkDestroyDescriptorPool(baseContext.device, descriptorPool, nullptr);
+    // TODO use SceneView
+    for (size_t i = 0; i < entities.size(); i++) {
+        if (!entities[i]) continue;
 
-    for (auto &object: objects) {
-        cleanRenderableObject(baseContext, object);
+        ComponentPool &renderablePool = componentPools[getComponentTypeId<RenderableObject>()];
+
+        if (renderablePool.hasComponent(i)) {
+            auto *object = (RenderableObject *) renderablePool.getComponent(i);
+
+            cleanRenderableObject(m_baseContext, *object);
+        }
     }
-}
-
-std::vector<RenderableObject> &Scene::getObjects() {
-    return objects;
-}
-
-bool Scene::hasObject() {
-    return objects.size() > 0;
 }
 
 Camera &Scene::getCameraRef() {
     return m_Camera;
 }
 
-void Scene::createUniformBuffers(VulkanBaseContext vulkanBaseContext) {
+void Scene::createUniformBuffers() {
     VkDeviceSize bufferSize = sizeof(SceneTransform);
 
-    createBuffer(vulkanBaseContext, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    createBuffer(m_baseContext, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer,
                  uniformBufferMemory);
 
-    vkMapMemory(vulkanBaseContext.device, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
+    vkMapMemory(m_baseContext.device, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
 }
 
 void Scene::registerSceneImgui() {
@@ -57,7 +54,7 @@ void Scene::registerSceneImgui() {
     ImGui::End();
 }
 
-void Scene::createDescriptorPool(VulkanBaseContext &baseContext) {
+void Scene::createDescriptorPool() {
     std::array<VkDescriptorPoolSize, 1> poolSizes{};
 
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -69,19 +66,19 @@ void Scene::createDescriptorPool(VulkanBaseContext &baseContext) {
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = 1;
 
-    if (vkCreateDescriptorPool(baseContext.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+    if (vkCreateDescriptorPool(m_baseContext.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
     }
 }
 
-void Scene::createDescriptorSets(VulkanBaseContext &baseContext, RenderContext &renderContext) {
+void Scene::createDescriptorSets(RenderContext &renderContext) {
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &renderContext.renderPassContext.descriptorSetLayout;
 
-    if (vkAllocateDescriptorSets(baseContext.device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(m_baseContext.device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
@@ -128,7 +125,7 @@ void Scene::createDescriptorSets(VulkanBaseContext &baseContext, RenderContext &
     descriptorWrites[1].pImageInfo = imageInfos.data();
     */
 
-    vkUpdateDescriptorSets(baseContext.device, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(m_baseContext.device, 1, &descriptorWrite, 0, nullptr);
 
 
 }
@@ -144,7 +141,7 @@ VkDescriptorSet *Scene::getDescriptorSet() {
 EntityId Scene::addEntity() {
     if (freeEntities.empty()) {
         entities.push_back(true);
-        return entities.size() - 1;
+        return static_cast<EntityId>(entities.size() - 1);
     }
     EntityId id = freeEntities.back();
     freeEntities.pop_back();
@@ -159,40 +156,22 @@ bool Scene::removeEntity(EntityId id) {
         return false;
     }
 
+    ComponentTypeId renderableCompId = getComponentTypeId<RenderableObject>();
+    if (componentPools[renderableCompId].hasComponent(id)) {
+        auto *object = (RenderableObject *) componentPools[renderableCompId].getComponent(id);
+        cleanRenderableObject(m_baseContext, *object);
+    }
+
     entities[id] = false;
     freeEntities.push_back(id);
 
     return true;
 }
 
-/*
-template<typename T>
-T *Scene::getComponent(EntityId entityId) {
-    ComponentTypeId componentTypeId = getComponentTypeId<T>();
-
-    if (componentPools.find(componentTypeId) == componentPools.end()) {
-        return nullptr;
-    }
-
-    return (T*) componentPools[componentTypeId].getComponent(entityId);
-}
- */
-
-/*
-template<typename T>
-T *Scene::assign(EntityId entityId) {
-    ComponentTypeId componentTypeId = getComponentTypeId<T>();
-
-    if (componentPools.find(componentTypeId) == componentPools.end()) {
-        componentPools[componentTypeId] = std::move(ComponentPool(sizeof(T)));
-    }
-
-    ComponentPool &pool = componentPools[componentTypeId];
-    ComponentId componentId = pool.getNewComponentId();
-
-    pool.mapComponent(entityId, componentId);
-
-    return (T*) pool.getComponent(entityId);
+std::vector<bool> &Scene::getEntities() {
+    return entities;
 }
 
- */
+std::map<ComponentId, ComponentPool> *Scene::getComponentPools() {
+    return &componentPools;
+}

@@ -14,14 +14,81 @@
 #include "Component.h"
 
 
+/*
+class Scene;
+
+template <typename... ComponentTypes>
+struct SceneView {
+    Scene *scene {nullptr};
+    std::vector<ComponentTypeId> componentTypeIds;
+    bool all {false};
+
+    SceneView(Scene &scene): scene(&scene)
+    {
+        auto numComponents = sizeof...(ComponentTypes);
+        if (numComponents == 0) {
+            all = true;
+        } else {
+            ComponentTypeId typeIds[] = { getComponentTypeId<ComponentTypes>() ..., 0 };
+
+            componentTypeIds.resize(numComponents);
+            for (size_t i = 0; i < numComponents; i++) {
+                componentTypeIds[i] = typeIds[i];
+            }
+        }
+    }
+
+    struct Iterator
+    {
+        EntityId index;
+        Scene* pScene;
+        std::vector<ComponentTypeId> componentTypeIds;
+        bool all{ false };
+
+        Iterator(Scene *scene, EntityId entityId, ) {
+
+        }
+
+        EntityId operator*() const {
+
+        }
+
+        bool operator==(const Iterator& other) const
+        {
+            // Compare two iterators
+        }
+
+        bool operator!=(const Iterator& other) const
+        {
+            // Similar to above
+        }
+
+        Iterator& operator++()
+        {
+            // Move the iterator forward
+        }
+    };
+
+    const Iterator begin() const
+    {
+        // Give an iterator to the beginning of this view
+    }
+
+    const Iterator end() const
+    {
+        // Give an iterator to the end of this view
+    }
+
+};
+
+ */
+
 class Scene {
 private:
     std::vector<bool> entities;
     std::vector<EntityId> freeEntities;
 
     std::map<ComponentId, ComponentPool> componentPools;
-
-    std::vector<RenderableObject> objects;
 
     Camera m_Camera;
 
@@ -32,6 +99,8 @@ private:
     VkDescriptorPool descriptorPool;
     VkDescriptorSet descriptorSet;
 
+    VulkanBaseContext m_baseContext;
+
 public:
     Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera());
 
@@ -39,6 +108,10 @@ public:
     EntityId addEntity();
 
     bool removeEntity(EntityId id);
+
+    std::vector<bool> &getEntities();
+
+    std::map<ComponentId, ComponentPool> *getComponentPools();
 
     template<typename T>
     T *assign(EntityId entityId) {
@@ -68,21 +141,18 @@ public:
     }
 
     /*
-    // TODO proper SceneView
-
     template<typename... Types>
-    SceneView getSceneView();
+    SceneView<Types> getSceneView() {
+
+    }
+     */
+
     // -------
-    */
 
-    void addObject(RenderableObject object);
-
-    std::vector<RenderableObject> &getObjects();
-    bool hasObject();
 
     Camera &getCameraRef();
 
-    void cleanup(VulkanBaseContext &baseContext);
+    void cleanup();
 
     void *getUniformBufferMapping();
 
@@ -97,11 +167,11 @@ public:
     float cameraDist = 45;
 
 private:
-    void createUniformBuffers(VulkanBaseContext vulkanBaseContext);
+    void createUniformBuffers();
 
-    void createDescriptorPool(VulkanBaseContext &baseContext);
+    void createDescriptorPool();
 
-    void createDescriptorSets(VulkanBaseContext &baseContext, RenderContext &renderContext);
+    void createDescriptorSets(RenderContext &renderContext);
 
 };
 

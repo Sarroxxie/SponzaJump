@@ -7,13 +7,14 @@
 #include "vulkan/VulkanUtils.h"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include "Component.h"
 #include <glm/gtx/euler_angles.hpp>
 
 typedef struct transformation_s
 {
-    glm::vec3 translation;
-    glm::vec3 rotation;
-    glm::vec3 scaling;
+    glm::vec3 translation {glm::vec3(0)};
+    glm::vec3 rotation {glm::vec3(0)};
+    glm::vec3 scaling {glm::vec3(1)};
 
     [[nodiscard]] glm::mat4 getMatrix() const {
         glm::mat4 scaleMat = glm::scale(glm::mat4(1), scaling);
@@ -24,18 +25,18 @@ typedef struct transformation_s
     }
 } Transformation;
 
-typedef struct
+typedef struct RenderableObject
 {
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
+    VkBuffer vertexBuffer {VK_NULL_HANDLE};
+    VkDeviceMemory vertexBufferMemory {VK_NULL_HANDLE};
 
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
+    VkBuffer indexBuffer {VK_NULL_HANDLE};
+    VkDeviceMemory indexBufferMemory {VK_NULL_HANDLE};
 
-    uint32_t verticesCount;
-    uint32_t indicesCount;
+    uint32_t verticesCount = 0;
+    uint32_t indicesCount = 0;
 
-    Transformation transformation;
+    Transformation transformation {};
 } RenderableObject;
 
 void cleanRenderableObject(VulkanBaseContext &baseContext, RenderableObject &object);

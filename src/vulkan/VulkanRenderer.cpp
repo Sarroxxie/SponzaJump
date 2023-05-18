@@ -20,10 +20,12 @@ void VulkanRenderer::cleanVulkanRessources() {
 }
 
 void VulkanRenderer::render(Scene &scene) {
+    /*
     if (!scene.hasObject()) {
         std::cout << "Scene needs objects to be rendered" << std::endl;
         return;
     }
+     */
 
     vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -56,10 +58,12 @@ void VulkanRenderer::render(Scene &scene) {
     }
 
     // Slowly Rotating Camera/objects for testing
+    /*
     frameNumber++;
     for (size_t i = 0; i < scene.getObjects().size(); i++) {
         scene.getObjects()[i].transformation.rotation = glm::vec3(scene.currentAngleX, scene.currentAngleY, 0);
     }
+     */
 
     scene.getCameraRef().setPosition(glm::vec3(glm::sin(scene.cameraAngleY) * scene.cameraDist, 0, glm::cos(scene.cameraAngleY) * scene.cameraDist));
     scene.getCameraRef().setLookAt(glm::vec3(0));
@@ -133,29 +137,6 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       m_RenderContext.renderPassContext.graphicsPipelines[m_RenderContext.renderPassContext.activePipelineIndex]);
 
-
-
-
-    /*
-     *
-    std::optional<VulkanMesh>& vulkanMesh = mesh->getVulkanMeshObject();
-
-    if (!vulkanMesh.has_value()) {
-        throw std::runtime_error("Mesh is not initialized for Vulkan Engine!");
-    }
-
-    if (!vulkanMesh.value().isValid()) {
-        throw std::runtime_error("Mesh can not be rendered!");
-    }
-
-    VkBuffer vertexBuffers[] = {vulkanMesh.value().getVertexBufferHandle() };
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-    vkCmdBindIndexBuffer(commandBuffer, vulkanMesh.value().getIndexBufferHandle(), 0, VK_INDEX_TYPE_UINT32);
-
-     */
-
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -184,39 +165,37 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                             nullptr);
 
 
-    auto sceneObjects = scene.getObjects();
+    auto entities = scene.getEntities();
+    auto pools = scene.getComponentPools();
 
-    for (auto &object: sceneObjects) {
-        VkBuffer vertexBuffers[] = { object.vertexBuffer };
-        VkDeviceSize offsets[] = {0};
+    ComponentPool &renderablePool = (*pools)[getComponentTypeId<RenderableObject>()];
 
-        vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    for (size_t i = 0; i < entities.size(); i++) {
+        // skip if entity is not valid
+        if (!entities[i]) continue;
 
-        glm::mat4 objectTransform = object.transformation.getMatrix();
+        if (renderablePool.hasComponent(i)) {
+            auto *object = (RenderableObject *) renderablePool.getComponent(i);
 
-        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                           m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
-                           0, // offset
-                           sizeof(glm::mat4),
-                           &objectTransform);
+            VkBuffer vertexBuffers[] = { object->vertexBuffer };
+            VkDeviceSize offsets[] = {0};
 
-        vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, object.indicesCount, 1, 0, 0, 0);
+            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, object->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            glm::mat4 objectTransform = object->transformation.getMatrix();
+
+            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                               m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
+                               0, // offset
+                               sizeof(glm::mat4),
+                               &objectTransform);
+
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, object->indicesCount, 1, 0, 0, 0);
+        }
     }
-
-    /*
-    VkBuffer vertexBuffers[] = {sceneObjects[0].vertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(appContext.commandContext.commandBuffer, 0, 1, vertexBuffersVec.data(), offsets);
-
-    vkCmdBindIndexBuffer(appContext.commandContext.commandBuffer, sceneObjects[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-
-    vkCmdEndRenderPass(renderContext.commandBuffer);
-
-    vkCmdDrawIndexed(appContext.commandContext.commandBuffer, 3, 1, 0, 0, 0);
-*/
 
     if (m_RenderContext.usesImgui) {
         // @IMGUI

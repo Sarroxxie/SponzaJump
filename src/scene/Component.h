@@ -1,18 +1,20 @@
 #ifndef GRAPHICSPRAKTIKUM_COMPONENT_H
 #define GRAPHICSPRAKTIKUM_COMPONENT_H
 
-
 #include <vector>
 #include <cstdint>
 #include <set>
-#include <exception>
 #include <cstring>
+#include <stdexcept>
 #include "Entity.h"
+#include "vulkan/ApplicationContext.h"
+
 
 typedef int ComponentTypeId;
 typedef int ComponentId;
 
 extern int s_componentCounter;
+
 template <class T>
 int getComponentTypeId()
 {
@@ -79,19 +81,21 @@ struct ComponentPool {
 
     ComponentId getNewComponentId() {
         if (freeComponents.empty()) {
-            char *newData = new char[currentSize * 2];
+            char *newData = new char[componentSize * currentSize * 2];
             memcpy(newData, data, currentSize * componentSize);
 
             delete []data;
             data = newData;
-            for (int i = currentSize; i < currentSize * 2; i++) {
-                freeComponents.insert(i);
+            for (int i = static_cast<ComponentId>(currentSize); i < currentSize * 2; i++) {
+                freeComponents.insert(static_cast<ComponentId>(i));
             }
+            currentSize *= 2;
         }
 
         auto freeComponent = freeComponents.begin();
+        ComponentId id = *freeComponent;
         freeComponents.erase(freeComponent);
-        return *freeComponent;
+        return id;
     }
 
     bool freeComponent(ComponentId id) {
@@ -119,7 +123,7 @@ struct ComponentPool {
     }
 
     bool hasComponent(EntityId entityId) {
-        return entityMapping.size() <= entityId && entityMapping[entityId] != -1;
+        return entityMapping.size() > entityId && entityMapping[entityId] != -1;
     }
 
     char *getComponent(EntityId entityId) {

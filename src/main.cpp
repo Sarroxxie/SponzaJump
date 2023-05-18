@@ -24,28 +24,26 @@ int main() {
 
     Scene scene(appContext.baseContext, renderContext);
 
-    /*
-    scene.addObject(createObject(appContext.baseContext,
-                                 appContext.commandContext,
-                                 COLORED_PYRAMID,
-                                 {glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0.5)}));
-
-    scene.addObject(createObject(appContext.baseContext,
-                                 appContext.commandContext,
-                                 COLORED_CUBE_DEF,
-                                 {glm::vec3(-1, 0, 0), glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
-    */
 
     int halfCountPerDimension = 2;
     int spacing = 5;
     for (int i = -halfCountPerDimension; i <= halfCountPerDimension; i++) {
         for (int j = -halfCountPerDimension; j <= halfCountPerDimension; j++) {
             for (int k = -halfCountPerDimension; k <= halfCountPerDimension; k++) {
-                scene.addObject(createObject(appContext.baseContext,
-                                             appContext.commandContext,
-                                             COLORED_CUBE_DEF,
-                                             {glm::vec3(j * spacing, k * spacing, i * spacing),
-                                              glm::vec3(0, glm::radians(45.0f), 0), glm::vec3(0.5)}));
+
+                EntityId entity = scene.addEntity();
+
+                auto *pObject = scene.assign<RenderableObject>(entity);
+
+                createObject(pObject,
+                             appContext.baseContext,
+                             appContext.commandContext,
+                             COLORED_CUBE_DEF,
+                             {
+                                glm::vec3(j * spacing, k * spacing, i * spacing),
+                                glm::vec3(0, 0, 0),
+                                glm::vec3(0.5)
+                             });
             }
         }
     }
@@ -82,7 +80,7 @@ int main() {
     }
     vkDeviceWaitIdle(appContext.baseContext.device);
 
-    scene.cleanup(appContext.baseContext);
+    scene.cleanup();
     renderer.cleanVulkanRessources();
     cleanupRenderContext(appContext.baseContext, renderContext);
     cleanupVulkanApplication(appContext);
