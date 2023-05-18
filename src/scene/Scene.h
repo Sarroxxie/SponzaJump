@@ -3,18 +3,23 @@
 
 #include <vulkan/vulkan_core.h>
 #include <vector>
+#include <map>
+#include <set>
 #include "vulkan/ApplicationContext.h"
 #include "SceneSetup.h"
 #include "RenderableObject.h"
 #include "Camera.h"
 #include "rendering/RenderContext.h"
+#include "Entity.h"
+#include "Component.h"
 
-typedef uint32_t EntityId;
 
 class Scene {
 private:
     std::vector<bool> entities;
     std::vector<EntityId> freeEntities;
+
+    std::map<ComponentId, ComponentPool> componentPools;
 
     std::vector<RenderableObject> objects;
 
@@ -30,9 +35,45 @@ private:
 public:
     Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera());
 
+    // ECS ---
     EntityId addEntity();
 
     bool removeEntity(EntityId id);
+
+    template<typename T>
+    T *assign(EntityId entityId) {
+        ComponentTypeId componentTypeId = getComponentTypeId<T>();
+
+        if (componentPools.find(componentTypeId) == componentPools.end()) {
+            componentPools[componentTypeId] = std::move(ComponentPool(sizeof(T)));
+        }
+
+        ComponentPool &pool = componentPools[componentTypeId];
+        ComponentId componentId = pool.getNewComponentId();
+
+        pool.mapComponent(entityId, componentId);
+
+        return (T*) pool.getComponent(entityId);
+    }
+
+    template<typename T>
+    T *getComponent(EntityId entityId) {
+        ComponentTypeId componentTypeId = getComponentTypeId<T>();
+
+        if (componentPools.find(componentTypeId) == componentPools.end()) {
+            return nullptr;
+        }
+
+        return (T*) componentPools[componentTypeId].getComponent(entityId);
+    }
+
+    /*
+    // TODO proper SceneView
+
+    template<typename... Types>
+    SceneView getSceneView();
+    // -------
+    */
 
     void addObject(RenderableObject object);
 

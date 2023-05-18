@@ -161,4 +161,38 @@ bool Scene::removeEntity(EntityId id) {
 
     entities[id] = false;
     freeEntities.push_back(id);
+
+    return true;
 }
+
+/*
+template<typename T>
+T *Scene::getComponent(EntityId entityId) {
+    ComponentTypeId componentTypeId = getComponentTypeId<T>();
+
+    if (componentPools.find(componentTypeId) == componentPools.end()) {
+        return nullptr;
+    }
+
+    return (T*) componentPools[componentTypeId].getComponent(entityId);
+}
+ */
+
+/*
+template<typename T>
+T *Scene::assign(EntityId entityId) {
+    ComponentTypeId componentTypeId = getComponentTypeId<T>();
+
+    if (componentPools.find(componentTypeId) == componentPools.end()) {
+        componentPools[componentTypeId] = std::move(ComponentPool(sizeof(T)));
+    }
+
+    ComponentPool &pool = componentPools[componentTypeId];
+    ComponentId componentId = pool.getNewComponentId();
+
+    pool.mapComponent(entityId, componentId);
+
+    return (T*) pool.getComponent(entityId);
+}
+
+ */
