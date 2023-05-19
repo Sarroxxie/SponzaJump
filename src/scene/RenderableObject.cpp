@@ -1,6 +1,6 @@
 #include "RenderableObject.h"
 
-void cleanRenderableObject(VulkanBaseContext &baseContext, RenderableObject &object) {
+void cleanMeshObject(VulkanBaseContext &baseContext, MeshComponent &object) {
     vkDestroyBuffer(baseContext.device, object.indexBuffer, nullptr);
     vkFreeMemory(baseContext.device, object.indexBufferMemory, nullptr);
 

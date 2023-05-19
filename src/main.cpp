@@ -30,20 +30,16 @@ int main() {
     for (int i = -halfCountPerDimension; i <= halfCountPerDimension; i++) {
         for (int j = -halfCountPerDimension; j <= halfCountPerDimension; j++) {
             for (int k = -halfCountPerDimension; k <= halfCountPerDimension; k++) {
-
                 EntityId entity = scene.addEntity();
 
-                auto *pObject = scene.assign<RenderableObject>(entity);
+                auto *pObject = scene.assign<MeshComponent>(entity);
+                createMeshComponent(pObject, appContext.baseContext, appContext.commandContext, COLORED_CUBE_DEF);
 
-                createObject(pObject,
-                             appContext.baseContext,
-                             appContext.commandContext,
-                             COLORED_CUBE_DEF,
-                             {
-                                glm::vec3(j * spacing, k * spacing, i * spacing),
-                                glm::vec3(0, 0, 0),
-                                glm::vec3(0.5)
-                             });
+                auto *pTransform = scene.assign<Transformation>(entity);
+                *pTransform = {
+                        glm::vec3(j * spacing, k * spacing, i * spacing),
+                        glm::vec3(0, 0, 0),
+                        glm::vec3(0.5)};
             }
         }
     }
@@ -68,11 +64,11 @@ int main() {
             ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
             ImGui::Begin("Statistics", 0,
                          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
-                             | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMouseInputs
-                             | ImGuiWindowFlags_NoTitleBar);
+                         | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMouseInputs
+                         | ImGuiWindowFlags_NoTitleBar);
             ImGui::Text("%.3f ms", 1000.0f / ImGui::GetIO().Framerate);
             ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
-            ImGui::SetWindowSize(ImVec2(0,0), ImGuiCond_Once);
+            ImGui::SetWindowSize(ImVec2(0, 0), ImGuiCond_Once);
             ImGui::End();
         }
 

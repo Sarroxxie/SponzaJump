@@ -5,15 +5,10 @@
 #include "vulkan/ApplicationContext.h"
 #include "RenderableObject.h"
 
-RenderableObject createObject(VulkanBaseContext context,
-                              CommandContext commandContext,
-                              ObjectDef objectDef,
-                              Transformation transformation = { glm::vec3(0), glm::vec3(0), glm::vec3(1)});
+MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef);
 
-void createObject(RenderableObject *object, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, Transformation transformation);
+void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object);
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object);
-
-void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object);
+void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object);
 
 #endif //GRAPHICSPRAKTIKUM_SCENESETUP_H

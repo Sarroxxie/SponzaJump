@@ -17,17 +17,17 @@ void Scene::cleanup() {
 
     vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
 
-    ComponentPool &renderablePool = componentPools[getComponentTypeId<RenderableObject>()];
+    ComponentPool &meshComponentPool = componentPools[getComponentTypeId<MeshComponent>()];
 
     // TODO use SceneView
     for (size_t i = 0; i < entities.size(); i++) {
         if (!entities[i].active) continue;
 
 
-        if (entities[i].componentMask.test(getComponentTypeId<RenderableObject>())) {
-            auto *object = (RenderableObject *) renderablePool.getComponent(i);
+        if (entities[i].componentMask.test(getComponentTypeId<MeshComponent>())) {
+            auto *object = (MeshComponent *) meshComponentPool.getComponent(i);
 
-            cleanRenderableObject(m_baseContext, *object);
+            cleanMeshObject(m_baseContext, *object);
         }
     }
 
@@ -159,10 +159,10 @@ bool Scene::removeEntity(EntityId id) {
         return false;
     }
 
-    ComponentTypeId renderableCompId = getComponentTypeId<RenderableObject>();
-    if (entities[id].componentMask.test(getComponentTypeId<RenderableObject>())) {
-        auto *object = (RenderableObject *) componentPools[renderableCompId].getComponent(id);
-        cleanRenderableObject(m_baseContext, *object);
+    ComponentTypeId renderableCompId = getComponentTypeId<MeshComponent>();
+    if (entities[id].componentMask.test(getComponentTypeId<MeshComponent>())) {
+        auto *object = (MeshComponent *) componentPools[renderableCompId].getComponent(id);
+        cleanMeshObject(m_baseContext, *object);
     }
 
     entities[id] = { false, ComponentMask() };

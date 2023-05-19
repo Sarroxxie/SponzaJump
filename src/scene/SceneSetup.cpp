@@ -2,28 +2,15 @@
 #include "SceneSetup.h"
 #include "vulkan/VulkanUtils.h"
 
-RenderableObject createObject(VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, Transformation transformation) {
-    RenderableObject object;
-    object.transformation = transformation;
-
-    createSampleVertexBuffer(context, commandContext, objectDef, object);
-    createSampleIndexBuffer(context, commandContext, objectDef, object);
-
-    return object;
+MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef) {
+    createSampleVertexBuffer(context, commandContext, objectDef, component);
+    createSampleIndexBuffer(context, commandContext, objectDef, component);
 }
 
-void createObject(RenderableObject *object, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef, Transformation transformation) {
-    object->transformation = transformation;
+void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object) {
+    object->verticesCount = objectDef.vertices.size();
 
-    createSampleVertexBuffer(context, commandContext, objectDef, *object);
-    createSampleIndexBuffer(context, commandContext, objectDef, *object);
-
-}
-
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object) {
-    object.verticesCount = objectDef.vertices.size();
-
-    VkDeviceSize bufferSize = sizeof(objectDef.vertices[0]) * object.verticesCount;
+    VkDeviceSize bufferSize = sizeof(objectDef.vertices[0]) * object->verticesCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -46,20 +33,20 @@ void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &comman
                  bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 object.vertexBuffer,
-                 object.vertexBufferMemory);
+                 object->vertexBuffer,
+                 object->vertexBufferMemory);
 
-    copyBuffer(context, commandContext, stagingBuffer, object.vertexBuffer, bufferSize);
+    copyBuffer(context, commandContext, stagingBuffer, object->vertexBuffer, bufferSize);
 
     vkDestroyBuffer(context.device, stagingBuffer, nullptr);
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 }
 
-void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, RenderableObject &object) {
+void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object) {
 
-    object.indicesCount = objectDef.indices.size();
+    object->indicesCount = objectDef.indices.size();
 
-    VkDeviceSize bufferSize = sizeof(objectDef.indices[0]) * object.indicesCount;
+    VkDeviceSize bufferSize = sizeof(objectDef.indices[0]) * object->indicesCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -82,10 +69,10 @@ void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &com
                  bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 object.indexBuffer,
-                 object.indexBufferMemory);
+                 object->indexBuffer,
+                 object->indexBufferMemory);
 
-    copyBuffer(baseContext, commandContext, stagingBuffer, object.indexBuffer, bufferSize);
+    copyBuffer(baseContext, commandContext, stagingBuffer, object->indexBuffer, bufferSize);
 
     vkDestroyBuffer(baseContext.device, stagingBuffer, nullptr);
     vkFreeMemory(baseContext.device, stagingBufferMemory, nullptr);

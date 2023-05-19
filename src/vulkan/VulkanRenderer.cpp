@@ -165,17 +165,18 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                             nullptr);
 
 
-    for (EntityId id: SceneView<RenderableObject>(scene)) {
-        auto *object = scene.getComponent<RenderableObject>(id);
+    for (EntityId id: SceneView<MeshComponent, Transformation>(scene)) {
+        auto *meshComponent = scene.getComponent<MeshComponent>(id);
+        auto *transformComponent = scene.getComponent<Transformation>(id);
 
-        VkBuffer vertexBuffers[] = { object->vertexBuffer };
+        VkBuffer vertexBuffers[] = { meshComponent->vertexBuffer };
         VkDeviceSize offsets[] = {0};
 
         vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, object->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, meshComponent->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        glm::mat4 objectTransform = object->transformation.getMatrix();
+        glm::mat4 objectTransform = transformComponent->getMatrix();
 
         vkCmdPushConstants(m_Context.commandContext.commandBuffer,
                            m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
@@ -183,7 +184,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                            sizeof(glm::mat4),
                            &objectTransform);
 
-        vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, object->indicesCount, 1, 0, 0, 0);
+        vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, meshComponent->indicesCount, 1, 0, 0, 0);
     }
 
     if (m_RenderContext.usesImgui) {

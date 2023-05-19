@@ -24,8 +24,7 @@ typedef struct transformation_s
     }
 } Transformation;
 
-typedef struct RenderableObject
-{
+typedef struct meshComponent_s {
     VkBuffer vertexBuffer {VK_NULL_HANDLE};
     VkDeviceMemory vertexBufferMemory {VK_NULL_HANDLE};
 
@@ -34,11 +33,9 @@ typedef struct RenderableObject
 
     uint32_t verticesCount = 0;
     uint32_t indicesCount = 0;
+} MeshComponent;
 
-    Transformation transformation {};
-} RenderableObject;
-
-void cleanRenderableObject(VulkanBaseContext &baseContext, RenderableObject &object);
+void cleanMeshObject(VulkanBaseContext &baseContext, MeshComponent &object);
 
 typedef struct objectDef_s {
     std::vector<Vertex> vertices;
