@@ -1,6 +1,3 @@
-//
-//
-
 #include "Scene.h"
 #include "rendering/RenderContext.h"
 
@@ -19,16 +16,10 @@ void Scene::cleanup() {
 
     ComponentPool &meshComponentPool = componentPools[getComponentTypeId<MeshComponent>()];
 
-    // TODO use SceneView
-    for (size_t i = 0; i < entities.size(); i++) {
-        if (!entities[i].active) continue;
+    for (EntityId id: SceneView<MeshComponent>(*this)) {
+        auto *object = (MeshComponent *) meshComponentPool.getComponent(id);
 
-
-        if (entities[i].componentMask.test(getComponentTypeId<MeshComponent>())) {
-            auto *object = (MeshComponent *) meshComponentPool.getComponent(i);
-
-            cleanMeshObject(m_baseContext, *object);
-        }
+        cleanMeshObject(m_baseContext, *object);
     }
 
     for (auto pair: componentPools) {
