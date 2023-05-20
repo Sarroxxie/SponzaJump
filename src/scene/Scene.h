@@ -6,7 +6,6 @@
 #include <map>
 #include <set>
 #include "vulkan/ApplicationContext.h"
-#include "SceneSetup.h"
 #include "RenderableObject.h"
 #include "Camera.h"
 #include "rendering/RenderContext.h"

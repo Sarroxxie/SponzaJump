@@ -4,6 +4,16 @@
 #include "Scene.h"
 #include "vulkan/ApplicationContext.h"
 #include "RenderableObject.h"
+#include "Entity.h"
+
+EntityId addPhysicsEntity(Scene &scene,
+                          VulkanBaseContext context,
+                          CommandContext commandContext,
+                          ObjectDef objectDef,
+                          Transformation transformation,
+                          glm::vec3 halfSize,
+                          bool dynamic = false,
+                          bool fixedRotation = true);
 
 MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef);
 

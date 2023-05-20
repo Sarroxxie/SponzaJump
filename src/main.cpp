@@ -13,6 +13,7 @@
 
 #include "box2d/b2_world.h">
 #include "physics/PhysicsComponent.h"
+#include "scene/SceneSetup.h"
 
 int main() {
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
@@ -27,88 +28,46 @@ int main() {
 
     Scene scene(appContext.baseContext, renderContext);
 
-    EntityId groundEntity = scene.addEntity();
+    glm::vec3 staticHalfSize = glm::vec3(15, 1, 1);
+    addPhysicsEntity(scene,
+                     appContext.baseContext,
+                     appContext.commandContext,
+                     getCuboid(staticHalfSize),
+                     Transformation (),
+                     staticHalfSize,
+                     false);
 
-    auto *pObject = scene.assign<MeshComponent>(groundEntity);
-    createMeshComponent(pObject, appContext.baseContext, appContext.commandContext, getCuboid(glm::vec3(1, 1, 1)));
+    glm::vec3 staticHalfSizeLeft = glm::vec3(20, 1, 1);
+    addPhysicsEntity(scene,
+                     appContext.baseContext,
+                     appContext.commandContext,
+                     getCuboid(staticHalfSizeLeft),
+                     { glm::vec3(-15 - 10, 10, 0), glm::vec3(0, 0, -glm::half_pi<float>() / 2), glm::vec3(1) },
+                     staticHalfSizeLeft,
+                     false);
 
-    auto *pTransform = scene.assign<Transformation>(groundEntity);
-    *pTransform = {
-            glm::vec3(0, 0, 0),
-            glm::vec3(0, 0, 0),
-            glm::vec3(1)};
-
-    auto *groundBodyComponent = scene.assign<PhysicsComponent>(groundEntity);
-    b2BodyDef groundBodyDef;
-    groundBodyDef.position.Set(0, 0);
-    groundBodyComponent->body = scene.getWorld().CreateBody(&groundBodyDef);
-    groundBodyComponent->dynamic = false;
-
-    b2PolygonShape groundBox;
-    groundBox.SetAsBox(1, 1);
-    groundBodyComponent->body->CreateFixture(&groundBox, 0.0);
-
-
-    EntityId dynamicEntity = scene.addEntity();
-
-    auto *meshComponent = scene.assign<MeshComponent>(dynamicEntity);
-    createMeshComponent(meshComponent, appContext.baseContext, appContext.commandContext, getCuboid(glm::vec3(1, 1, 1), glm::vec3(0.8, 0.1, 0.1)));
-
-    auto *pDynamicTransform = scene.assign<Transformation>(dynamicEntity);
-    *pDynamicTransform = {
-            glm::vec3(3, 20, 0),
-            glm::vec3(0, 0, 0),
-            glm::vec3(1)};
-
-    auto *pDynamicPhysicsComponent = scene.assign<PhysicsComponent>(dynamicEntity);
-
-    b2BodyDef bodyDef;
-    bodyDef.type = b2_dynamicBody;
-    bodyDef.fixedRotation = true;
-    bodyDef.position.Set(3.0f, 20.0f);
-    pDynamicPhysicsComponent->body = scene.getWorld().CreateBody(&bodyDef);
-    pDynamicPhysicsComponent->dynamic = true;
-
-    b2PolygonShape dynamicBox;
-    dynamicBox.SetAsBox(1.0f, 1.0f);
-
-    b2FixtureDef fixtureDef;
-    fixtureDef.shape = &dynamicBox;
-    fixtureDef.density = 1.0f;
-    fixtureDef.friction = 0.3f;
-
-    pDynamicPhysicsComponent->body->CreateFixture(&fixtureDef);
+    glm::vec3 staticHalfSizeRight = glm::vec3(20, 1, 1);
+    addPhysicsEntity(scene,
+                     appContext.baseContext,
+                     appContext.commandContext,
+                     getCuboid(staticHalfSizeRight),
+                     { glm::vec3(15 + 10, 10, 0), glm::vec3(0, 0, glm::half_pi<float>() / 2), glm::vec3(1) },
+                     staticHalfSizeRight,
+                     false);
 
 
-    EntityId dynamicEntity2 = scene.addEntity();
-
-    auto *meshComponent2 = scene.assign<MeshComponent>(dynamicEntity2);
-    createMeshComponent(meshComponent2, appContext.baseContext, appContext.commandContext, getCuboid(glm::vec3(1, 1, 1), glm::vec3(0.1, 0.1, 0.8)));
-
-    auto *pDynamicTransform2 = scene.assign<Transformation>(dynamicEntity2);
-    *pDynamicTransform2 = {
-            glm::vec3(0, 20, 0),
-            glm::vec3(0, 0, 0),
-            glm::vec3(1)};
-
-    auto *pDynamicPhysicsComponent2 = scene.assign<PhysicsComponent>(dynamicEntity2);
-
-    b2BodyDef bodyDef2;
-    bodyDef2.type = b2_dynamicBody;
-    bodyDef2.fixedRotation = true;
-    bodyDef2.position.Set(0.0f, 20.0f);
-    pDynamicPhysicsComponent2->body = scene.getWorld().CreateBody(&bodyDef2);
-    pDynamicPhysicsComponent2->dynamic = true;
-
-    b2PolygonShape dynamicBox2;
-    dynamicBox2.SetAsBox(1.0f, 1.0f);
-
-    b2FixtureDef fixtureDef2;
-    fixtureDef2.shape = &dynamicBox2;
-    fixtureDef2.density = 1.0f;
-    fixtureDef2.friction = 0.3f;
-
-    pDynamicPhysicsComponent2->body->CreateFixture(&fixtureDef2);
+    int numDynamicObjects = 30;
+    for (int i = 0; i < numDynamicObjects; i++) {
+        glm::vec3 halfSize = glm::vec3(1, 1, 1);
+        addPhysicsEntity(scene,
+                         appContext.baseContext,
+                         appContext.commandContext,
+                         getCuboid(halfSize, glm::vec3(static_cast<float>(i + 1) / (numDynamicObjects + 1.0f))),
+                         {glm::vec3(-15 + ((static_cast<float>(i) / numDynamicObjects) * 30), 20 + 5 * i, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                         halfSize,
+                         true,
+                         false);
+    }
 
     /*
     int halfCountPerDimension = 2;
@@ -162,11 +121,11 @@ int main() {
         renderer.render(scene);
 
 
-        float timeStep = 1.0f / 4000.0f;
+        float timeStep = 1.0f / 800.0f;
         int32 velocityIterations = 6;
         int32 positionIterations = 2;
         scene.getWorld().Step(timeStep, velocityIterations, positionIterations);
-        for (EntityId id : SceneView<Transformation, PhysicsComponent>(scene)) {
+        for (EntityId id: SceneView<Transformation, PhysicsComponent>(scene)) {
             auto *physicsComponent = scene.getComponent<PhysicsComponent>(id);
             if (physicsComponent->dynamic) {
                 auto *transform = scene.getComponent<Transformation>(id);

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "SceneSetup.h"
 #include "vulkan/VulkanUtils.h"
+#include "physics/PhysicsComponent.h"
 
 MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef) {
     createSampleVertexBuffer(context, commandContext, objectDef, component);
@@ -76,4 +77,45 @@ void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &com
 
     vkDestroyBuffer(baseContext.device, stagingBuffer, nullptr);
     vkFreeMemory(baseContext.device, stagingBufferMemory, nullptr);
+}
+
+EntityId addPhysicsEntity(Scene &scene,
+                          VulkanBaseContext context,
+                          CommandContext commandContext,
+                          ObjectDef objectDef,
+                          Transformation transformation,
+                          glm::vec3 halfSize,
+                          bool dynamic,
+                          bool fixedRotation) {
+
+    EntityId dynamicEntity = scene.addEntity();
+
+    auto *meshComponent = scene.assign<MeshComponent>(dynamicEntity);
+
+    createMeshComponent(meshComponent, context, commandContext, objectDef);
+
+    auto *pDynamicTransform = scene.assign<Transformation>(dynamicEntity);
+    *pDynamicTransform = transformation;
+
+    auto *pDynamicPhysicsComponent = scene.assign<PhysicsComponent>(dynamicEntity);
+
+    b2BodyDef bodyDef;
+    if (dynamic)
+        bodyDef.type = b2_dynamicBody;
+    if (fixedRotation)
+        bodyDef.fixedRotation = true;
+    bodyDef.position.Set(transformation.translation.x, transformation.translation.y);
+    bodyDef.angle = transformation.rotation.z;
+    pDynamicPhysicsComponent->body = scene.getWorld().CreateBody(&bodyDef);
+    pDynamicPhysicsComponent->dynamic = true;
+
+    b2PolygonShape dynamicBox;
+    dynamicBox.SetAsBox(halfSize.x, halfSize.y);
+
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &dynamicBox;
+    fixtureDef.density = 1.0f;
+    fixtureDef.friction = 0.3f;
+
+    pDynamicPhysicsComponent->body->CreateFixture(&fixtureDef);
 }
