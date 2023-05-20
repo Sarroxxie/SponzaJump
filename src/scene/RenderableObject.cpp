@@ -8,6 +8,17 @@ void cleanMeshObject(VulkanBaseContext &baseContext, MeshComponent &object) {
     vkFreeMemory(baseContext.device, object.vertexBufferMemory, nullptr);
 }
 
+ObjectDef getCuboid(glm::vec3 halfSizes, glm::vec3 color) {
+    ObjectDef objectDef;
+
+    for (const Vertex &v : COLORED_CUBE_DEF.vertices) {
+        objectDef.vertices.push_back({v.pos * halfSizes, color });
+    }
+
+    objectDef.indices = COLORED_CUBE_DEF.indices;
+    return objectDef;
+}
+
 const ObjectDef COLORED_TRIANGLE_DEF = { std::vector<Vertex>({
                                         {{ 0.0f, -0.5f, 0}, {1.0f, 0.0f, 0.0f}},
                                         {{ 0.5f,  0.5f, 0}, {0.0f, 1.0f, 0.0f}},

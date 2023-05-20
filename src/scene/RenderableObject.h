@@ -42,6 +42,8 @@ typedef struct objectDef_s {
     std::vector<uint32_t> indices;
 } ObjectDef;
 
+ObjectDef getCuboid(glm::vec3 halfSizes, glm::vec3 color = glm::vec3(0.7));
+
 extern const ObjectDef COLORED_TRIANGLE_DEF;
 extern const ObjectDef COLORED_SQUARE_DEF;
 extern const ObjectDef COLORED_CUBE_DEF;

@@ -12,6 +12,7 @@
 #include "rendering/RenderContext.h"
 #include "Entity.h"
 #include "Component.h"
+#include "box2d/box2d.h"
 
 template <typename... ComponentTypes>
 struct SceneView;
@@ -24,6 +25,8 @@ private:
     std::map<ComponentId, ComponentPool> componentPools;
 
     Camera m_Camera;
+
+    b2World m_World;
 
     VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
@@ -75,6 +78,8 @@ public:
 
 
     Camera &getCameraRef();
+
+    b2World &getWorld();
 
     void cleanup();
 

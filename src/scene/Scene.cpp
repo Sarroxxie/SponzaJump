@@ -2,7 +2,7 @@
 #include "rendering/RenderContext.h"
 
 Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera)
-        : m_Camera(camera), m_baseContext(vulkanBaseContext) {
+        : m_Camera(camera), m_World(b2World(b2Vec2(0, -10.0))), m_baseContext(vulkanBaseContext) {
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets(renderContext);
@@ -29,6 +29,10 @@ void Scene::cleanup() {
 
 Camera &Scene::getCameraRef() {
     return m_Camera;
+}
+
+b2World &Scene::getWorld() {
+    return m_World;
 }
 
 void Scene::createUniformBuffers() {

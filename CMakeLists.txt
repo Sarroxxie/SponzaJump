@@ -3,7 +3,7 @@ project(GraphicsPraktikum)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h src/vulkan/ApplicationContext.h src/vulkan/VulkanRenderer.cpp src/vulkan/VulkanRenderer.h src/vulkan/BufferImage.cpp src/vulkan/BufferImage.h src/scene/Scene.cpp src/scene/Scene.h src/scene/SceneSetup.cpp src/scene/SceneSetup.h src/scene/RenderableObject.cpp src/scene/RenderableObject.h src/scene/Camera.cpp src/scene/Camera.h src/rendering/RenderContext.h src/rendering/RenderSetup.cpp src/rendering/RenderSetup.h src/rendering/Shader.cpp src/rendering/Shader.h src/rendering/RenderSetupDescription.h src/scene/Component.cpp src/scene/Component.h src/scene/Entity.h)
+add_executable(GraphicsPraktikum src/main.cpp src/vulkan/VulkanSetup.cpp src/vulkan/VulkanSetup.h src/vulkan/VulkanSettings.h src/vulkan/VulkanUtils.cpp src/vulkan/VulkanUtils.h src/utils/FileUtils.cpp src/utils/FileUtils.h src/vulkan/ApplicationContext.h src/vulkan/VulkanRenderer.cpp src/vulkan/VulkanRenderer.h src/vulkan/BufferImage.cpp src/vulkan/BufferImage.h src/scene/Scene.cpp src/scene/Scene.h src/scene/SceneSetup.cpp src/scene/SceneSetup.h src/scene/RenderableObject.cpp src/scene/RenderableObject.h src/scene/Camera.cpp src/scene/Camera.h src/rendering/RenderContext.h src/rendering/RenderSetup.cpp src/rendering/RenderSetup.h src/rendering/Shader.cpp src/rendering/Shader.h src/rendering/RenderSetupDescription.h src/scene/Component.cpp src/scene/Component.h src/scene/Entity.h src/physics/PhysicsComponent.h)
 
 # add additional source code
 target_sources(GraphicsPraktikum PUBLIC src/window.h src/window.cpp)
@@ -14,6 +14,7 @@ message(${PROJECT_ROOT_DIR})
 set(GLFW_DIR libs/glfw/)
 set(IMGUI_DIR libs/imgui/)
 set(GLM_DIR libs/glm/)
+set(BOX2D_DIR libs/box2d)
 
 # VulkanSDK
 find_package(Vulkan REQUIRED)
@@ -22,7 +23,8 @@ find_package(Vulkan REQUIRED)
 target_include_directories(GraphicsPraktikum PUBLIC
 ${PROJECT_ROOT_DIR}/src # include so local includes are relative to sources root
 ${IMGUI_DIR} 
-${IMGUI_DIR}/backends 
+${IMGUI_DIR}/backends
+${BOX2D_DIR}/include
 )
 
 target_sources(GraphicsPraktikum PUBLIC 
@@ -48,6 +50,11 @@ target_link_libraries(GraphicsPraktikum Vulkan::Vulkan)
 
 add_subdirectory(${GLM_DIR})
 target_link_libraries(GraphicsPraktikum glm)
+
+set(BOX2D_BUILD_UNIT_TESTS OFF)
+set(BOX2D_BUILD_TESTBED OFF)
+add_subdirectory(${BOX2D_DIR})
+target_link_libraries(GraphicsPraktikum box2d)
 
 # Pass path to the Vulkan glslangValidator.exe as definition to C++
 add_definitions(-DVULKAN_GLSLANG_VALIDATOR_PATH=\"${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}\")
