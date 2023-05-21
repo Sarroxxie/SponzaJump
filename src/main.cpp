@@ -29,68 +29,7 @@ int main() {
     initializeSimpleSceneRenderContext(appContext, renderContext);
 
     Scene scene(appContext.baseContext, renderContext);
-
-    glm::vec3 staticHalfSize = glm::vec3(15, 1, 1);
-    addPhysicsEntity(scene,
-                     appContext.baseContext,
-                     appContext.commandContext,
-                     getCuboid(staticHalfSize),
-                     Transformation (),
-                     staticHalfSize,
-                     false);
-
-    glm::vec3 staticHalfSizeLeft = glm::vec3(20, 1, 1);
-    addPhysicsEntity(scene,
-                     appContext.baseContext,
-                     appContext.commandContext,
-                     getCuboid(staticHalfSizeLeft),
-                     { glm::vec3(-15 - 10, 10, 0), glm::vec3(0, 0, -glm::half_pi<float>() / 2), glm::vec3(1) },
-                     staticHalfSizeLeft,
-                     false);
-
-    glm::vec3 staticHalfSizeRight = glm::vec3(20, 1, 1);
-    addPhysicsEntity(scene,
-                     appContext.baseContext,
-                     appContext.commandContext,
-                     getCuboid(staticHalfSizeRight),
-                     { glm::vec3(15 + 10, 10, 0), glm::vec3(0, 0, glm::half_pi<float>() / 2), glm::vec3(1) },
-                     staticHalfSizeRight,
-                     false);
-
-
-    int numDynamicObjects = 30;
-    for (int i = 0; i < numDynamicObjects; i++) {
-        glm::vec3 halfSize = glm::vec3(1, 1, 1);
-        addPhysicsEntity(scene,
-                         appContext.baseContext,
-                         appContext.commandContext,
-                         getCuboid(halfSize, glm::vec3(static_cast<float>(i + 1) / (numDynamicObjects + 1.0f))),
-                         {glm::vec3(-15 + ((static_cast<float>(i) / numDynamicObjects) * 30), 20 + 5 * i, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
-                         halfSize,
-                         true,
-                         false);
-    }
-
-    /*
-    int halfCountPerDimension = 2;
-    int spacing = 5;
-    for (int i = -halfCountPerDimension; i <= halfCountPerDimension; i++) {
-        for (int j = -halfCountPerDimension; j <= halfCountPerDimension; j++) {
-            for (int k = -halfCountPerDimension; k <= halfCountPerDimension; k++) {
-                EntityId groundEntity = scene.addEntity();
-
-                auto *pObject = scene.assign<MeshComponent>(groundEntity);
-                createMeshComponent(pObject, appContext.baseContext, appContext.commandContext, COLORED_CUBE_DEF);
-
-                auto *pTransform = scene.assign<Transformation>(groundEntity);
-                *pTransform = {
-                        glm::vec3(j * spacing, k * spacing, i * spacing),
-                        glm::vec3(0, 0, 0),
-                        glm::vec3(0.5)};
-            }
-        }
-    }
-     */
+    createSamplePhysicsScene(appContext, scene);
 
     VulkanRenderer renderer(appContext, renderContext);
 

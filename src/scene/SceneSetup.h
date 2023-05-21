@@ -6,6 +6,8 @@
 #include "RenderableObject.h"
 #include "Entity.h"
 
+void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene);
+
 EntityId addPhysicsEntity(Scene &scene,
                           VulkanBaseContext context,
                           CommandContext commandContext,

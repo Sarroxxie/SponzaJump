@@ -3,6 +3,83 @@
 #include "vulkan/VulkanUtils.h"
 #include "physics/PhysicsComponent.h"
 
+void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene) {
+    glm::vec3 groundHalfDims = glm::vec3(30, 1, 1);
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     getCuboid(groundHalfDims),
+                     Transformation (),
+                     groundHalfDims,
+                     false);
+
+    glm::vec3 sideHalfDims = glm::vec3(1, 10, 1);
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     getCuboid(sideHalfDims),
+                     { glm::vec3(-29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     sideHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     getCuboid(sideHalfDims),
+                     { glm::vec3(29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     sideHalfDims,
+                     false);
+
+    glm::vec3 floatingBoxHalfDims(1, 1, 1);
+    ObjectDef floatingStaticObstacles = getCuboid(floatingBoxHalfDims);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     { glm::vec3(-17, 3, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     floatingBoxHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     { glm::vec3(-2, 5, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     floatingBoxHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     { glm::vec3(7, 7, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     floatingBoxHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     { glm::vec3(18, 4, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     floatingBoxHalfDims,
+                     false);
+
+    int numDynamicObjects = 30;
+    for (int i = 0; i < numDynamicObjects; i++) {
+        glm::vec3 halfSize = glm::vec3(1, 1, 1);
+        addPhysicsEntity(scene,
+                         context.baseContext,
+                         context.commandContext,
+                         getCuboid(halfSize, glm::vec3(static_cast<float>(i + 1) / (static_cast<float>(numDynamicObjects) + 1.0f))),
+                         {glm::vec3(-15 + ((static_cast<float>(i) / static_cast<float>(numDynamicObjects)) * 30), 20 + 5 * i, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                         halfSize,
+                         true,
+                         false);
+    }
+}
+
+
 MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef) {
     createSampleVertexBuffer(context, commandContext, objectDef, component);
     createSampleIndexBuffer(context, commandContext, objectDef, component);

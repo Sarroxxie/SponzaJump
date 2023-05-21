@@ -51,7 +51,7 @@ void Scene::registerSceneImgui() {
     ImGui::SliderFloat("Object Angle X", &currentAngleX, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Object Angle Y", &currentAngleY, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Camera Angle Y", &cameraAngleY, 0, glm::two_pi<float>());
-    ImGui::SliderFloat("Camera Distance", &cameraDist, 0, 150);
+    ImGui::SliderFloat("Camera Distance", &cameraDist, 0, 900);
     ImGui::End();
 }
 
