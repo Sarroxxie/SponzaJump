@@ -8,11 +8,14 @@
 #include "RenderableObject.h"
 #include "Camera.h"
 #include "rendering/RenderContext.h"
+#include "Model.h"
 
 
 class Scene {
 private:
     std::vector<RenderableObject> objects;
+    std::vector<Material>         materials;
+    std::vector<Texture>          textures;
 
     Camera m_Camera;
 

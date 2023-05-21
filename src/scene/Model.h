@@ -6,7 +6,7 @@
 struct Material
 {
     std::string name                         = "default";
-    glm::vec3   albedo                       = glm::vec3(0, 0, 0);
+    glm::vec3   albedo                       = glm::vec3(1, 0, 0);
     glm::vec3   aoRoughnessMetallic          = glm::vec3(0, 0, 0);
     // these IDs reference textures in the texture data array inside Scene
     int         albedoTextureID              = -1;
@@ -23,7 +23,13 @@ struct Material
     }
 };
 
-struct MeshPart
+struct Texture
+{
+    std::string uri = "";
+    // TODO: needs handles to the GPU references
+};
+
+struct Mesh
 {
     uint32_t verticesCount;
     uint32_t indicesCount;
@@ -33,21 +39,26 @@ struct MeshPart
 
     VkBuffer       indexBuffer;
     VkDeviceMemory indexBufferMemory;
+};
 
+struct MeshPart
+{
+    // underlying geometry
+    Mesh* mesh;
     // references Material stored in the std::vector<Material> inside Scene
     unsigned int materialIndex;
+};
+
+class Model
+{
+  private:
+    std::vector<MeshPart> meshParts;
 };
 
 struct ModelInstance
 {
     Transformation transformation;
     Model*         model;
-};
-
-class Model
-{
-  private:
-    std::vector<RenderableObject> meshParts;
 };
 
 // TODO: all of the following will be contained in the Scene, so the Scene itself is responsible for

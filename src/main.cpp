@@ -92,7 +92,7 @@ int main() {
         std::cout << "\n";
     }*/
 
-    //return 0;
+    return 0;
 
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
