@@ -14,7 +14,7 @@
 #define CURRENT_MILLIS (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()))
 
 #include "scene/SceneSetup.h"
-
+#include "input/CallbackData.h"
 
 
 int main() {
@@ -33,8 +33,16 @@ int main() {
 
     VulkanRenderer renderer(appContext, renderContext);
 
+    InputController inputController;
+    scene.setInputController(&inputController);
+
+    CallbackData callbackData;
+    callbackData.renderer = &renderer;
+    callbackData.inputController = &inputController;
+
+
     // passes reference to the renderer to the key callback function
-    glfwSetWindowUserPointer(window.getWindowHandle(), (void *) &renderer);
+    glfwSetWindowUserPointer(window.getWindowHandle(), (void *) &callbackData);
 
     if (renderContext.usesImgui) {
         ImGui_ImplGlfw_InitForVulkan(window.getWindowHandle(), true);
@@ -85,6 +93,8 @@ int main() {
             }
             accumulatedDelta = accumulatedDelta % targetPhysicsRate;
         }
+
+        scene.handleUserInput();
     }
     vkDeviceWaitIdle(appContext.baseContext.device);
 

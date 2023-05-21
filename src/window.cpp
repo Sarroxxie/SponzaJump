@@ -2,22 +2,29 @@
 #include <iostream>
 #include "vulkan/VulkanRenderer.h"
 #include "vulkan/VulkanSetup.h"
+#include "input/CallbackData.h"
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    VulkanRenderer* renderer = (VulkanRenderer*)glfwGetWindowUserPointer(window);
+    auto* callbackData = (CallbackData*) glfwGetWindowUserPointer(window);
+
+    // VulkanRenderer* renderer = (VulkanRenderer*)glfwGetWindowUserPointer(window);
     // compile shaders
     if(key == GLFW_KEY_C && action == GLFW_PRESS) {
-        renderer->recompileToSecondaryPipeline();
+        callbackData->renderer->recompileToSecondaryPipeline();
     }
     // swap graphics pipelines
-    if(key == GLFW_KEY_S && action == GLFW_PRESS) {
-        renderer->swapToSecondaryPipeline();
+    else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+        callbackData->renderer->swapToSecondaryPipeline();
+    } else {
+        callbackData->inputController->handleKeyEvent(key, action);
     }
 }
 
 static void framebufferResizeCallback(GLFWwindow* glfWwindow, int width, int height) {
-    VulkanRenderer* renderer = (VulkanRenderer*) glfwGetWindowUserPointer(glfWwindow);
-    renderer->getContext().window->setResized(true);
+    auto* callbackData = (CallbackData*) glfwGetWindowUserPointer(glfWwindow);
+
+    // VulkanRenderer* renderer = (VulkanRenderer*) glfwGetWindowUserPointer(glfWwindow);
+    callbackData->renderer->getContext().window->setResized(true);
 }
 
 

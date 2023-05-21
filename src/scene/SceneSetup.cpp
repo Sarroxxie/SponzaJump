@@ -2,6 +2,7 @@
 #include "SceneSetup.h"
 #include "vulkan/VulkanUtils.h"
 #include "physics/PhysicsComponent.h"
+#include "game/PlayerComponent.h"
 
 void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene) {
     glm::vec3 groundHalfDims = glm::vec3(30, 1, 1);
@@ -37,7 +38,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     {glm::vec3(-17, 3, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     {glm::vec3(-24, 4, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -45,7 +46,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     {glm::vec3(-2, 5, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     {glm::vec3(-15, 8, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -53,7 +54,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     {glm::vec3(7, 7, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     {glm::vec3(0, 7, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -61,10 +62,54 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     {glm::vec3(18, 4, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     {glm::vec3(13, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     {glm::vec3(15, 15, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     floatingBoxHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     {glm::vec3(5, 19, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     floatingBoxHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     {glm::vec3(-11, 18, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     floatingBoxHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     floatingStaticObstacles,
+                     {glm::vec3(-27, 18, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     floatingBoxHalfDims,
+                     false);
+
+    EntityId playerEntity = addPhysicsEntity(scene,
+                                             context.baseContext,
+                                             context.commandContext,
+                                             getCuboid(floatingBoxHalfDims, glm::vec3(0.2, 0.2, 0.8)),
+                                             {glm::vec3(0, 2, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                                             floatingBoxHalfDims,
+                                             true,
+                                             true);
+
+    scene.assign<PlayerComponent>(playerEntity);
+
+    /*
     int numDynamicObjects = 30;
     for (int i = 0; i < numDynamicObjects; i++) {
         glm::vec3 halfSize = glm::vec3(1, 1, 1);
@@ -79,16 +124,19 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                          true,
                          false);
     }
+     */
 }
 
 
-void createMeshComponent(MeshComponent *component, const VulkanBaseContext &context, const CommandContext &commandContext,
-                                  const ObjectDef &objectDef) {
+void
+createMeshComponent(MeshComponent *component, const VulkanBaseContext &context, const CommandContext &commandContext,
+                    const ObjectDef &objectDef) {
     createSampleVertexBuffer(context, commandContext, objectDef, component);
     createSampleIndexBuffer(context, commandContext, objectDef, component);
 }
 
-void createSampleVertexBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, const ObjectDef &objectDef,
+void createSampleVertexBuffer(const VulkanBaseContext &context, const CommandContext &commandContext,
+                              const ObjectDef &objectDef,
                               MeshComponent *object) {
     object->verticesCount = objectDef.vertices.size();
 
@@ -124,7 +172,8 @@ void createSampleVertexBuffer(const VulkanBaseContext &context, const CommandCon
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 }
 
-void createSampleIndexBuffer(const VulkanBaseContext &baseContext, const CommandContext &commandContext, const ObjectDef &objectDef,
+void createSampleIndexBuffer(const VulkanBaseContext &baseContext, const CommandContext &commandContext,
+                             const ObjectDef &objectDef,
                              MeshComponent *object) {
 
     object->indicesCount = objectDef.indices.size();
@@ -197,7 +246,7 @@ EntityId addPhysicsEntity(Scene &scene,
     b2FixtureDef fixtureDef;
     fixtureDef.shape = &dynamicBox;
     fixtureDef.density = 1.0f;
-    fixtureDef.friction = 0.3f;
+    fixtureDef.friction = 0.0f;
 
     pDynamicPhysicsComponent->body->CreateFixture(&fixtureDef);
 

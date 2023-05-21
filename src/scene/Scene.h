@@ -12,6 +12,7 @@
 #include "Entity.h"
 #include "Component.h"
 #include "box2d/box2d.h"
+#include "input/InputController.h"
 
 template <typename... ComponentTypes>
 struct SceneView;
@@ -26,6 +27,8 @@ private:
     Camera m_Camera;
 
     b2World m_World;
+
+    InputController *m_InputController = nullptr;
 
     VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
@@ -77,9 +80,13 @@ public:
 
 
     Camera &getCameraRef();
+    void doCameraUpdate();
 
     b2World &getWorld();
     void doPhysicsUpdate(uint64_t deltaMillis);
+
+    void setInputController(InputController *inputController);
+    void handleUserInput();
 
     void cleanup();
 

@@ -1,9 +1,10 @@
 #include "Scene.h"
 #include "rendering/RenderContext.h"
 #include "physics/PhysicsComponent.h"
+#include "game/PlayerComponent.h"
 
 Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera)
-        : m_Camera(camera), m_World(b2World(b2Vec2(0, -10.0))), m_baseContext(vulkanBaseContext) {
+        : m_Camera(camera), m_World(b2World(b2Vec2(0, -30.0))), m_baseContext(vulkanBaseContext) {
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets(renderContext);
@@ -191,5 +192,45 @@ void Scene::doPhysicsUpdate(uint64_t deltaMillis) {
             transform->rotation.z = physicsComponent->body->GetAngle();
 
         }
+    }
+}
+
+void Scene::handleUserInput() {
+    if (m_InputController == nullptr) return;
+    bool movingLeft = m_InputController->isPressed(GLFW_KEY_A);
+    bool movingRight = m_InputController->isPressed(GLFW_KEY_D);
+
+    bool isJumping = m_InputController->isPressed(GLFW_KEY_SPACE);
+
+    float speed = 10;
+
+    for (auto id: SceneView<PlayerComponent, PhysicsComponent>(*this)) {
+        auto *physicsComponent = getComponent<PhysicsComponent>(id);
+
+        float notMovingEps = 1e-4;
+
+        b2Vec2 linVel = physicsComponent->body->GetLinearVelocity();
+
+        // TODO this check is not only true if the player is actually grounded
+        bool isGrounded = abs(linVel.y) < notMovingEps;
+
+        b2Vec2 newVel;
+        newVel.x = movingRight ? speed : movingLeft ? -speed : 0;
+        newVel.y = (isGrounded && isJumping) ? 20 : linVel.y;
+
+        physicsComponent->body->SetLinearVelocity(newVel);
+    }
+}
+
+void Scene::setInputController(InputController *inputController) {
+    m_InputController = inputController;
+}
+
+void Scene::doCameraUpdate() {
+    for (auto id: SceneView<PlayerComponent, Transformation>(*this)) {
+        auto *transformation = getComponent<Transformation>(id);
+
+        m_Camera.setPosition(glm::vec3(transformation->translation.x, transformation->translation.y, cameraDist));
+        m_Camera.setLookAt(glm::vec3(transformation->translation.x, transformation->translation.y, 0));
     }
 }
