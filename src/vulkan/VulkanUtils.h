@@ -120,16 +120,16 @@ void createImage(VulkanBaseContext &context, uint32_t width, uint32_t height, ui
                  VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
                  VkDeviceMemory &imageMemory);
 
-void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
-void copyBuffer(VulkanBaseContext &context, CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext  &context, const CommandContext &commandContext);
 
 void endSingleTimeCommands(const VulkanBaseContext &context, const CommandContext &commandContext, VkCommandBuffer commandBuffer);
 
-uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+uint32_t findMemoryType(const VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 VkFormat findDepthFormat(const VulkanBaseContext &context);
 

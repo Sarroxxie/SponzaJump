@@ -9,7 +9,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      getCuboid(groundHalfDims),
-                     Transformation (),
+                     Transformation(),
                      groundHalfDims,
                      false);
 
@@ -18,7 +18,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      getCuboid(sideHalfDims),
-                     { glm::vec3(-29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     {glm::vec3(-29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      sideHalfDims,
                      false);
 
@@ -26,7 +26,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      getCuboid(sideHalfDims),
-                     { glm::vec3(29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     {glm::vec3(29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      sideHalfDims,
                      false);
 
@@ -37,7 +37,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     { glm::vec3(-17, 3, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     {glm::vec3(-17, 3, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -45,7 +45,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     { glm::vec3(-2, 5, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     {glm::vec3(-2, 5, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -53,7 +53,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     { glm::vec3(7, 7, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     {glm::vec3(7, 7, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -61,7 +61,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      context.baseContext,
                      context.commandContext,
                      floatingStaticObstacles,
-                     { glm::vec3(18, 4, 0), glm::vec3(0, 0, 0), glm::vec3(1) },
+                     {glm::vec3(18, 4, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
@@ -71,8 +71,10 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
         addPhysicsEntity(scene,
                          context.baseContext,
                          context.commandContext,
-                         getCuboid(halfSize, glm::vec3(static_cast<float>(i + 1) / (static_cast<float>(numDynamicObjects) + 1.0f))),
-                         {glm::vec3(-15 + ((static_cast<float>(i) / static_cast<float>(numDynamicObjects)) * 30), 20 + 5 * i, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                         getCuboid(halfSize, glm::vec3(
+                                 static_cast<float>(i + 1) / (static_cast<float>(numDynamicObjects) + 1.0f))),
+                         {glm::vec3(-15 + ((static_cast<float>(i) / static_cast<float>(numDynamicObjects)) * 30),
+                                    20 + 5 * i, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                          halfSize,
                          true,
                          false);
@@ -80,12 +82,14 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
 }
 
 
-MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef) {
+void createMeshComponent(MeshComponent *component, const VulkanBaseContext &context, const CommandContext &commandContext,
+                                  const ObjectDef &objectDef) {
     createSampleVertexBuffer(context, commandContext, objectDef, component);
     createSampleIndexBuffer(context, commandContext, objectDef, component);
 }
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object) {
+void createSampleVertexBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, const ObjectDef &objectDef,
+                              MeshComponent *object) {
     object->verticesCount = objectDef.vertices.size();
 
     VkDeviceSize bufferSize = sizeof(objectDef.vertices[0]) * object->verticesCount;
@@ -120,7 +124,8 @@ void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &comman
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 }
 
-void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object) {
+void createSampleIndexBuffer(const VulkanBaseContext &baseContext, const CommandContext &commandContext, const ObjectDef &objectDef,
+                             MeshComponent *object) {
 
     object->indicesCount = objectDef.indices.size();
 
@@ -157,9 +162,9 @@ void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &com
 }
 
 EntityId addPhysicsEntity(Scene &scene,
-                          VulkanBaseContext context,
-                          CommandContext commandContext,
-                          ObjectDef objectDef,
+                          const VulkanBaseContext &context,
+                          const CommandContext &commandContext,
+                          const ObjectDef &objectDef,
                           Transformation transformation,
                           glm::vec3 halfSize,
                           bool dynamic,
@@ -195,4 +200,6 @@ EntityId addPhysicsEntity(Scene &scene,
     fixtureDef.friction = 0.3f;
 
     pDynamicPhysicsComponent->body->CreateFixture(&fixtureDef);
+
+    return dynamicEntity;
 }

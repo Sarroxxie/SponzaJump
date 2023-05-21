@@ -9,18 +9,18 @@
 void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene);
 
 EntityId addPhysicsEntity(Scene &scene,
-                          VulkanBaseContext context,
-                          CommandContext commandContext,
-                          ObjectDef objectDef,
+                          const VulkanBaseContext &context,
+                          const CommandContext &commandContext,
+                          const ObjectDef &objectDef,
                           Transformation transformation,
                           glm::vec3 halfSize,
                           bool dynamic = false,
                           bool fixedRotation = true);
 
-MeshComponent createMeshComponent(MeshComponent *component, VulkanBaseContext context, CommandContext commandContext, ObjectDef objectDef);
+void createMeshComponent(MeshComponent *component, const VulkanBaseContext &context, const CommandContext &commandContext, const ObjectDef &objectDef);
 
-void createSampleVertexBuffer(VulkanBaseContext &context, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object);
+void createSampleVertexBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, const ObjectDef &objectDef, MeshComponent *object);
 
-void createSampleIndexBuffer(VulkanBaseContext &baseContext, CommandContext &commandContext, ObjectDef objectDef, MeshComponent *object);
+void createSampleIndexBuffer(const VulkanBaseContext &baseContext, const CommandContext &commandContext, const ObjectDef &objectDef, MeshComponent *object);
 
 #endif //GRAPHICSPRAKTIKUM_SCENESETUP_H

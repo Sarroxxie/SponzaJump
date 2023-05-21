@@ -221,7 +221,7 @@ void createImage(VulkanBaseContext &context, uint32_t width, uint32_t height, ui
     vkBindImageMemory(context.device, image, imageMemory, 0);
 }
 
-void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -249,7 +249,7 @@ void createBuffer(VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFl
 
 }
 
-void copyBuffer(VulkanBaseContext &context, CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(context, commandContext);
 
     VkBufferCopy copyRegion{};
@@ -292,7 +292,7 @@ void endSingleTimeCommands(const VulkanBaseContext &context, const CommandContex
     vkFreeCommandBuffers(context.device, commandContext.commandPool, 1, &commandBuffer);
 }
 
-uint32_t findMemoryType(VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t findMemoryType(const VulkanBaseContext &context, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(context.physicalDevice, &memProperties);
 
