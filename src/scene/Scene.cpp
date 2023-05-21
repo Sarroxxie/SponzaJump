@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "rendering/RenderContext.h"
+#include "physics/PhysicsComponent.h"
 
 Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera)
         : m_Camera(camera), m_World(b2World(b2Vec2(0, -10.0))), m_baseContext(vulkanBaseContext) {
@@ -168,4 +169,27 @@ bool Scene::removeEntity(EntityId id) {
 
 std::vector<Entity> &Scene::getEntities() {
     return entities;
+}
+
+void Scene::doPhysicsUpdate(uint64_t deltaMillis) {
+    float timeStep = static_cast<float>(deltaMillis) / 1000.0f;
+    int32 velocityIterations = 6;
+    int32 positionIterations = 2;
+    m_World.Step(timeStep, velocityIterations, positionIterations);
+    for (EntityId id: SceneView<Transformation, PhysicsComponent>(*this)) {
+        auto *physicsComponent = getComponent<PhysicsComponent>(id);
+        if (physicsComponent->dynamic) {
+            auto *transform = getComponent<Transformation>(id);
+
+            b2Vec2 newPos = physicsComponent->body->GetPosition();
+
+            if (newPos.y < -5) {
+                b2Vec2 vel = physicsComponent->body->GetLinearVelocity();
+                physicsComponent->body->SetLinearVelocity(b2Vec2(vel.x, -vel.y));
+            }
+            transform->translation = glm::vec3(newPos.x, newPos.y, transform->translation.z);
+            transform->rotation.z = physicsComponent->body->GetAngle();
+
+        }
+    }
 }

@@ -1,9 +1,9 @@
 #include <iostream>
+#include <chrono>
 #include "window.h"
 #include "vulkan/VulkanSetup.h"
 #include "vulkan/VulkanRenderer.h"
 
-#include "utils/FileUtils.h"
 #include "scene/RenderableObject.h"
 #include "rendering/RenderSetup.h"
 
@@ -11,9 +11,11 @@
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
 
-#include "box2d/b2_world.h">
-#include "physics/PhysicsComponent.h"
+#define CURRENT_MILLIS (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()))
+
 #include "scene/SceneSetup.h"
+
+
 
 int main() {
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
@@ -99,6 +101,15 @@ int main() {
         ImGui_ImplGlfw_InitForVulkan(window.getWindowHandle(), true);
     }
 
+
+
+    std::chrono::milliseconds lastUpdate = CURRENT_MILLIS;
+    std::chrono::milliseconds delta = std::chrono::milliseconds(0);
+    std::chrono::milliseconds accumulatedDelta = std::chrono::milliseconds(0);
+
+    std::chrono::milliseconds targetPhysicsRate = std::chrono::milliseconds(20);
+
+
     while (!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();
 
@@ -120,26 +131,20 @@ int main() {
 
         renderer.render(scene);
 
+        delta = (CURRENT_MILLIS - lastUpdate);
+        lastUpdate = CURRENT_MILLIS;
 
-        float timeStep = 1.0f / 800.0f;
-        int32 velocityIterations = 6;
-        int32 positionIterations = 2;
-        scene.getWorld().Step(timeStep, velocityIterations, positionIterations);
-        for (EntityId id: SceneView<Transformation, PhysicsComponent>(scene)) {
-            auto *physicsComponent = scene.getComponent<PhysicsComponent>(id);
-            if (physicsComponent->dynamic) {
-                auto *transform = scene.getComponent<Transformation>(id);
+        accumulatedDelta += delta;
+        if (accumulatedDelta >= targetPhysicsRate) {
+            scene.doPhysicsUpdate(targetPhysicsRate.count());
 
-                b2Vec2 newPos = physicsComponent->body->GetPosition();
+            // accumulatedDelta -= targetPhysicsRate;
 
-                if (newPos.y < -5) {
-                    b2Vec2 vel = physicsComponent->body->GetLinearVelocity();
-                    physicsComponent->body->SetLinearVelocity(b2Vec2(vel.x, -vel.y));
-                }
-                transform->translation = glm::vec3(newPos.x, newPos.y, transform->translation.z);
-                transform->rotation.z = physicsComponent->body->GetAngle();
-
+            int amountStepsInAcc = accumulatedDelta / targetPhysicsRate;
+            if (amountStepsInAcc > 1) {
+                std::cout << "Skipping " << amountStepsInAcc - 1 << " physics steps" << std::endl;
             }
+            accumulatedDelta = accumulatedDelta % targetPhysicsRate;
         }
     }
     vkDeviceWaitIdle(appContext.baseContext.device);

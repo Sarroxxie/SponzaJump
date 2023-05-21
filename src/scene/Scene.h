@@ -79,6 +79,7 @@ public:
     Camera &getCameraRef();
 
     b2World &getWorld();
+    void doPhysicsUpdate(uint64_t deltaMillis);
 
     void cleanup();
 
