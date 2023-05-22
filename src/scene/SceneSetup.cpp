@@ -4,7 +4,8 @@
 #include "physics/PhysicsComponent.h"
 #include "game/PlayerComponent.h"
 
-void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene) {
+void
+createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, GameContactListener &contactListener) {
     glm::vec3 groundHalfDims = glm::vec3(30, 1, 1);
     addPhysicsEntity(scene,
                      context.baseContext,
@@ -29,6 +30,15 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      getCuboid(sideHalfDims),
                      {glm::vec3(29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      sideHalfDims,
+                     false);
+
+    glm::vec3 slopeHalfDims = glm::vec3(1, 20, 1);
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     getCuboid(slopeHalfDims),
+                     {glm::vec3(45, 10, 0), glm::vec3(0, 0, glm::half_pi<float>() / 2), glm::vec3(1)},
+                     slopeHalfDims,
                      false);
 
     glm::vec3 floatingBoxHalfDims(1, 1, 1);
@@ -82,32 +92,36 @@ void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &sc
                      floatingBoxHalfDims,
                      false);
 
+    glm::vec3 floatingBoxHalfDims2(1, 0.5, 1);
     addPhysicsEntity(scene,
                      context.baseContext,
                      context.commandContext,
-                     floatingStaticObstacles,
-                     {glm::vec3(-11, 18, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
-                     floatingBoxHalfDims,
+                     getCuboid(floatingBoxHalfDims2),
+                     {glm::vec3(-11, 18.5, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                     floatingBoxHalfDims2,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
                      context.commandContext,
-                     floatingStaticObstacles,
+                     getCuboid(floatingBoxHalfDims),
                      {glm::vec3(-27, 18, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
-    EntityId playerEntity = addPhysicsEntity(scene,
-                                             context.baseContext,
-                                             context.commandContext,
-                                             getCuboid(floatingBoxHalfDims, glm::vec3(0.2, 0.2, 0.8)),
-                                             {glm::vec3(0, 2, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
-                                             floatingBoxHalfDims,
-                                             true,
-                                             true);
+    EntityId playerEntity = addPlayerEntity(scene,
+                                            context.baseContext,
+                                            context.commandContext,
+                                            getCuboid(floatingBoxHalfDims, glm::vec3(0.2, 0.2, 0.8)),
+                                            {glm::vec3(30, 20, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
+                                            floatingBoxHalfDims,
+                                            contactListener,
+                                            true,
+                                            true);
 
-    scene.assign<PlayerComponent>(playerEntity);
+    auto *playerComponent = scene.assign<PlayerComponent>(playerEntity);
+
+    contactListener.setPlayerComponent(playerComponent);
 
     /*
     int numDynamicObjects = 30;
@@ -251,4 +265,43 @@ EntityId addPhysicsEntity(Scene &scene,
     pDynamicPhysicsComponent->body->CreateFixture(&fixtureDef);
 
     return dynamicEntity;
+}
+
+EntityId addPlayerEntity(Scene &scene, const VulkanBaseContext &context, const CommandContext &commandContext,
+                         const ObjectDef &objectDef, Transformation transformation, glm::vec3 halfSize,
+                         GameContactListener &contactListener,
+                         bool dynamic, bool fixedRotation) {
+    EntityId playerEntity = scene.addEntity();
+
+    auto *meshComponent = scene.assign<MeshComponent>(playerEntity);
+
+    createMeshComponent(meshComponent, context, commandContext, objectDef);
+
+    auto *pDynamicTransform = scene.assign<Transformation>(playerEntity);
+    *pDynamicTransform = transformation;
+
+    auto *pDynamicPhysicsComponent = scene.assign<PhysicsComponent>(playerEntity);
+
+    b2BodyDef bodyDef;
+    if (dynamic)
+        bodyDef.type = b2_dynamicBody;
+    if (fixedRotation)
+        bodyDef.fixedRotation = true;
+    bodyDef.position.Set(transformation.translation.x, transformation.translation.y);
+    bodyDef.angle = transformation.rotation.z;
+    pDynamicPhysicsComponent->body = scene.getWorld().CreateBody(&bodyDef);
+    pDynamicPhysicsComponent->dynamic = true;
+
+    b2PolygonShape dynamicBox;
+    dynamicBox.SetAsBox(halfSize.x, halfSize.y);
+
+    b2FixtureDef fixtureDef;
+    fixtureDef.shape = &dynamicBox;
+    fixtureDef.density = 1.0f;
+    fixtureDef.friction = 0.0f;
+
+    b2Fixture *fixture = pDynamicPhysicsComponent->body->CreateFixture(&fixtureDef);
+    contactListener.setPlayerFixture(fixture);
+
+    return playerEntity;
 }

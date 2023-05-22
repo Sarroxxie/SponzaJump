@@ -206,6 +206,7 @@ void Scene::handleUserInput() {
 
     for (auto id: SceneView<PlayerComponent, PhysicsComponent>(*this)) {
         auto *physicsComponent = getComponent<PhysicsComponent>(id);
+        auto *playerComponent = getComponent<PlayerComponent>(id);
 
         float notMovingEps = 1e-4;
 
@@ -216,7 +217,7 @@ void Scene::handleUserInput() {
 
         b2Vec2 newVel;
         newVel.x = movingRight ? speed : movingLeft ? -speed : 0;
-        newVel.y = (isGrounded && isJumping) ? 20 : linVel.y;
+        newVel.y = (playerComponent->grounded && isJumping) ? 20 : linVel.y;
 
         physicsComponent->body->SetLinearVelocity(newVel);
     }

@@ -5,8 +5,9 @@
 #include "vulkan/ApplicationContext.h"
 #include "RenderableObject.h"
 #include "Entity.h"
+#include "physics/GameContactListener.h"
 
-void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene);
+void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, GameContactListener &contactListener);
 
 EntityId addPhysicsEntity(Scene &scene,
                           const VulkanBaseContext &context,
@@ -14,6 +15,16 @@ EntityId addPhysicsEntity(Scene &scene,
                           const ObjectDef &objectDef,
                           Transformation transformation,
                           glm::vec3 halfSize,
+                          bool dynamic = false,
+                          bool fixedRotation = true);
+
+EntityId addPlayerEntity(Scene &scene,
+                          const VulkanBaseContext &context,
+                          const CommandContext &commandContext,
+                          const ObjectDef &objectDef,
+                          Transformation transformation,
+                          glm::vec3 halfSize,
+                          GameContactListener &contactListener,
                           bool dynamic = false,
                           bool fixedRotation = true);
 

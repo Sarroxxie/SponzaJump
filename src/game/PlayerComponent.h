@@ -1,6 +1,8 @@
 #ifndef GRAPHICSPRAKTIKUM_PLAYERCOMPONENT_H
 #define GRAPHICSPRAKTIKUM_PLAYERCOMPONENT_H
 
-struct PlayerComponent {};
+struct PlayerComponent {
+    bool grounded;
+};
 
 #endif //GRAPHICSPRAKTIKUM_PLAYERCOMPONENT_H

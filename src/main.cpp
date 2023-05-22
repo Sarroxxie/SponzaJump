@@ -15,6 +15,7 @@
 
 #include "scene/SceneSetup.h"
 #include "input/CallbackData.h"
+#include "physics/GameContactListener.h"
 
 
 int main() {
@@ -29,7 +30,8 @@ int main() {
     initializeSimpleSceneRenderContext(appContext, renderContext);
 
     Scene scene(appContext.baseContext, renderContext);
-    createSamplePhysicsScene(appContext, scene);
+    GameContactListener contactListener;
+    createSamplePhysicsScene(appContext, scene, contactListener);
 
     VulkanRenderer renderer(appContext, renderContext);
 
@@ -40,6 +42,8 @@ int main() {
     callbackData.renderer = &renderer;
     callbackData.inputController = &inputController;
 
+
+    scene.getWorld().SetContactListener((b2ContactListener *) &contactListener);
 
     // passes reference to the renderer to the key callback function
     glfwSetWindowUserPointer(window.getWindowHandle(), (void *) &callbackData);
