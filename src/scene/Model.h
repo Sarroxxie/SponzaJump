@@ -7,7 +7,7 @@ struct Material
 {
     std::string name                         = "default";
     glm::vec3   albedo                       = glm::vec3(1, 0, 0);
-    glm::vec3   aoRoughnessMetallic          = glm::vec3(0, 0, 0);
+    glm::vec3   aoRoughnessMetallic          = glm::vec3(1, 1, 0);
     // these IDs reference textures in the texture data array inside Scene
     int         albedoTextureID              = -1;
     int         normalTextureID              = -1;
@@ -33,6 +33,8 @@ struct Mesh
 {
     uint32_t verticesCount;
     uint32_t indicesCount;
+    // radius of the bounding sphere around the Mesh -> will be used for frustum culling
+    float radius;
 
     VkBuffer       vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
@@ -43,22 +45,37 @@ struct Mesh
 
 struct MeshPart
 {
-    // underlying geometry
-    Mesh* mesh;
+    // references Mesh stored in the std::vector<Mesh> inside Scene
+    int meshIndex;
     // references Material stored in the std::vector<Material> inside Scene
-    unsigned int materialIndex;
+    int materialIndex;
+
+    MeshPart()
+        : meshIndex(-1)
+        , materialIndex(-1) {}
+
+    MeshPart(int meshIndex,int materialIndex)
+        : meshIndex(meshIndex)
+        , materialIndex(materialIndex) {}
+
+    bool operator==(const MeshPart& other) const {
+        return meshIndex == other.meshIndex && materialIndex == other.materialIndex;
+    }
 };
 
-class Model
+struct Model
 {
-  private:
-    std::vector<MeshPart> meshParts;
+    std::vector<int> meshPartIndices;
 };
 
-struct ModelInstance
+class ModelInstance
 {
+    // TODO: rewrite parts of the transformation struct (to use quaternions and store the mat4)
     Transformation transformation;
     Model*         model;
+
+    public:
+    ModelInstance(Model* model) : model(model) {}
 };
 
 // TODO: all of the following will be contained in the Scene, so the Scene itself is responsible for

@@ -32,7 +32,7 @@ bool imageLoaderFunction(tinygltf::Image*     image,
 }
 
 bool ModelLoader::loadModel(const std::string& filename) {
-    tinygltf::Model    model;
+    tinygltf::Model    gltfModel;
     tinygltf::TinyGLTF loader;
     std::string        errors;
     std::string        warnings;
@@ -40,7 +40,7 @@ bool ModelLoader::loadModel(const std::string& filename) {
 
     // set custom image loading function
     loader.SetImageLoader(imageLoaderFunction, nullptr);
-    success = loader.LoadASCIIFromFile(&model, &errors, &warnings, filename);
+    success = loader.LoadASCIIFromFile(&gltfModel, &errors, &warnings, filename);
 
     if(!warnings.empty()) {
         printf("Warn: %s\n", warnings.c_str());
@@ -52,19 +52,61 @@ bool ModelLoader::loadModel(const std::string& filename) {
 
     if(!success) {
         printf("Failed to parse glTF\n");
-    } else {
-        // grab per node transformation
-        for(auto& node : model.nodes) {
-            transforms.push_back(getTransform(node));
-            int meshIndex = node.mesh;
-        }
+        return false;
     }
-    return success;
+    // 1. create Meshes
+    for(auto& gltfMesh : gltfModel.meshes) {
+        // a "Mesh" from the glTF file is called a "Model" in our program
+        Model model;
+        for(auto& primitive : gltfMesh.primitives) {
+            int meshPartIndex = -1;
+            int meshIndex     = findGeometryData(primitive);
+            if(meshIndex < 0) {
+                // Mesh not yet created, so create a new one alongside a MeshPart
+                Mesh mesh = createMesh(primitive);
+                meshes.emplace_back(mesh);
+                meshParts.emplace_back(MeshPart(meshes.size() - 1, primitive.material));
+                model.meshPartIndices.emplace_back(meshParts.size() - 1);
+                meshLookups.emplace_back(MeshLookup(primitive, meshes.size() - 1));
+            } else {
+                // Mesh exists, so we need to see if there exists a MeshPart
+                // pointing at that Mesh and sharing the material index
+                bool meshPartExists = false;
+                for(int i = 0; i < meshParts.size(); i++) {
+                    if(meshParts[i].meshIndex == meshIndex
+                       && meshParts[i].materialIndex == primitive.material) {
+                        meshPartExists = true;
+                        model.meshPartIndices.emplace_back(i);
+                        break;
+                    }
+                }
+                if(!meshPartExists) {
+                    // create the MeshPart that points to the found Mesh and
+                    // the material of the primitive
+                    meshParts.emplace_back(MeshPart(meshIndex, primitive.material));
+                    model.meshPartIndices.emplace_back(meshParts.size() - 1);
+                }
+            }
+        }
+        models.emplace_back(model);
+    }
+    // 2. create Materials
+    for(auto& gltfMaterial : gltfModel.materials) {
+        materials.emplace_back(createMaterial(gltfMaterial, gltfModel));
+    }
+
+    // 3. create ModelInstances (from list of Nodes)
+    for(auto& node : gltfModel.nodes) {
+        ModelInstance instance(&models[node.mesh]);
+        glm::mat4     transform = getTransform(node);
+        instances.emplace_back(instance);
+    }
+    return true;
 }
 
 /*
-* Calculates transformation matrix from scale, rotation and translation of a Node.
-*/
+ * Calculates transformation matrix from scale, rotation and translation of a Node.
+ */
 glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
     glm::mat4 transform = glm::mat4(1.0f);
 
@@ -85,11 +127,94 @@ glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
     return transform;
 }
 
-Material ModelLoader::createMaterial(tinygltf::Material material) {
-    return Material();
+/*
+ * Creates a material by loading all the needed textures and setting IDs in the
+ * material to point at them.
+ */
+Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
+                                     std::vector<tinygltf::Texture>& gltfTextures,
+                                     std::vector<tinygltf::Image>& gltfImages) {
+    Material material;
+    material.name = gltfMaterial.name;
+    if(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
+        textures.emplace_back(createTexture(
+            gltfImages
+                [gltfTextures[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index]
+                     .source]
+                    .uri));
+        material.albedoTextureID = textures.size() - 1;
+    } else {
+        material.albedo =
+            glm::vec3(gltfMaterial.pbrMetallicRoughness.baseColorFactor[0],
+                      gltfMaterial.pbrMetallicRoughness.baseColorFactor[1],
+                      gltfMaterial.pbrMetallicRoughness.baseColorFactor[2]);
+    }
+    if(gltfMaterial.normalTexture.index != -1) {
+        textures.emplace_back(createTexture(
+            gltfImages[gltfTextures[gltfMaterial.normalTexture.index].source].uri));
+        material.normalTextureID = textures.size() - 1;
+    }
+    if(gltfMaterial.occlusionTexture.index != -1) {
+        textures.emplace_back(createTexture(
+            gltfImages[gltfTextures[gltfMaterial.occlusionTexture.index].source].uri));
+        material.aoRoughnessMetallicTextureID = textures.size() - 1;
+    } else {
+        material.aoRoughnessMetallic.r = 1;
+    }
+    if(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index != -1
+       && material.aoRoughnessMetallicTextureID == -1) {
+        textures.emplace_back(createTexture(
+            gltfImages[gltfTextures[gltfMaterial.pbrMetallicRoughness
+                                        .metallicRoughnessTexture.index]
+                           .source]
+                .uri));
+        material.aoRoughnessMetallicTextureID = textures.size() - 1;
+    } else {
+        material.aoRoughnessMetallic.g = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
+        material.aoRoughnessMetallic.b = gltfMaterial.pbrMetallicRoughness.metallicFactor;
+    }
+    return material;
 }
 
-Mesh ModelLoader::createMesh(tinygltf::Mesh mesh, tinygltf::Accessor accessors) {
-    Mesh geometryMesh;
-    return geometryMesh;
+/*
+ * TODO: implement this
+ * Gets the geometry data from the primitive and stores it in a Mesh.
+ */
+Mesh ModelLoader::createMesh(tinygltf::Primitive& primitive) {
+    return Mesh();
+}
+
+// TODO: implement this -> will need vulkan tutorial for it
+Texture ModelLoader::createTexture(std::string uri) {
+    return Texture();
+}
+
+/*
+ * Returns the index of the geometry data from the "meshes" array if the
+ * geometry of the primitive already exists, else -1.
+ */
+int ModelLoader::findGeometryData(tinygltf::Primitive& primitive) {
+    for(auto& meshLookup : meshLookups) {
+        if(primitive.indices != meshLookup.primitive.indices)
+            continue;
+        bool attributesMatch = true;
+        if(primitive.attributes.size() == meshLookup.primitive.attributes.size()) {
+            for(auto& attribute : primitive.attributes) {
+                // if key is not found
+                if(meshLookup.primitive.attributes.count(attribute.first) == 0) {
+                    attributesMatch = false;
+                    break;
+                }
+                // if attribute value does not match
+                if(attribute.second
+                   != meshLookup.primitive.attributes.at(attribute.first)) {
+                    attributesMatch = false;
+                    break;
+                }
+            }
+            if(attributesMatch)
+                return meshLookup.meshIndex;
+        }
+    }
+    return -1;
 }
