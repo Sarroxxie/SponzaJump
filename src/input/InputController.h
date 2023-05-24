@@ -6,12 +6,22 @@
 
 class InputController {
 
-    std::map<int, bool> m_pressedKeys;
+    struct KeyPressValues {
+        bool pressed = false;
+        bool pressedOnce = false;
+        bool releasedOnce = false;
+    };
+
+    std::map<int, KeyPressValues> m_pressedKeys;
 
 public:
     void handleKeyEvent(int key, int action);
 
     bool isPressed(int key);
+
+    bool getSinglePress(int key);
+
+    bool getSingleRelease(int key);
 };
 
 
