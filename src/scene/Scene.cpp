@@ -147,7 +147,7 @@ EntityId Scene::addEntity() {
     }
     EntityId id = freeEntities.back();
     freeEntities.pop_back();
-    entities[id] = { true, ComponentMask () };
+    entities[id] = {true, ComponentMask()};
     return id;
 }
 
@@ -162,7 +162,7 @@ bool Scene::removeEntity(EntityId id) {
         cleanMeshObject(m_baseContext, *object);
     }
 
-    entities[id] = { false, ComponentMask() };
+    entities[id] = {false, ComponentMask()};
     freeEntities.push_back(id);
 
     return true;
