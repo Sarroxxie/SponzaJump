@@ -37,7 +37,23 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
                      context.baseContext,
                      context.commandContext,
                      getCuboid(slopeHalfDims),
-                     {glm::vec3(45, 10, 0), glm::vec3(0, 0, glm::half_pi<float>() / 2), glm::vec3(1)},
+                     {glm::vec3(45, 10, 0), glm::vec3(0, 0, glm::radians<float>(45)), glm::vec3(1)},
+                     slopeHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     getCuboid(slopeHalfDims),
+                     {glm::vec3(65, 0, 0), glm::vec3(0, 0, glm::radians<float>(60)), glm::vec3(1)},
+                     slopeHalfDims,
+                     false);
+
+    addPhysicsEntity(scene,
+                     context.baseContext,
+                     context.commandContext,
+                     getCuboid(slopeHalfDims),
+                     {glm::vec3(85, -10, 0), glm::vec3(0, 0, glm::radians<float>(75)), glm::vec3(1)},
                      slopeHalfDims,
                      false);
 

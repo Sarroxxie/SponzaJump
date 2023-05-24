@@ -25,6 +25,10 @@ public:
     void setPlayerComponent(PlayerComponent *component);
 
 private:
+    b2Vec2 getWorldManifoldNormal(b2Contact *contact, int fixture_id);
+
+    bool contactMakesGrounded(b2Contact *contact, int fixture_id);
+
     bool contactIsBelow(b2Contact *contact, int fixture_id);
 
 };

@@ -184,10 +184,6 @@ void Scene::doPhysicsUpdate(uint64_t deltaMillis) {
 
             b2Vec2 newPos = physicsComponent->body->GetPosition();
 
-            if (newPos.y < -5) {
-                b2Vec2 vel = physicsComponent->body->GetLinearVelocity();
-                physicsComponent->body->SetLinearVelocity(b2Vec2(vel.x, -vel.y));
-            }
             transform->translation = glm::vec3(newPos.x, newPos.y, transform->translation.z);
             transform->rotation.z = physicsComponent->body->GetAngle();
 
@@ -200,7 +196,7 @@ void Scene::handleUserInput() {
     bool movingLeft = m_InputController->isPressed(GLFW_KEY_A);
     bool movingRight = m_InputController->isPressed(GLFW_KEY_D);
 
-    bool isJumping = m_InputController->isPressed(GLFW_KEY_SPACE);
+    bool wantsToJump = m_InputController->getSinglePress(GLFW_KEY_SPACE);
 
     float speed = 10;
 
@@ -212,12 +208,20 @@ void Scene::handleUserInput() {
 
         b2Vec2 linVel = physicsComponent->body->GetLinearVelocity();
 
+        bool jumps = false;
+        if (wantsToJump) {
+            if (playerComponent->grounded) {
+                jumps = true;
+            } else if (playerComponent->canDoubleJump) {
+                jumps = true;
+                playerComponent->canDoubleJump = false;
+            }
+        }
         // TODO this check is not only true if the player is actually grounded
-        bool isGrounded = abs(linVel.y) < notMovingEps;
 
         b2Vec2 newVel;
         newVel.x = movingRight ? speed : movingLeft ? -speed : 0;
-        newVel.y = (playerComponent->grounded && isJumping) ? 20 : linVel.y;
+        newVel.y = jumps ? 20 : linVel.y;
 
         physicsComponent->body->SetLinearVelocity(newVel);
     }

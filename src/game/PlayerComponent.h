@@ -3,6 +3,7 @@
 
 struct PlayerComponent {
     bool grounded;
+    bool canDoubleJump;
 };
 
 #endif //GRAPHICSPRAKTIKUM_PLAYERCOMPONENT_H
