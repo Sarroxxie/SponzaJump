@@ -2,6 +2,7 @@
 #include "scene/RenderableObject.h"
 #include "tiny_gltf.h"
 #include <vector>
+#include <glm/mat4x4.hpp>
 
 // in "rendering/host_device.h" is a copy of this called "MaterialDescription" for use on GPU
 struct Material
@@ -42,6 +43,14 @@ struct Mesh
 
     VkBuffer       indexBuffer;
     VkDeviceMemory indexBufferMemory;
+
+    void cleanup(VulkanBaseContext& baseContext) {
+        vkDestroyBuffer(baseContext.device, indexBuffer, nullptr);
+        vkFreeMemory(baseContext.device, indexBufferMemory, nullptr);
+
+        vkDestroyBuffer(baseContext.device, vertexBuffer, nullptr);
+        vkFreeMemory(baseContext.device, vertexBufferMemory, nullptr);
+    };
 };
 
 struct MeshPart
@@ -71,12 +80,14 @@ struct Model
 
 class ModelInstance
 {
+  public:
     // TODO: rewrite parts of the transformation struct (to use quaternions and store the mat4)
-    Transformation transformation;
+    glm::mat4 transformation;
     Model*         model;
 
-    public:
-    ModelInstance(Model* model) : model(model) {}
+  public:
+    ModelInstance(Model* model)
+        : model(model) {}
 };
 
 // TODO: all of the following will be contained in the Scene, so the Scene itself is responsible for

@@ -3,10 +3,10 @@
 #include <functional>
 
 // byte size of float in the glTF2.0 file
-constexpr int FLOAT_SIZE = 4;
-constexpr int COMPONENT_TYPE_UBYTE = 5121;
+constexpr int FLOAT_SIZE            = 4;
+constexpr int COMPONENT_TYPE_UBYTE  = 5121;
 constexpr int COMPONENT_TYPE_USHORT = 5123;
-constexpr int COMPONENT_TYPE_UINT = 5125;
+constexpr int COMPONENT_TYPE_UINT   = 5125;
 
 /**
  * TODO: keep track of uploaded textures somewhere in a map (uri + TextureStruct)
@@ -38,6 +38,10 @@ bool imageLoaderFunction(tinygltf::Image*     image,
     return true;
 }
 
+/*
+ * Creates a glm::vec2 from raw byte data. This function assumes that the OS
+ * uses small-endians. Reads a total of 8 bytes at the specified address.
+ */
 glm::vec2 bytesToVec2(unsigned char* address) {
     glm::vec2 out(0);
     memcpy(&out.r, address, sizeof(float));
@@ -45,6 +49,10 @@ glm::vec2 bytesToVec2(unsigned char* address) {
     return out;
 }
 
+/*
+ * Creates a glm::vec3 from raw byte data. This function assumes that the OS
+ * uses small-endians. Reads a total of 12 bytes at the specified address.
+ */
 glm::vec3 bytesToVec3(unsigned char* address) {
     glm::vec3 out(0);
     memcpy(&out.r, address, sizeof(float));
@@ -53,6 +61,10 @@ glm::vec3 bytesToVec3(unsigned char* address) {
     return out;
 }
 
+/*
+ * Creates a glm::vec4 from raw byte data. This function assumes that the OS
+ * uses small-endians. Reads a total of 16 bytes at the specified address.
+ */
 glm::vec4 bytesToVec4(unsigned char* address) {
     glm::vec4 out(0);
     memcpy(&out.r, address, sizeof(float));
@@ -62,25 +74,130 @@ glm::vec4 bytesToVec4(unsigned char* address) {
     return out;
 }
 
+/*
+ * Reads an unsigned byte from 1 bytes at the specified address and casts it to
+ * an unsigned int.
+ */
 unsigned int bytesFromUnsignedCharToUnsignedInt(unsigned char* address) {
     unsigned char out;
     memcpy(&out, address, sizeof(unsigned char));
     return (unsigned int)out;
 }
 
+/*
+ * Reads an unsigned short from 2 bytes at the specified address and casts it to
+ * an unsigned int.
+ */
 unsigned int bytesFromUnsignedShortToUnsignedInt(unsigned char* address) {
     unsigned short out;
     memcpy(&out, address, sizeof(unsigned short));
     return (unsigned int)out;
 }
 
+/*
+ * Reads an unsigned int from 4 bytes at the specified address.
+ */
 unsigned int bytesToUnsignedInt(unsigned char* address) {
     unsigned int out;
     memcpy(&out, address, sizeof(unsigned int));
     return out;
 }
 
-bool ModelLoader::loadModel(const std::string& filename) {
+/*
+ * Creates vertex and index buffers on the GPU and stores a reference to the
+ * handle in the mesh.
+ */
+void createMeshBuffers(VulkanBaseContext         context,
+                       CommandContext            commandContext,
+                       std::vector<Vertex>       vertices,
+                       std::vector<unsigned int> indices,
+                       Mesh&                     mesh) {
+    createSampleVertexBuffer2(context, commandContext, vertices, mesh);
+    createSampleIndexBuffer2(context, commandContext, indices, mesh);
+}
+
+/*
+ * TODO: test this
+ * Creates a vertex buffer from the specified vertices vector and uploads it
+ * to GPU. ALso stores a reference to the handle in the mesh.
+ */
+void createSampleVertexBuffer2(VulkanBaseContext&  context,
+                               CommandContext&     commandContext,
+                               std::vector<Vertex> vertices,
+                               Mesh&               mesh) {
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    VkBuffer       stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(context, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer, stagingBufferMemory);
+
+    //void* data = (void*)vertices.data();
+    void* data;
+    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(context.device, stagingBufferMemory);
+
+    createBuffer(context, bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.vertexBuffer,
+                 mesh.vertexBufferMemory);
+
+    copyBuffer(context, commandContext, stagingBuffer, mesh.vertexBuffer, bufferSize);
+
+    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+}
+
+/*
+ * TODO: test this
+ * Creates an index buffer from the specified indices vector and uploads it
+ * to GPU. ALso stores a reference to the handle in the mesh.
+ */
+void createSampleIndexBuffer2(VulkanBaseContext&        baseContext,
+                              CommandContext&           commandContext,
+                              std::vector<unsigned int> indices,
+                              Mesh&                     mesh) {
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+    VkBuffer       stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(baseContext, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer, stagingBufferMemory);
+
+    //void* data = (void*)indices.data();
+    void* data;
+    vkMapMemory(baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
+    memcpy(data, indices.data(), (size_t)bufferSize);
+    vkUnmapMemory(baseContext.device, stagingBufferMemory);
+
+    createBuffer(baseContext, bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mesh.indexBuffer,
+                 mesh.indexBufferMemory);
+
+    copyBuffer(baseContext, commandContext, stagingBuffer, mesh.indexBuffer, bufferSize);
+
+    vkDestroyBuffer(baseContext.device, stagingBuffer, nullptr);
+    vkFreeMemory(baseContext.device, stagingBufferMemory, nullptr);
+}
+
+/*
+ * Loads model from glTF2.0 file and converts everything to the internally used
+ * format. Buffers get created for vertices, indices, materials and textures and
+ * are uploaded to the GPU.
+ */
+bool ModelLoader::loadModel(const std::string& filename,
+                            VulkanBaseContext  context,
+                            CommandContext     commandContext) {
     tinygltf::Model    gltfModel;
     tinygltf::TinyGLTF loader;
     std::string        errors;
@@ -112,10 +229,11 @@ bool ModelLoader::loadModel(const std::string& filename) {
             int meshIndex     = findGeometryData(primitive);
             if(meshIndex < 0) {
                 // Mesh not yet created, so create a new one alongside a MeshPart
-                Mesh mesh = createMesh(primitive, gltfModel.accessors, gltfModel.bufferViews, gltfModel.buffers);
+                Mesh mesh = createMesh(primitive, gltfModel.accessors, gltfModel.bufferViews,
+                                       gltfModel.buffers, context, commandContext);
                 meshes.emplace_back(mesh);
                 meshParts.emplace_back(MeshPart(meshes.size() - 1, primitive.material));
-                model.meshPartIndices.emplace_back(meshParts.size() - 1);
+                model.meshPartIndices.emplace_back((int)meshParts.size() - 1);
                 meshLookups.emplace_back(MeshLookup(primitive, meshes.size() - 1));
             } else {
                 // Mesh exists, so we need to see if there exists a MeshPart
@@ -130,6 +248,7 @@ bool ModelLoader::loadModel(const std::string& filename) {
                     }
                 }
                 if(!meshPartExists) {
+                    std::cout << "in\n";
                     // create the MeshPart that points to the found Mesh and
                     // the material of the primitive
                     meshParts.emplace_back(MeshPart(meshIndex, primitive.material));
@@ -141,13 +260,15 @@ bool ModelLoader::loadModel(const std::string& filename) {
     }
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
-        materials.emplace_back(createMaterial(gltfMaterial, gltfModel.textures, gltfModel.images));
+        materials.emplace_back(
+            createMaterial(gltfMaterial, gltfModel.textures, gltfModel.images));
     }
 
     // 3. create ModelInstances (from list of Nodes)
     for(auto& node : gltfModel.nodes) {
         ModelInstance instance(&models[node.mesh]);
         glm::mat4     transform = getTransform(node);
+        instance.transformation = transform;
         instances.emplace_back(instance);
     }
     return true;
@@ -232,13 +353,15 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
 Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
                              std::vector<tinygltf::Accessor>   accessors,
                              std::vector<tinygltf::BufferView> bufferViews,
-                             std::vector<tinygltf::Buffer>     buffers) {
+                             std::vector<tinygltf::Buffer>     buffers,
+                             VulkanBaseContext                 context,
+                             CommandContext                    commandContext) {
     Mesh                      out;
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
 
     tinygltf::Accessor position = accessors[primitive.attributes.at("POSITION")];
-    tinygltf::Accessor normal  = accessors[primitive.attributes.at("NORMAL")];
+    tinygltf::Accessor normal   = accessors[primitive.attributes.at("NORMAL")];
     tinygltf::Accessor tangents = accessors[primitive.attributes.at("TANGENT")];
     tinygltf::Accessor texCoord0 = accessors[primitive.attributes.at("TEXCOORD_0")];
 
@@ -249,7 +372,7 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     // convert vertices into internal format
     for(int i = 0; i < position.count; i++) {
         // last number from the multiplication is the number of components in the vector
-        Vertex    vert;
+        Vertex vert;
         vert.pos = bytesToVec3(
             &buffers[bufferViews[position.bufferView].buffer]
                  .data[bufferViews[position.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
@@ -265,28 +388,32 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
         vertices.push_back(vert);
     }
 
+    // default parsing function (if indices are stored as byte)
     auto function = bytesFromUnsignedCharToUnsignedInt;
     // size of one index in bytes
     int indexStride = 1;
 
     // choose parsing function based on the numeric type that the index is stored as
     if(accessors[primitive.indices].componentType == COMPONENT_TYPE_UINT) {
-        function  = bytesToUnsignedInt;
+        function    = bytesToUnsignedInt;
         indexStride = 4;
     } else if(accessors[primitive.indices].componentType == COMPONENT_TYPE_USHORT) {
-        function  = bytesFromUnsignedShortToUnsignedInt;
+        function    = bytesFromUnsignedShortToUnsignedInt;
         indexStride = 2;
     }
 
     // convert indices into internal format
     int componentType = accessors[primitive.indices].componentType;
     for(int i = 0; i < accessors[primitive.indices].count; i++) {
-        indices.push_back(buffers[bufferViews[primitive.indices].buffer]
-                              .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
+        unsigned int index =
+            function(&buffers[bufferViews[primitive.indices].buffer]
+                         .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
+        indices.push_back(index);
     }
-    // TODO: create buffers from vertices and indices and add to the Mesh
+
     out.verticesCount = vertices.size();
     out.indicesCount  = indices.size();
+    createMeshBuffers(context, commandContext, vertices, indices, out);
     return out;
 }
 

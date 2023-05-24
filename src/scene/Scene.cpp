@@ -11,8 +11,14 @@ Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, 
     createDescriptorSets(vulkanBaseContext, renderContext);
 }
 
-void Scene::addObject(RenderableObject object) {
-    objects.push_back(object);
+// TODO: need to make sure all the IDs in meshparts, etc. are correctly offset by the ModelLoader
+void Scene::addObject(ModelLoader loader) {
+    meshes.insert(meshes.end(), loader.meshes.begin(), loader.meshes.end());
+    meshParts.insert(meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
+    textures.insert(textures.end(), loader.textures.begin(), loader.textures.end());
+    materials.insert(materials.end(), loader.materials.begin(), loader.materials.end());
+    models.insert(models.end(), loader.models.begin(), loader.models.end());
+    instances.insert(instances.end(), loader.instances.begin(), loader.instances.end());
 }
 
 void Scene::cleanup(VulkanBaseContext &baseContext) {
@@ -24,6 +30,34 @@ void Scene::cleanup(VulkanBaseContext &baseContext) {
     for (auto &object: objects) {
         cleanRenderableObject(baseContext, object);
     }
+
+    for(auto& mesh : meshes) {
+        mesh.cleanup(baseContext);
+    }
+
+    for(auto& texture : textures) {
+        // TODO: need to implement texture cleanup
+    }
+}
+
+std::vector<Mesh>& Scene::getMeshes() {
+    return meshes;
+}
+
+std::vector<MeshPart>& Scene::getMeshParts() {
+    return meshParts;
+}
+std::vector<Texture>& Scene::getTextures() {
+    return textures;
+}
+std::vector<Material>& Scene::getMaterials() {
+    return materials;
+}
+std::vector<Model>& Scene::getModels() {
+    return models;
+}
+std::vector<ModelInstance>& Scene::getInstances() {
+    return instances;
 }
 
 std::vector<RenderableObject> &Scene::getObjects() {

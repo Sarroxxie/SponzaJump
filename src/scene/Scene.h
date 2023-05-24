@@ -9,13 +9,19 @@
 #include "Camera.h"
 #include "rendering/RenderContext.h"
 #include "Model.h"
+#include "ModelLoader.h"
 
 
 class Scene {
 private:
     std::vector<RenderableObject> objects;
-    std::vector<Material>         materials;
-    std::vector<Texture>          textures;
+
+    std::vector<Mesh>          meshes;
+    std::vector<MeshPart>      meshParts;
+    std::vector<Texture>       textures;
+    std::vector<Material>      materials;
+    std::vector<Model>         models;
+    std::vector<ModelInstance> instances;
 
     Camera m_Camera;
 
@@ -29,7 +35,14 @@ private:
 public:
     Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera());
 
-    void addObject(RenderableObject object);
+    void addObject(ModelLoader loader);
+
+    std::vector<Mesh> &getMeshes();
+    std::vector<MeshPart> &getMeshParts();
+    std::vector<Texture> &getTextures();
+    std::vector<Material> &getMaterials();
+    std::vector<Model> &getModels();
+    std::vector<ModelInstance> &getInstances();
 
     std::vector<RenderableObject> &getObjects();
     bool hasObject();
