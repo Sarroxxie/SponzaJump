@@ -1,5 +1,12 @@
 #include "ModelLoader.h"
 #include <glm/gtx/quaternion.hpp>
+#include <functional>
+
+// byte size of float in the glTF2.0 file
+constexpr int FLOAT_SIZE = 4;
+constexpr int COMPONENT_TYPE_UBYTE = 5121;
+constexpr int COMPONENT_TYPE_USHORT = 5123;
+constexpr int COMPONENT_TYPE_UINT = 5125;
 
 /**
  * TODO: keep track of uploaded textures somewhere in a map (uri + TextureStruct)
@@ -29,6 +36,48 @@ bool imageLoaderFunction(tinygltf::Image*     image,
 
     // tinygltf::LoadImageData(image, image_idx, err, warn, req_width, req_height, bytes, size, user_data);
     return true;
+}
+
+glm::vec2 bytesToVec2(unsigned char* address) {
+    glm::vec2 out(0);
+    memcpy(&out.r, address, sizeof(float));
+    memcpy(&out.g, address + 4, sizeof(float));
+    return out;
+}
+
+glm::vec3 bytesToVec3(unsigned char* address) {
+    glm::vec3 out(0);
+    memcpy(&out.r, address, sizeof(float));
+    memcpy(&out.g, address + 4, sizeof(float));
+    memcpy(&out.b, address + 8, sizeof(float));
+    return out;
+}
+
+glm::vec4 bytesToVec4(unsigned char* address) {
+    glm::vec4 out(0);
+    memcpy(&out.r, address, sizeof(float));
+    memcpy(&out.g, address + 4, sizeof(float));
+    memcpy(&out.b, address + 8, sizeof(float));
+    memcpy(&out.a, address + 12, sizeof(float));
+    return out;
+}
+
+unsigned int bytesFromUnsignedCharToUnsignedInt(unsigned char* address) {
+    unsigned char out;
+    memcpy(&out, address, sizeof(unsigned char));
+    return (unsigned int)out;
+}
+
+unsigned int bytesFromUnsignedShortToUnsignedInt(unsigned char* address) {
+    unsigned short out;
+    memcpy(&out, address, sizeof(unsigned short));
+    return (unsigned int)out;
+}
+
+unsigned int bytesToUnsignedInt(unsigned char* address) {
+    unsigned int out;
+    memcpy(&out, address, sizeof(unsigned int));
+    return out;
 }
 
 bool ModelLoader::loadModel(const std::string& filename) {
@@ -63,7 +112,7 @@ bool ModelLoader::loadModel(const std::string& filename) {
             int meshIndex     = findGeometryData(primitive);
             if(meshIndex < 0) {
                 // Mesh not yet created, so create a new one alongside a MeshPart
-                Mesh mesh = createMesh(primitive);
+                Mesh mesh = createMesh(primitive, gltfModel.accessors, gltfModel.bufferViews, gltfModel.buffers);
                 meshes.emplace_back(mesh);
                 meshParts.emplace_back(MeshPart(meshes.size() - 1, primitive.material));
                 model.meshPartIndices.emplace_back(meshParts.size() - 1);
@@ -92,7 +141,7 @@ bool ModelLoader::loadModel(const std::string& filename) {
     }
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
-        materials.emplace_back(createMaterial(gltfMaterial, gltfModel));
+        materials.emplace_back(createMaterial(gltfMaterial, gltfModel.textures, gltfModel.images));
     }
 
     // 3. create ModelInstances (from list of Nodes)
@@ -180,8 +229,65 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
  * TODO: implement this
  * Gets the geometry data from the primitive and stores it in a Mesh.
  */
-Mesh ModelLoader::createMesh(tinygltf::Primitive& primitive) {
-    return Mesh();
+Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
+                             std::vector<tinygltf::Accessor>   accessors,
+                             std::vector<tinygltf::BufferView> bufferViews,
+                             std::vector<tinygltf::Buffer>     buffers) {
+    Mesh                      out;
+    std::vector<Vertex>       vertices;
+    std::vector<unsigned int> indices;
+
+    tinygltf::Accessor position = accessors[primitive.attributes.at("POSITION")];
+    tinygltf::Accessor normal  = accessors[primitive.attributes.at("NORMAL")];
+    tinygltf::Accessor tangents = accessors[primitive.attributes.at("TANGENT")];
+    tinygltf::Accessor texCoord0 = accessors[primitive.attributes.at("TEXCOORD_0")];
+
+    // every vertex has to have every attribute
+    assert(position.count == normal.count && position.count == tangents.count
+           && position.count == texCoord0.count);
+
+    // convert vertices into internal format
+    for(int i = 0; i < position.count; i++) {
+        // last number from the multiplication is the number of components in the vector
+        Vertex    vert;
+        vert.pos = bytesToVec3(
+            &buffers[bufferViews[position.bufferView].buffer]
+                 .data[bufferViews[position.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
+        vert.nrm = bytesToVec3(
+            &buffers[bufferViews[normal.bufferView].buffer]
+                 .data[bufferViews[normal.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
+        vert.tangents = bytesToVec4(
+            &buffers[bufferViews[tangents.bufferView].buffer]
+                 .data[bufferViews[tangents.bufferView].byteOffset + i * FLOAT_SIZE * 4]);
+        vert.texCoord = bytesToVec2(
+            &buffers[bufferViews[texCoord0.bufferView].buffer]
+                 .data[bufferViews[texCoord0.bufferView].byteOffset + i * FLOAT_SIZE * 2]);
+        vertices.push_back(vert);
+    }
+
+    auto function = bytesFromUnsignedCharToUnsignedInt;
+    // size of one index in bytes
+    int indexStride = 1;
+
+    // choose parsing function based on the numeric type that the index is stored as
+    if(accessors[primitive.indices].componentType == COMPONENT_TYPE_UINT) {
+        function  = bytesToUnsignedInt;
+        indexStride = 4;
+    } else if(accessors[primitive.indices].componentType == COMPONENT_TYPE_USHORT) {
+        function  = bytesFromUnsignedShortToUnsignedInt;
+        indexStride = 2;
+    }
+
+    // convert indices into internal format
+    int componentType = accessors[primitive.indices].componentType;
+    for(int i = 0; i < accessors[primitive.indices].count; i++) {
+        indices.push_back(buffers[bufferViews[primitive.indices].buffer]
+                              .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
+    }
+    // TODO: create buffers from vertices and indices and add to the Mesh
+    out.verticesCount = vertices.size();
+    out.indicesCount  = indices.size();
+    return out;
 }
 
 // TODO: implement this -> will need vulkan tutorial for it

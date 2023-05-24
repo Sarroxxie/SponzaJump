@@ -10,6 +10,8 @@
 #include "tiny_gltf.h"
 #include "stb_image.h"
 
+#include "scene/ModelLoader.h"
+
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
@@ -68,10 +70,16 @@ bool loadModel(tinygltf::Model &model, const char *filename) {
     return success;
 }
 
+unsigned char bytesToUnsignedChar2(unsigned char* address) {
+    unsigned char out;
+    memcpy(&out, address, sizeof(unsigned char));
+    return out;
+}
+
 
 int main() {
     // tinygltf test code
-    const char*  modelPath = "res/assets/models/debug_model/debug_model.gltf";
+    const char*  modelPath = "res/assets/models/debug_cube/debug_cube.gltf";
     tinygltf::Model    model;
     loadModel(model, modelPath);
     
@@ -91,6 +99,12 @@ int main() {
         stbi_image_free(stbiImage);
         std::cout << "\n";
     }*/
+
+    ModelLoader loader;
+    loader.loadModel(modelPath);
+    std::cout << loader.meshes.size() << "\n";
+    std::cout << loader.meshes[0].verticesCount << "\n";
+    std::cout << loader.meshes[0].indicesCount << "\n";
 
     return 0;
 

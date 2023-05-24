@@ -51,7 +51,10 @@ class ModelLoader
     Material  createMaterial(tinygltf::Material&             gltfMaterial,
                              std::vector<tinygltf::Texture>& gltfTextures,
                              std::vector<tinygltf::Image>&   gltfImages);
-    Mesh      createMesh(tinygltf::Primitive& primitive);
+    Mesh      createMesh(tinygltf::Primitive&              primitive,
+                         std::vector<tinygltf::Accessor>   accessors,
+                         std::vector<tinygltf::BufferView> bufferViews,
+                         std::vector<tinygltf::Buffer>     buffers);
     Texture   createTexture(std::string uri);
     int       findGeometryData(tinygltf::Primitive& primitive);
 

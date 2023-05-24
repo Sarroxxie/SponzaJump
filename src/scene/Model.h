@@ -1,3 +1,4 @@
+#pragma once
 #include "scene/RenderableObject.h"
 #include "tiny_gltf.h"
 #include <vector>
