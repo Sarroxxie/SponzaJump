@@ -22,7 +22,7 @@ private:
     std::vector<Entity> entities;
     std::vector<EntityId> freeEntities;
 
-    std::map<ComponentId, ComponentPool> componentPools;
+    std::map<ComponentTypeId, ComponentPool> componentPools;
 
     Camera m_Camera;
 
