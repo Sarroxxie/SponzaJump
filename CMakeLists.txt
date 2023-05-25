@@ -51,9 +51,13 @@ target_link_libraries(GraphicsPraktikum Vulkan::Vulkan)
 add_subdirectory(${GLM_DIR})
 target_link_libraries(GraphicsPraktikum glm)
 
+
+cmake_policy(SET CMP0079 NEW)
+
 set(BOX2D_BUILD_UNIT_TESTS OFF)
 set(BOX2D_BUILD_TESTBED OFF)
 add_subdirectory(${BOX2D_DIR})
+
 target_link_libraries(GraphicsPraktikum box2d)
 
 # Pass path to the Vulkan glslangValidator.exe as definition to C++
