@@ -8,6 +8,7 @@
 #include "ApplicationContext.h"
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include <array>
 
 struct QueueFamilyIndices {
@@ -29,8 +30,9 @@ struct SwapChainSupportDetails {
 // TODO This struct is taken from tutorial, we will probably create better way to hold vertices at some point, then this can be deleted
 struct Vertex {
     glm::vec3 pos;
-    glm::vec3 color;
-    // glm::vec2 texCoord;
+    glm::vec3 nrm;
+    glm::vec4 tangents;
+    glm::vec2 texCoord;
     // uint32_t texIndex;
 
     static VkVertexInputBindingDescription getBindingDescription() {
@@ -44,36 +46,35 @@ struct Vertex {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, pos);
+        attributeDescriptions[0].offset = static_cast<uint32_t>(offsetof(Vertex, pos));
 
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-        /*
+        attributeDescriptions[1].offset = static_cast<uint32_t>(offsetof(Vertex, nrm));
+        
         attributeDescriptions[2].binding = 0;
         attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+        attributeDescriptions[2].format   = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attributeDescriptions[2].offset = static_cast<uint32_t>(offsetof(Vertex, tangents));
 
         attributeDescriptions[3].binding = 0;
         attributeDescriptions[3].location = 3;
-        attributeDescriptions[3].format = VK_FORMAT_R32_UINT;
-        attributeDescriptions[3].offset = offsetof(Vertex, texIndex);
-        */
+        attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[3].offset = static_cast<uint32_t>(offsetof(Vertex, texCoord));
 
         return attributeDescriptions;
     }
 
-    bool operator==(const Vertex &other) const {
-        return pos == other.pos && color == other.color; // && texCoord == other.texCoord && texIndex == other.texIndex;
+    bool operator==(const Vertex& other) const {
+        return pos == other.pos && nrm == other.nrm
+               && tangents == other.tangents && texCoord == other.texCoord;
     }
 };
 
@@ -135,4 +136,6 @@ VkFormat findDepthFormat(const VulkanBaseContext &context);
 
 VkFormat findSupportedFormat(const VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features);
+
+VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

@@ -1,7 +1,9 @@
 #version 450
 
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec4 inTangents;
+layout(location = 3) in vec2 texCoords;
 
 layout(binding = 0) uniform SceneTransform {
     mat4 proj;
@@ -17,6 +19,6 @@ layout(location = 1) out vec3 fragColor;
 
 void main() {
     gl_Position = sceneTransform.proj * sceneTransform.view * objectTransform.obj * vec4(inPosition, 1);
-    fragColor = inColor;
-    //fragColor = vec3(0,0,1);
+    fragColor = (inNormal + 1) * 0.5;
+    //fragColor = normal;
 }

@@ -330,3 +330,9 @@ VkFormat findSupportedFormat(const VulkanBaseContext &context, const std::vector
 
     throw std::runtime_error("failed to find supported format!");
 }
+
+VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer) {
+    VkBufferDeviceAddressInfo info = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
+    info.buffer = buffer;
+    return vkGetBufferDeviceAddress(device, &info);
+}

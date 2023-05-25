@@ -13,6 +13,8 @@
 #include "Component.h"
 #include "box2d/box2d.h"
 #include "input/InputController.h"
+#include "Model.h"
+#include "ModelLoader.h"
 
 template <typename... ComponentTypes>
 struct SceneView;
@@ -23,6 +25,13 @@ private:
     std::vector<EntityId> freeEntities;
 
     std::map<ComponentTypeId, ComponentPool> componentPools;
+
+    std::vector<Mesh>          meshes;
+    std::vector<MeshPart>      meshParts;
+    std::vector<Texture>       textures;
+    std::vector<Material>      materials;
+    std::vector<Model>         models;
+    std::vector<ModelInstance> instances;
 
     Camera m_Camera;
 
@@ -62,6 +71,14 @@ public:
 
         pool.mapComponent(entityId, componentId);
         entities[entityId].componentMask.set(componentTypeId);
+    void addObject(ModelLoader loader);
+
+    std::vector<Mesh> &getMeshes();
+    std::vector<MeshPart> &getMeshParts();
+    std::vector<Texture> &getTextures();
+    std::vector<Material> &getMaterials();
+    std::vector<Model> &getModels();
+    std::vector<ModelInstance> &getInstances();
 
         return (T*) pool.getComponent(entityId);
     }

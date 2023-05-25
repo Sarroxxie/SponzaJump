@@ -125,7 +125,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     renderPassInfo.renderArea.extent = m_Context.swapchainContext.swapChainExtent;
 
     std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    clearValues[0].color = {{1.0f, 1.0f, 1.0f, 1.0f}};
     clearValues[1].depthStencil = {1.0f, 0};
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -171,7 +171,8 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
         VkBuffer vertexBuffers[] = { meshComponent->vertexBuffer };
         VkDeviceSize offsets[] = {0};
 
-        vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+                                   vertexBuffers, offsets);
 
         vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, meshComponent->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
@@ -184,6 +185,34 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                            &objectTransform);
 
         vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, meshComponent->indicesCount, 1, 0, 0, 0);
+    }
+
+    for(auto& instance : scene.getInstances()) {
+        Model model = *instance.model;
+        glm::mat4 transformation = instance.transformation;
+        for(auto& meshPartIndex : model.meshPartIndices) {
+            MeshPart meshPart = scene.getMeshParts()[meshPartIndex];
+            Mesh     mesh     = scene.getMeshes()[meshPart.meshIndex];
+            VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+            VkDeviceSize offsets[]       = {0};
+
+            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+                                   vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            vkCmdPushConstants(
+                    m_Context.commandContext.commandBuffer,
+                    m_RenderContext.renderPassContext
+                            .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+                    VK_SHADER_STAGE_VERTEX_BIT,
+                    0,  // offset
+                    sizeof(glm::mat4), &transformation);
+
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                             mesh.indicesCount, 1, 0, 0, 0);
+        }
     }
 
     if (m_RenderContext.usesImgui) {

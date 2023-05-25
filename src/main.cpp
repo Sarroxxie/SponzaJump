@@ -7,6 +7,11 @@
 #include "scene/RenderableObject.h"
 #include "rendering/RenderSetup.h"
 
+#include "tiny_gltf.h"
+#include "stb_image.h"
+
+#include "scene/ModelLoader.h"
+
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
@@ -19,6 +24,9 @@
 
 
 int main() {
+    // tinygltf test code
+    const char*  modelPath = "res/assets/models/debug_model/debug_model.gltf";
+
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
 
@@ -32,6 +40,21 @@ int main() {
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
+
+    ModelLoader loader;
+    loader.loadModel(modelPath, appContext.baseContext, appContext.commandContext);
+    std::cout << "mesh count: " << loader.meshes.size() << "\n";
+    int verticesCount = 0;
+    int indicesCount    = 0;
+    for(auto& mesh : loader.meshes) {
+        verticesCount += mesh.verticesCount;
+        indicesCount += mesh.indicesCount;
+    }
+    std::cout << "vertices count: " << verticesCount << "\n";
+
+    std::cout << "triangle count: " << indicesCount / 3 << "\n";
+
+    scene.addObject(loader);
 
     VulkanRenderer renderer(appContext, renderContext);
 
