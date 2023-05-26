@@ -13,6 +13,30 @@ Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, 
 void Scene::cleanup() {
     vkDestroyBuffer(m_baseContext.device, uniformBuffer, nullptr);
     vkFreeMemory(m_baseContext.device, uniformBufferMemory, nullptr);
+
+    vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
+
+    ComponentPool &meshComponentPool = componentPools[getComponentTypeId<MeshComponent>()];
+
+    for (EntityId id: SceneView<MeshComponent>(*this)) {
+        auto *object = (MeshComponent *) meshComponentPool.getComponent(id);
+
+        cleanMeshObject(m_baseContext, *object);
+    }
+
+    for (auto pair: componentPools) {
+        pair.second.clean();
+    }
+
+    for (auto &mesh: meshes) {
+        mesh.cleanup(m_baseContext);
+    }
+
+    for (auto &texture: textures) {
+        // TODO: need to implement texture cleanup
+    }
+}
+
 // TODO: need to make sure all the IDs in meshparts, etc. are correctly offset by the ModelLoader
 void Scene::addObject(ModelLoader loader) {
     meshes.insert(meshes.end(), loader.meshes.begin(), loader.meshes.end());
@@ -23,51 +47,29 @@ void Scene::addObject(ModelLoader loader) {
     instances.insert(instances.end(), loader.instances.begin(), loader.instances.end());
 }
 
-    vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
 
-    ComponentPool &meshComponentPool = componentPools[getComponentTypeId<MeshComponent>()];
-
-    for (EntityId id: SceneView<MeshComponent>(*this)) {
-        auto *object = (MeshComponent *) meshComponentPool.getComponent(id);
-    for (auto &object: objects) {
-        cleanRenderableObject(baseContext, object);
-    }
-
-    for(auto& mesh : meshes) {
-        mesh.cleanup(baseContext);
-    }
-
-    for(auto& texture : textures) {
-        // TODO: need to implement texture cleanup
-    }
-}
-
-std::vector<Mesh>& Scene::getMeshes() {
+std::vector<Mesh> &Scene::getMeshes() {
     return meshes;
 }
 
-std::vector<MeshPart>& Scene::getMeshParts() {
+std::vector<MeshPart> &Scene::getMeshParts() {
     return meshParts;
 }
-std::vector<Texture>& Scene::getTextures() {
+
+std::vector<Texture> &Scene::getTextures() {
     return textures;
 }
-std::vector<Material>& Scene::getMaterials() {
+
+std::vector<Material> &Scene::getMaterials() {
     return materials;
 }
-std::vector<Model>& Scene::getModels() {
+
+std::vector<Model> &Scene::getModels() {
     return models;
 }
-std::vector<ModelInstance>& Scene::getInstances() {
+
+std::vector<ModelInstance> &Scene::getInstances() {
     return instances;
-}
-
-        cleanMeshObject(m_baseContext, *object);
-    }
-
-    for (auto pair: componentPools) {
-        pair.second.clean();
-    }
 }
 
 Camera &Scene::getCameraRef() {

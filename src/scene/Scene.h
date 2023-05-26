@@ -71,14 +71,6 @@ public:
 
         pool.mapComponent(entityId, componentId);
         entities[entityId].componentMask.set(componentTypeId);
-    void addObject(ModelLoader loader);
-
-    std::vector<Mesh> &getMeshes();
-    std::vector<MeshPart> &getMeshParts();
-    std::vector<Texture> &getTextures();
-    std::vector<Material> &getMaterials();
-    std::vector<Model> &getModels();
-    std::vector<ModelInstance> &getInstances();
 
         return (T*) pool.getComponent(entityId);
     }
@@ -95,6 +87,14 @@ public:
     }
     // -------
 
+    void addObject(ModelLoader loader);
+
+    std::vector<Mesh> &getMeshes();
+    std::vector<MeshPart> &getMeshParts();
+    std::vector<Texture> &getTextures();
+    std::vector<Material> &getMaterials();
+    std::vector<Model> &getModels();
+    std::vector<ModelInstance> &getInstances();
 
     Camera &getCameraRef();
     void doCameraUpdate();
