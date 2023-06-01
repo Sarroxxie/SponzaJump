@@ -28,6 +28,16 @@ void createSampleIndexBuffer2(VulkanBaseContext&        baseContext,
                               std::vector<unsigned int> indices,
                               Mesh&                     mesh);
 
+struct ModelLoadingOffsets
+{
+    int meshesOffset    = 0;
+    int meshPartsOffset = 0;
+    int texturesOffset  = 0;
+    int materialsOffset = 0;
+    int modelsOffset    = 0;
+    int instancesOffset = 0;
+};
+
 // TODO: allow for offsets in the pointers to meshes, textures and materials
 //        -> this way the meshes, textures and materials can get appended to
 //           already existing vectors
@@ -43,16 +53,18 @@ class ModelLoader
         // index in the "meshes" vector
         int meshIndex;
 
-        MeshLookup(tinygltf::Primitive& primitive, int meshIndex)
+        MeshLookup(tinygltf::Primitive primitive, int meshIndex)
             : primitive(primitive)
             , meshIndex(meshIndex) {}
     };
 
   public:
-    bool loadModel(const std::string& filename, VulkanBaseContext context, CommandContext commandContext);
+    bool loadModel(const std::string&  filename,
+                   ModelLoadingOffsets offsets,
+                   VulkanBaseContext   context,
+                   CommandContext      commandContext);
 
-    // TODO: see todo at start of class
-    int meshOffset, materialOffset, textureOffset;
+    ModelLoadingOffsets offsets;
 
     // stores per node transformation -> will be used to create instances from the models
     std::vector<Mesh>          meshes;
@@ -77,10 +89,4 @@ class ModelLoader
     int       findGeometryData(tinygltf::Primitive& primitive);
 
     std::vector<MeshLookup> meshLookups;
-    int                     meshesOffset    = 0;
-    int                     meshPartsOffset = 0;
-    int                     texturesOffset  = 0;
-    int                     materialsOffset = 0;
-    int                     modelsOffset    = 0;
-    int                     instancesOffset = 0;
 };

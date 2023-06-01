@@ -195,7 +195,8 @@ void createSampleIndexBuffer2(VulkanBaseContext&        baseContext,
  * format. Buffers get created for vertices, indices, materials and textures and
  * are uploaded to the GPU.
  */
-bool ModelLoader::loadModel(const std::string& filename,
+bool ModelLoader::loadModel(const std::string&  filename,
+                            ModelLoadingOffsets offsets,
                             VulkanBaseContext  context,
                             CommandContext     commandContext) {
     tinygltf::Model    gltfModel;
@@ -220,6 +221,9 @@ bool ModelLoader::loadModel(const std::string& filename,
         printf("Failed to parse glTF\n");
         return false;
     }
+
+    this->offsets = offsets;
+
     // 1. create Meshes
     for(auto& gltfMesh : gltfModel.meshes) {
         // a "Mesh" from the glTF file is called a "Model" in our program
@@ -231,19 +235,21 @@ bool ModelLoader::loadModel(const std::string& filename,
                 // Mesh not yet created, so create a new one alongside a MeshPart
                 Mesh mesh = createMesh(primitive, gltfModel.accessors, gltfModel.bufferViews,
                                        gltfModel.buffers, context, commandContext);
-                meshes.emplace_back(mesh);
-                meshParts.emplace_back(MeshPart(meshes.size() - 1, primitive.material));
-                model.meshPartIndices.emplace_back((int)meshParts.size() - 1);
-                meshLookups.emplace_back(MeshLookup(primitive, meshes.size() - 1));
+                meshes.push_back(mesh);
+                meshParts.push_back(MeshPart(meshes.size() - 1 + offsets.meshesOffset,
+                                             primitive.material + offsets.materialsOffset));
+                model.meshPartIndices.push_back((int)meshParts.size() - 1
+                                                + offsets.meshPartsOffset);
+                meshLookups.push_back(MeshLookup(primitive, meshes.size() - 1));
             } else {
                 // Mesh exists, so we need to see if there exists a MeshPart
                 // pointing at that Mesh and sharing the material index
                 bool meshPartExists = false;
                 for(int i = 0; i < meshParts.size(); i++) {
-                    if(meshParts[i].meshIndex == meshIndex
-                       && meshParts[i].materialIndex == primitive.material) {
+                    if(meshParts[i].meshIndex == (meshIndex + offsets.meshesOffset)
+                       && meshParts[i].materialIndex == (primitive.material + offsets.materialsOffset)) {
                         meshPartExists = true;
-                        model.meshPartIndices.emplace_back(i);
+                        model.meshPartIndices.push_back(i + offsets.meshPartsOffset);
                         break;
                     }
                 }
@@ -251,25 +257,27 @@ bool ModelLoader::loadModel(const std::string& filename,
                     std::cout << "in\n";
                     // create the MeshPart that points to the found Mesh and
                     // the material of the primitive
-                    meshParts.emplace_back(MeshPart(meshIndex, primitive.material));
-                    model.meshPartIndices.emplace_back(meshParts.size() - 1);
+                    meshParts.push_back(MeshPart(meshIndex + offsets.meshesOffset,
+                                                 primitive.material + offsets.materialsOffset));
+                    model.meshPartIndices.push_back(meshParts.size() - 1
+                                                    + offsets.meshPartsOffset);
                 }
             }
         }
-        models.emplace_back(model);
+        models.push_back(model);
     }
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
-        materials.emplace_back(
+        materials.push_back(
             createMaterial(gltfMaterial, gltfModel.textures, gltfModel.images));
     }
 
     // 3. create ModelInstances (from list of Nodes)
     for(auto& node : gltfModel.nodes) {
-        ModelInstance instance(&models[node.mesh]);
+        ModelInstance instance(node.mesh + offsets.modelsOffset);
         glm::mat4     transform = getTransform(node);
         instance.transformation = transform;
-        instances.emplace_back(instance);
+        instances.push_back(instance);
     }
     return true;
 }
@@ -307,7 +315,7 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
     Material material;
     material.name = gltfMaterial.name;
     if(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
-        textures.emplace_back(createTexture(
+        textures.push_back(createTexture(
             gltfImages
                 [gltfTextures[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index]
                      .source]
@@ -320,12 +328,12 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
                       gltfMaterial.pbrMetallicRoughness.baseColorFactor[2]);
     }
     if(gltfMaterial.normalTexture.index != -1) {
-        textures.emplace_back(createTexture(
+        textures.push_back(createTexture(
             gltfImages[gltfTextures[gltfMaterial.normalTexture.index].source].uri));
         material.normalTextureID = textures.size() - 1;
     }
     if(gltfMaterial.occlusionTexture.index != -1) {
-        textures.emplace_back(createTexture(
+        textures.push_back(createTexture(
             gltfImages[gltfTextures[gltfMaterial.occlusionTexture.index].source].uri));
         material.aoRoughnessMetallicTextureID = textures.size() - 1;
     } else {

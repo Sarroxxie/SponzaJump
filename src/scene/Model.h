@@ -83,11 +83,11 @@ class ModelInstance
   public:
     // TODO: rewrite parts of the transformation struct (to use quaternions and store the mat4)
     glm::mat4 transformation;
-    Model*         model;
+    int       modelID;
 
   public:
-    ModelInstance(Model* model)
-        : model(model) {}
+    ModelInstance(int modelID)
+        : modelID(modelID) {}
 };
 
 // TODO: all of the following will be contained in the Scene, so the Scene itself is responsible for

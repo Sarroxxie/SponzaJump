@@ -89,6 +89,8 @@ public:
 
     void addObject(ModelLoader loader);
 
+    ModelLoadingOffsets getModelLoadingOffsets();
+
     std::vector<Mesh> &getMeshes();
     std::vector<MeshPart> &getMeshParts();
     std::vector<Texture> &getTextures();

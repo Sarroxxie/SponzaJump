@@ -45,6 +45,27 @@ void Scene::addObject(ModelLoader loader) {
     materials.insert(materials.end(), loader.materials.begin(), loader.materials.end());
     models.insert(models.end(), loader.models.begin(), loader.models.end());
     instances.insert(instances.end(), loader.instances.begin(), loader.instances.end());
+
+    /*std::copy(loader.meshes.begin(), loader.meshes.end(), std::back_inserter(meshes));
+    std::copy(loader.meshParts.begin(), loader.meshParts.end(),
+              std::back_inserter(meshParts));
+    std::copy(loader.textures.begin(), loader.textures.end(), std::back_inserter(textures));
+    std::copy(loader.materials.begin(), loader.materials.end(),
+              std::back_inserter(materials));
+    std::copy(loader.models.begin(), loader.models.end(), std::back_inserter(models));
+    std::copy(loader.instances.begin(), loader.instances.end(),
+              std::back_inserter(instances));*/
+}
+
+ModelLoadingOffsets Scene::getModelLoadingOffsets() {
+    ModelLoadingOffsets offsets;
+    offsets.meshesOffset    = meshes.size();
+    offsets.meshPartsOffset = meshParts.size();
+    offsets.texturesOffset  = textures.size();
+    offsets.materialsOffset = materials.size();
+    offsets.modelsOffset    = models.size();
+    offsets.instancesOffset = instances.size();
+    return offsets;
 }
 
 
@@ -278,7 +299,7 @@ void Scene::doCameraUpdate() {
     for (auto id: SceneView<PlayerComponent, Transformation>(*this)) {
         auto *transformation = getComponent<Transformation>(id);
 
-        m_Camera.setPosition(glm::vec3(transformation->translation.x, transformation->translation.y, cameraDist));
+        m_Camera.setPosition(glm::vec3(transformation->translation.x, transformation->translation.y + 10, cameraDist));
         m_Camera.setLookAt(glm::vec3(transformation->translation.x, transformation->translation.y, 0));
     }
 }

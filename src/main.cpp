@@ -22,7 +22,6 @@
 #include "input/CallbackData.h"
 #include "physics/GameContactListener.h"
 
-
 int main() {
     // tinygltf test code
     const char*  modelPath = "res/assets/models/debug_model/debug_model.gltf";
@@ -40,21 +39,24 @@ int main() {
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
-
-    ModelLoader loader;
-    loader.loadModel(modelPath, appContext.baseContext, appContext.commandContext);
-    std::cout << "mesh count: " << loader.meshes.size() << "\n";
-    int verticesCount = 0;
-    int indicesCount    = 0;
-    for(auto& mesh : loader.meshes) {
-        verticesCount += mesh.verticesCount;
-        indicesCount += mesh.indicesCount;
+    
+    {
+        ModelLoader loader;
+        loader.loadModel(modelPath, scene.getModelLoadingOffsets(),
+                         appContext.baseContext, appContext.commandContext);
+        scene.addObject(loader);
     }
-    std::cout << "vertices count: " << verticesCount << "\n";
 
-    std::cout << "triangle count: " << indicesCount / 3 << "\n";
+    {
+        ModelLoader loader;
+        loader.loadModel("res/assets/models/debug_cube/debug_cube.gltf",
+                         scene.getModelLoadingOffsets(), appContext.baseContext,
+                         appContext.commandContext);
+        scene.addObject(loader);
+    }
+    std::cout << scene.getMeshes().size() << "\n";
 
-    scene.addObject(loader);
+
 
     VulkanRenderer renderer(appContext, renderContext);
 
@@ -74,8 +76,6 @@ int main() {
     if (renderContext.usesImgui) {
         ImGui_ImplGlfw_InitForVulkan(window.getWindowHandle(), true);
     }
-
-
 
     std::chrono::milliseconds lastUpdate = CURRENT_MILLIS;
     std::chrono::milliseconds delta = std::chrono::milliseconds(0);
@@ -102,9 +102,7 @@ int main() {
             ImGui::SetWindowSize(ImVec2(0, 0), ImGuiCond_Once);
             ImGui::End();
         }
-
         renderer.render(scene);
-
         delta = (CURRENT_MILLIS - lastUpdate);
         lastUpdate = CURRENT_MILLIS;
 
@@ -113,7 +111,6 @@ int main() {
             scene.doPhysicsUpdate(targetPhysicsRate.count());
 
             // accumulatedDelta -= targetPhysicsRate;
-
             int amountStepsInAcc = accumulatedDelta / targetPhysicsRate;
             if (amountStepsInAcc > 1) {
                 std::cout << "Skipping " << amountStepsInAcc - 1 << " physics steps" << std::endl;

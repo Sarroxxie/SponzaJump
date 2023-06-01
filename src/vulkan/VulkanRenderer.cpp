@@ -186,9 +186,8 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
         vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, meshComponent->indicesCount, 1, 0, 0, 0);
     }
-
     for(auto& instance : scene.getInstances()) {
-        Model model = *instance.model;
+        Model model = scene.getModels()[instance.modelID];
         glm::mat4 transformation = instance.transformation;
         for(auto& meshPartIndex : model.meshPartIndices) {
             MeshPart meshPart = scene.getMeshParts()[meshPartIndex];
@@ -214,7 +213,6 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                              mesh.indicesCount, 1, 0, 0, 0);
         }
     }
-
     if (m_RenderContext.usesImgui) {
         // @IMGUI
         ImGui::Render();
