@@ -24,19 +24,6 @@ typedef struct transformation_s
     }
 } Transformation;
 
-typedef struct meshComponent_s {
-    VkBuffer vertexBuffer {VK_NULL_HANDLE};
-    VkDeviceMemory vertexBufferMemory {VK_NULL_HANDLE};
-
-    VkBuffer indexBuffer {VK_NULL_HANDLE};
-    VkDeviceMemory indexBufferMemory {VK_NULL_HANDLE};
-
-    uint32_t verticesCount = 0;
-    uint32_t indicesCount = 0;
-} MeshComponent;
-
-void cleanMeshObject(VulkanBaseContext &baseContext, MeshComponent &object);
-
 typedef struct objectDef_s {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;

@@ -19,11 +19,11 @@ void createMeshBuffers(VulkanBaseContext         context,
                        std::vector<Vertex>       vertices,
                        std::vector<unsigned int> indices,
                        Mesh&                     mesh);
-void createSampleVertexBuffer2(VulkanBaseContext&  context,
+void createSampleVertexBuffer(VulkanBaseContext&  context,
                                CommandContext&     commandContext,
                                std::vector<Vertex> vertices,
                                Mesh&               mesh);
-void createSampleIndexBuffer2(VulkanBaseContext&        baseContext,
+void createSampleIndexBuffer(VulkanBaseContext&        baseContext,
                               CommandContext&           commandContext,
                               std::vector<unsigned int> indices,
                               Mesh&                     mesh);
@@ -38,11 +38,6 @@ struct ModelLoadingOffsets
     int instancesOffset = 0;
 };
 
-// TODO: allow for offsets in the pointers to meshes, textures and materials
-//        -> this way the meshes, textures and materials can get appended to
-//           already existing vectors
-//        -> need to add the offset everytime an ID/index gets set
-// TODO: implement cleanup function that wipes the tinygltf::Model
 class ModelLoader
 {
   private:

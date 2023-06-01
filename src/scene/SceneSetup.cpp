@@ -6,11 +6,34 @@
 
 void
 createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, GameContactListener &contactListener) {
+    {
+        ModelLoader loader;
+        loader.loadModel("res/assets/models/debug_model/debug_model.gltf",
+                         scene.getModelLoadingOffsets(), context.baseContext,
+                         context.commandContext);
+        scene.addObject(loader);
+        // move a bit to the foreground so object can be seen
+        scene.getInstances().back().transformation *=
+            glm::translate(glm::mat4(1), glm::vec3(0, 0, 4));
+    }
+
+    {
+        ModelLoader loader;
+        loader.loadModel("res/assets/models/debug_cube/debug_cube.gltf",
+                         scene.getModelLoadingOffsets(), context.baseContext,
+                         context.commandContext);
+        scene.addObject(loader);
+    }
+
+    // remove the cube from the instances, because it will not be rendered directly, but added per Entity
+    scene.getInstances().pop_back();
+    int   cubeModelID = scene.getModels().size() - 1;
+
     glm::vec3 groundHalfDims = glm::vec3(30, 1, 1);
     addPhysicsEntity(scene,
                      context.baseContext,
                      context.commandContext,
-                     getCuboid(groundHalfDims),
+                     cubeModelID,
                      Transformation(),
                      groundHalfDims,
                      false);
@@ -18,16 +41,14 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
     glm::vec3 sideHalfDims = glm::vec3(1, 10, 1);
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(sideHalfDims),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(-29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      sideHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(sideHalfDims),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(29, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      sideHalfDims,
                      false);
@@ -35,75 +56,65 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
     glm::vec3 slopeHalfDims = glm::vec3(1, 20, 1);
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(slopeHalfDims),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(45, 10, 0), glm::vec3(0, 0, glm::radians<float>(45)), glm::vec3(1)},
                      slopeHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(slopeHalfDims),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(65, 0, 0), glm::vec3(0, 0, glm::radians<float>(60)), glm::vec3(1)},
                      slopeHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(slopeHalfDims),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(85, -10, 0), glm::vec3(0, 0, glm::radians<float>(75)), glm::vec3(1)},
                      slopeHalfDims,
                      false);
 
     glm::vec3 floatingBoxHalfDims(1, 1, 1);
-    ObjectDef floatingStaticObstacles = getCuboid(floatingBoxHalfDims);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     floatingStaticObstacles,
+                     context.commandContext, cubeModelID,
                      {glm::vec3(-24, 4, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     floatingStaticObstacles,
+                     context.commandContext, cubeModelID,
                      {glm::vec3(-15, 8, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     floatingStaticObstacles,
+                     context.commandContext, cubeModelID,
                      {glm::vec3(0, 7, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     floatingStaticObstacles,
+                     context.commandContext, cubeModelID,
                      {glm::vec3(13, 9, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     floatingStaticObstacles,
+                     context.commandContext, cubeModelID,
                      {glm::vec3(15, 15, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     floatingStaticObstacles,
+                     context.commandContext, cubeModelID,
                      {glm::vec3(5, 19, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
@@ -111,24 +122,21 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
     glm::vec3 floatingBoxHalfDims2(1, 0.5, 1);
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(floatingBoxHalfDims2),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(-11, 18.5, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims2,
                      false);
 
     addPhysicsEntity(scene,
                      context.baseContext,
-                     context.commandContext,
-                     getCuboid(floatingBoxHalfDims),
+                     context.commandContext, cubeModelID,
                      {glm::vec3(-27, 18, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                      floatingBoxHalfDims,
                      false);
 
     EntityId playerEntity = addPlayerEntity(scene,
                                             context.baseContext,
-                                            context.commandContext,
-                                            getCuboid(floatingBoxHalfDims, glm::vec3(0.2, 0.2, 0.8)),
+                                            context.commandContext, cubeModelID,
                                             {glm::vec3(30, 20, 0), glm::vec3(0, 0, 0), glm::vec3(1)},
                                             floatingBoxHalfDims,
                                             contactListener,
@@ -158,92 +166,10 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
 }
 
 
-void
-createMeshComponent(MeshComponent *component, const VulkanBaseContext &context, const CommandContext &commandContext,
-                    const ObjectDef &objectDef) {
-    createSampleVertexBuffer(context, commandContext, objectDef, component);
-    createSampleIndexBuffer(context, commandContext, objectDef, component);
-}
-
-void createSampleVertexBuffer(const VulkanBaseContext &context, const CommandContext &commandContext,
-                              const ObjectDef &objectDef,
-                              MeshComponent *object) {
-    object->verticesCount = objectDef.vertices.size();
-
-    VkDeviceSize bufferSize = sizeof(objectDef.vertices[0]) * object->verticesCount;
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-
-    createBuffer(context,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer,
-                 stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
-
-    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, objectDef.vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(context.device, stagingBufferMemory);
-
-    createBuffer(context,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 object->vertexBuffer,
-                 object->vertexBufferMemory);
-
-    copyBuffer(context, commandContext, stagingBuffer, object->vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
-    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
-}
-
-void createSampleIndexBuffer(const VulkanBaseContext &baseContext, const CommandContext &commandContext,
-                             const ObjectDef &objectDef,
-                             MeshComponent *object) {
-
-    object->indicesCount = objectDef.indices.size();
-
-    VkDeviceSize bufferSize = sizeof(objectDef.indices[0]) * object->indicesCount;
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-
-    createBuffer(baseContext,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer,
-                 stagingBufferMemory);
-
-    void *data;
-    vkMapMemory(baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
-
-    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, objectDef.indices.data(), (size_t) bufferSize);
-    vkUnmapMemory(baseContext.device, stagingBufferMemory);
-
-    createBuffer(baseContext,
-                 bufferSize,
-                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 object->indexBuffer,
-                 object->indexBufferMemory);
-
-    copyBuffer(baseContext, commandContext, stagingBuffer, object->indexBuffer, bufferSize);
-
-    vkDestroyBuffer(baseContext.device, stagingBuffer, nullptr);
-    vkFreeMemory(baseContext.device, stagingBufferMemory, nullptr);
-}
-
 EntityId addPhysicsEntity(Scene &scene,
                           const VulkanBaseContext &context,
                           const CommandContext &commandContext,
-                          const ObjectDef &objectDef,
+                          int modelID,
                           Transformation transformation,
                           glm::vec3 halfSize,
                           bool dynamic,
@@ -251,9 +177,14 @@ EntityId addPhysicsEntity(Scene &scene,
 
     EntityId dynamicEntity = scene.addEntity();
 
-    auto *meshComponent = scene.assign<MeshComponent>(dynamicEntity);
-
-    createMeshComponent(meshComponent, context, commandContext, objectDef);
+    // attaches a given model to the entity
+    auto* modelComponent    = scene.assign<ModelInstance>(dynamicEntity);
+    modelComponent->modelID = modelID;
+    // sets the scale of the model to be the same as the scale of the collision
+    // box (will be multiplied with a transform component to get the final tranformation matrix)
+    glm::mat4 scale =
+        glm::scale(glm::mat4(1.0f), glm::vec3(halfSize[0], halfSize[1], halfSize[2]));
+    modelComponent->transformation = scale;
 
     auto *pDynamicTransform = scene.assign<Transformation>(dynamicEntity);
     *pDynamicTransform = transformation;
@@ -284,14 +215,19 @@ EntityId addPhysicsEntity(Scene &scene,
 }
 
 EntityId addPlayerEntity(Scene &scene, const VulkanBaseContext &context, const CommandContext &commandContext,
-                         const ObjectDef &objectDef, Transformation transformation, glm::vec3 halfSize,
+                         int modelID, Transformation transformation, glm::vec3 halfSize,
                          GameContactListener &contactListener,
                          bool dynamic, bool fixedRotation) {
     EntityId playerEntity = scene.addEntity();
 
-    auto *meshComponent = scene.assign<MeshComponent>(playerEntity);
-
-    createMeshComponent(meshComponent, context, commandContext, objectDef);
+    // attaches a given model to the entity
+    auto* modelComponent    = scene.assign<ModelInstance>(playerEntity);
+    modelComponent->modelID = modelID;
+    // sets the scale of the model to be the same as the scale of the collision
+    // box (will be multiplied with a transform component to get the final tranformation matrix)
+    glm::mat4 scale =
+        glm::scale(glm::mat4(1.0f), glm::vec3(halfSize[0], halfSize[1], halfSize[2]));
+    modelComponent->transformation = scale;
 
     auto *pDynamicTransform = scene.assign<Transformation>(playerEntity);
     *pDynamicTransform = transformation;

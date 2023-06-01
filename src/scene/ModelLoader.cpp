@@ -112,16 +112,15 @@ void createMeshBuffers(VulkanBaseContext         context,
                        std::vector<Vertex>       vertices,
                        std::vector<unsigned int> indices,
                        Mesh&                     mesh) {
-    createSampleVertexBuffer2(context, commandContext, vertices, mesh);
-    createSampleIndexBuffer2(context, commandContext, indices, mesh);
+    createSampleVertexBuffer(context, commandContext, vertices, mesh);
+    createSampleIndexBuffer(context, commandContext, indices, mesh);
 }
 
 /*
- * TODO: test this
  * Creates a vertex buffer from the specified vertices vector and uploads it
  * to GPU. ALso stores a reference to the handle in the mesh.
  */
-void createSampleVertexBuffer2(VulkanBaseContext&  context,
+void createSampleVertexBuffer(VulkanBaseContext&  context,
                                CommandContext&     commandContext,
                                std::vector<Vertex> vertices,
                                Mesh&               mesh) {
@@ -154,11 +153,10 @@ void createSampleVertexBuffer2(VulkanBaseContext&  context,
 }
 
 /*
- * TODO: test this
  * Creates an index buffer from the specified indices vector and uploads it
  * to GPU. ALso stores a reference to the handle in the mesh.
  */
-void createSampleIndexBuffer2(VulkanBaseContext&        baseContext,
+void createSampleIndexBuffer(VulkanBaseContext&        baseContext,
                               CommandContext&           commandContext,
                               std::vector<unsigned int> indices,
                               Mesh&                     mesh) {
@@ -355,7 +353,6 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
 }
 
 /*
- * TODO: implement this
  * Gets the geometry data from the primitive and stores it in a Mesh.
  */
 Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
@@ -422,6 +419,7 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     out.verticesCount = vertices.size();
     out.indicesCount  = indices.size();
     createMeshBuffers(context, commandContext, vertices, indices, out);
+    // TODO: calculate Mesh.radius for later frustum culling
     return out;
 }
 

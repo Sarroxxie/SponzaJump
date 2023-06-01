@@ -163,29 +163,38 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                             0,
                             nullptr);
 
+    // render entities
+    for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
+        auto* modelComponent      = scene.getComponent<ModelInstance>(id);
+        auto* transformComponent = scene.getComponent<Transformation>(id);
 
-    for (EntityId id: SceneView<MeshComponent, Transformation>(scene)) {
-        auto *meshComponent = scene.getComponent<MeshComponent>(id);
-        auto *transformComponent = scene.getComponent<Transformation>(id);
-
-        VkBuffer vertexBuffers[] = { meshComponent->vertexBuffer };
-        VkDeviceSize offsets[] = {0};
+        for(auto& meshPartIndex : scene.getModels()[modelComponent->modelID].meshPartIndices) {
+            MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
+            Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+            VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
+            VkDeviceSize offsets[]       = {0};
 
             vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
                                    vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer, meshComponent->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            glm::mat4 combinedTransform =
+                transformComponent->getMatrix() * modelComponent->transformation;
+            vkCmdPushConstants(
+                m_Context.commandContext.commandBuffer,
+                m_RenderContext.renderPassContext
+                    .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+                VK_SHADER_STAGE_VERTEX_BIT,
+                0,  // offset
+                sizeof(glm::mat4), &combinedTransform);
 
-        glm::mat4 objectTransform = transformComponent->getMatrix();
-
-        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                           m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex], VK_SHADER_STAGE_VERTEX_BIT,
-                           0, // offset
-                           sizeof(glm::mat4),
-                           &objectTransform);
-
-        vkCmdDrawIndexed(m_Context.commandContext.commandBuffer, meshComponent->indicesCount, 1, 0, 0, 0);
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                             mesh.indicesCount, 1, 0, 0, 0);
+        }
     }
+
+    // render non-entity models
     for(auto& instance : scene.getInstances()) {
         Model model = scene.getModels()[instance.modelID];
         glm::mat4 transformation = instance.transformation;

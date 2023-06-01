@@ -16,14 +16,6 @@ void Scene::cleanup() {
 
     vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
 
-    ComponentPool &meshComponentPool = componentPools[getComponentTypeId<MeshComponent>()];
-
-    for (EntityId id: SceneView<MeshComponent>(*this)) {
-        auto *object = (MeshComponent *) meshComponentPool.getComponent(id);
-
-        cleanMeshObject(m_baseContext, *object);
-    }
-
     for (auto pair: componentPools) {
         pair.second.clean();
     }
@@ -218,12 +210,6 @@ EntityId Scene::addEntity() {
 bool Scene::removeEntity(EntityId id) {
     if (entities.size() <= id || !entities[id].active) {
         return false;
-    }
-
-    ComponentTypeId renderableCompId = getComponentTypeId<MeshComponent>();
-    if (entities[id].componentMask.test(getComponentTypeId<MeshComponent>())) {
-        auto *object = (MeshComponent *) componentPools[renderableCompId].getComponent(id);
-        cleanMeshObject(m_baseContext, *object);
     }
 
     entities[id] = {false, ComponentMask()};

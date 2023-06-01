@@ -1,13 +1,5 @@
 #include "RenderableObject.h"
 
-void cleanMeshObject(VulkanBaseContext &baseContext, MeshComponent &object) {
-    vkDestroyBuffer(baseContext.device, object.indexBuffer, nullptr);
-    vkFreeMemory(baseContext.device, object.indexBufferMemory, nullptr);
-
-    vkDestroyBuffer(baseContext.device, object.vertexBuffer, nullptr);
-    vkFreeMemory(baseContext.device, object.vertexBufferMemory, nullptr);
-}
-
 ObjectDef getCuboid(glm::vec3 halfSizes, glm::vec3 color) {
     ObjectDef objectDef;
 

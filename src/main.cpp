@@ -7,11 +7,6 @@
 #include "scene/RenderableObject.h"
 #include "rendering/RenderSetup.h"
 
-#include "tiny_gltf.h"
-#include "stb_image.h"
-
-#include "scene/ModelLoader.h"
-
 #define DEFAULT_APPLICATION_WIDTH 800
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
@@ -23,9 +18,6 @@
 #include "physics/GameContactListener.h"
 
 int main() {
-    // tinygltf test code
-    const char*  modelPath = "res/assets/models/debug_model/debug_model.gltf";
-
     Window window = Window(DEFAULT_APPLICATION_WIDTH,
                            DEFAULT_APPLICATION_HEIGHT, DEFAULT_APPLICATION_NAME);
 
@@ -39,21 +31,6 @@ int main() {
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
-    
-    {
-        ModelLoader loader;
-        loader.loadModel(modelPath, scene.getModelLoadingOffsets(),
-                         appContext.baseContext, appContext.commandContext);
-        scene.addObject(loader);
-    }
-
-    {
-        ModelLoader loader;
-        loader.loadModel("res/assets/models/debug_cube/debug_cube.gltf",
-                         scene.getModelLoadingOffsets(), appContext.baseContext,
-                         appContext.commandContext);
-        scene.addObject(loader);
-    }
 
     
     VulkanRenderer renderer(appContext, renderContext);
