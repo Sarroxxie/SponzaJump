@@ -54,10 +54,8 @@ int main() {
                          appContext.commandContext);
         scene.addObject(loader);
     }
-    std::cout << scene.getMeshes().size() << "\n";
 
-
-
+    
     VulkanRenderer renderer(appContext, renderContext);
 
     InputController inputController;
