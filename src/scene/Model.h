@@ -82,7 +82,7 @@ class ModelInstance
 {
   public:
     // TODO: rewrite parts of the transformation struct (to use quaternions and store the mat4)
-    glm::mat4 transformation;
+    glm::mat4 transformation = glm::mat4(1.0f);
     int       modelID;
 
   public:
