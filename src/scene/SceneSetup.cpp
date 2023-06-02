@@ -177,6 +177,8 @@ EntityId addPhysicsEntity(Scene &scene,
 
     EntityId dynamicEntity = scene.addEntity();
 
+    // TODO: only the modelID is used here because the transformation is stored in a different component
+    //        -> would be better to have a component that only stores the modelID
     // attaches a given model to the entity
     auto* modelComponent    = scene.assign<ModelInstance>(dynamicEntity);
     modelComponent->modelID = modelID;
@@ -216,6 +218,8 @@ EntityId addPlayerEntity(Scene &scene, const VulkanBaseContext &context, const C
                          bool dynamic, bool fixedRotation) {
     EntityId playerEntity = scene.addEntity();
 
+    // TODO: only the modelID is used here because the transformation is stored in a different component
+    //        -> would be better to have a component that only stores the modelID
     // attaches a given model to the entity
     auto* modelComponent    = scene.assign<ModelInstance>(playerEntity);
     modelComponent->modelID = modelID;
