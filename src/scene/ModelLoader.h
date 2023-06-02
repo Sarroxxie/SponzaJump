@@ -72,6 +72,7 @@ class ModelLoader
   private:
     glm::mat4 getTransform(tinygltf::Node node);
     Material  createMaterial(tinygltf::Material&             gltfMaterial,
+                             int                             texturesOffset,
                              std::vector<tinygltf::Texture>& gltfTextures,
                              std::vector<tinygltf::Image>&   gltfImages);
     Mesh      createMesh(tinygltf::Primitive&              primitive,

@@ -312,43 +312,44 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
                                      std::vector<tinygltf::Texture>& gltfTextures,
                                      std::vector<tinygltf::Image>& gltfImages) {
     Material material;
-    material.name = gltfMaterial.name;
-    if(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
-        textures.push_back(createTexture(
-            gltfImages
-                [gltfTextures[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index]
-                     .source]
-                    .uri));
+    auto     pbrSection = gltfMaterial.pbrMetallicRoughness;
+    if(pbrSection.baseColorTexture.index != -1) {
+        int imageIndex = gltfTextures[pbrSection.baseColorTexture.index].source;
+        std::string uri     = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.push_back(texture);
         material.albedoTextureID = textures.size() - 1 + texturesOffset;
     } else {
-        material.albedo =
-            glm::vec3(gltfMaterial.pbrMetallicRoughness.baseColorFactor[0],
-                      gltfMaterial.pbrMetallicRoughness.baseColorFactor[1],
-                      gltfMaterial.pbrMetallicRoughness.baseColorFactor[2]);
+        material.albedo = glm::vec3(pbrSection.baseColorFactor[0],
+                                    pbrSection.baseColorFactor[1],
+                                    pbrSection.baseColorFactor[2]);
     }
     if(gltfMaterial.normalTexture.index != -1) {
-        textures.push_back(createTexture(
-            gltfImages[gltfTextures[gltfMaterial.normalTexture.index].source].uri));
+        int imageIndex  = gltfTextures[gltfMaterial.normalTexture.index].source;
+        std::string uri = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.push_back(texture);
         material.normalTextureID = textures.size() - 1 + texturesOffset;
     }
     if(gltfMaterial.occlusionTexture.index != -1) {
-        textures.push_back(createTexture(
-            gltfImages[gltfTextures[gltfMaterial.occlusionTexture.index].source].uri));
+        int imageIndex = gltfTextures[gltfMaterial.occlusionTexture.index].source;
+        std::string uri     = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.push_back(texture);
         material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
     } else {
         material.aoRoughnessMetallic.r = 1;
     }
-    if(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index != -1
+    if(pbrSection.metallicRoughnessTexture.index != -1
        && material.aoRoughnessMetallicTextureID == -1) {
-        textures.emplace_back(createTexture(
-            gltfImages[gltfTextures[gltfMaterial.pbrMetallicRoughness
-                                        .metallicRoughnessTexture.index]
-                           .source]
-                .uri));
+        int imageIndex = gltfTextures[pbrSection.metallicRoughnessTexture.index].source;
+        std::string uri     = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.emplace_back(texture);
         material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
     } else {
-        material.aoRoughnessMetallic.g = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
-        material.aoRoughnessMetallic.b = gltfMaterial.pbrMetallicRoughness.metallicFactor;
+        material.aoRoughnessMetallic.g = pbrSection.roughnessFactor;
+        material.aoRoughnessMetallic.b = pbrSection.metallicFactor;
     }
     return material;
 }
@@ -371,26 +372,40 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     tinygltf::Accessor tangents = accessors[primitive.attributes.at("TANGENT")];
     tinygltf::Accessor texCoord0 = accessors[primitive.attributes.at("TEXCOORD_0")];
 
-    // every vertex has to have every attribute
+    // every vertex has to support internal format
     assert(position.count == normal.count && position.count == tangents.count
            && position.count == texCoord0.count);
 
+    int   positionBufferIndex = bufferViews[position.bufferView].buffer;
+    int   positionOffset      = bufferViews[position.bufferView].byteOffset;
+    auto* positionBuffer      = &buffers[positionBufferIndex].data;
+
+    int   normalBufferIndex = bufferViews[normal.bufferView].buffer;
+    int   normalOffset      = bufferViews[normal.bufferView].byteOffset;
+    auto* normalBuffer      = &buffers[normalBufferIndex].data;
+
+    int   tangentsBufferIndex = bufferViews[tangents.bufferView].buffer;
+    int   tangentsOffset      = bufferViews[tangents.bufferView].byteOffset;
+    auto* tangentsBuffer      = &buffers[tangentsBufferIndex].data;
+
+    int   texCoordBufferIndex = bufferViews[texCoord0.bufferView].buffer;
+    int   texCoordOffset      = bufferViews[texCoord0.bufferView].byteOffset;
+    auto* texCoordBuffer      = &buffers[texCoordBufferIndex].data;
+
     // convert vertices into internal format
     for(int i = 0; i < position.count; i++) {
-        // last number from the multiplication is the number of components in the vector
         Vertex vert;
-        vert.pos = bytesToVec3(
-            &buffers[bufferViews[position.bufferView].buffer]
-                 .data[bufferViews[position.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
-        vert.nrm = bytesToVec3(
-            &buffers[bufferViews[normal.bufferView].buffer]
-                 .data[bufferViews[normal.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
-        vert.tangents = bytesToVec4(
-            &buffers[bufferViews[tangents.bufferView].buffer]
-                 .data[bufferViews[tangents.bufferView].byteOffset + i * FLOAT_SIZE * 4]);
-        vert.texCoord = bytesToVec2(
-            &buffers[bufferViews[texCoord0.bufferView].buffer]
-                 .data[bufferViews[texCoord0.bufferView].byteOffset + i * FLOAT_SIZE * 2]);
+        // last number from the multiplication is the number of components in the vector
+        auto positionAddress = &(*positionBuffer)[positionOffset + i * FLOAT_SIZE * 3];
+        auto normalAddress = &(*normalBuffer)[normalOffset + i * FLOAT_SIZE * 3];
+        auto tangentsAddress = &(*tangentsBuffer)[tangentsOffset + i * FLOAT_SIZE * 3];
+        auto texCoordAddress = &(*texCoordBuffer)[texCoordOffset + i * FLOAT_SIZE * 3];
+
+        // extract data from byte array
+        vert.pos      = bytesToVec3(positionAddress);
+        vert.nrm      = bytesToVec3(normalAddress);
+        vert.tangents = bytesToVec4(tangentsAddress);
+        vert.texCoord = bytesToVec2(texCoordAddress);
         vertices.push_back(vert);
     }
 
@@ -413,7 +428,7 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     for(int i = 0; i < accessors[primitive.indices].count; i++) {
         unsigned int index =
             function(&buffers[bufferViews[primitive.indices].buffer]
-                         .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
+                          .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
         indices.push_back(index);
     }
 

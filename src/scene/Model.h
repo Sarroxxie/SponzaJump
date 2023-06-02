@@ -7,7 +7,6 @@
 // in "rendering/host_device.h" is a copy of this called "MaterialDescription" for use on GPU
 struct Material
 {
-    std::string name                         = "untitled";
     // these default values match the defaults of tinygltf
     glm::vec3   albedo                       = glm::vec3(1, 1, 1);
     glm::vec3   aoRoughnessMetallic          = glm::vec3(1, 1, 1);
@@ -21,8 +20,7 @@ struct Material
         return albedo == other.albedo && aoRoughnessMetallic == other.aoRoughnessMetallic
                && albedoTextureID == other.albedoTextureID
                && normalTextureID == other.normalTextureID
-               && aoRoughnessMetallicTextureID == other.aoRoughnessMetallicTextureID
-               && name == other.name;
+               && aoRoughnessMetallicTextureID == other.aoRoughnessMetallicTextureID;
     }
 };
 
