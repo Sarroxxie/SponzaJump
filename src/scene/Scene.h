@@ -43,6 +43,9 @@ private:
     VkDeviceMemory uniformBufferMemory;
     void* uniformBufferMapped;
 
+    VkBuffer       materialsBuffer;
+    VkDeviceMemory materialsBufferMemory;
+
     VkDescriptorPool descriptorPool;
     VkDescriptorSet descriptorSet;
 
@@ -114,6 +117,9 @@ public:
     VkDescriptorSet *getDescriptorSet();
 
     void registerSceneImgui();
+
+    void createMaterialsBuffer(const VulkanBaseContext& context,
+                               const CommandContext&    commandContext);
 
     float currentAngleY = 0;
     float currentAngleX = 0;

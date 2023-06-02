@@ -3,6 +3,7 @@
 #include "RenderSetup.h"
 #include "vulkan/VulkanUtils.h"
 #include "utils/FileUtils.h"
+#include "rendering/host_device.h"
 
 void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     auto &settings = renderContext.renderSettings;
@@ -23,7 +24,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
     renderSetupDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
     renderSetupDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
-    renderSetupDescription.bindings.push_back(createUniformBufferLayoutBinding(0, 1, ShaderStage::VERTEX_SHADER));
+    renderSetupDescription.bindings.push_back(createUniformBufferLayoutBinding(SceneBindings::eCamera, 1, ShaderStage::VERTEX_SHADER));
     /*
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 1;
@@ -463,7 +464,6 @@ VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, Shad
 
     return pushConstantRange;
 }
-
 
 // @IMGUI
 // Heavily inspired by "https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/main.cpp"

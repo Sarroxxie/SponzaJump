@@ -7,7 +7,9 @@
 #include "Entity.h"
 #include "physics/GameContactListener.h"
 
-void createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, GameContactListener &contactListener);
+void createSamplePhysicsScene(const ApplicationVulkanContext& context,
+                              Scene&                          scene,
+                              GameContactListener&            contactListener);
 
 EntityId addPhysicsEntity(Scene &scene,
                           const VulkanBaseContext &context,

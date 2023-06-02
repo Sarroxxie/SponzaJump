@@ -24,6 +24,8 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
                          context.commandContext);
         scene.addObject(loader);
     }
+    // create materials buffer after all models are loaded
+    scene.createMaterialsBuffer(context.baseContext, context.commandContext);
 
     // remove the cube from the instances, because it will not be rendered directly, but added per Entity
     scene.getInstances().pop_back();

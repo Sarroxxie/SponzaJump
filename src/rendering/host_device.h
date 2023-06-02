@@ -22,9 +22,9 @@ using uint = unsigned int;
 
 // access for descriptor sets
 START_BINDING(SceneBindings)
-    eGlobals  = 0,  // Global uniform containing camera matrices
-    eObjDescs = 1,      // Access to the object descriptions
-    eTextures = 2       // Access to textures
+    eCamera    = 0,  // Global uniform containing camera matrices
+    eMaterials = 1,      // Access to the object descriptions
+    eTextures  = 2       // Access to textures
 END_BINDING();
 // clang-format on
 

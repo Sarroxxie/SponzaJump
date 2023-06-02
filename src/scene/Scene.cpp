@@ -2,6 +2,7 @@
 #include "rendering/RenderContext.h"
 #include "physics/PhysicsComponent.h"
 #include "game/PlayerComponent.h"
+#include "rendering/host_device.h"
 
 Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera)
         : m_Camera(camera), m_World(b2World(b2Vec2(0, -30.0))), m_baseContext(vulkanBaseContext) {
@@ -13,6 +14,9 @@ Scene::Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, 
 void Scene::cleanup() {
     vkDestroyBuffer(m_baseContext.device, uniformBuffer, nullptr);
     vkFreeMemory(m_baseContext.device, uniformBufferMemory, nullptr);
+
+    vkDestroyBuffer(m_baseContext.device, materialsBuffer, nullptr);
+    vkFreeMemory(m_baseContext.device, materialsBufferMemory, nullptr);
 
     vkDestroyDescriptorPool(m_baseContext.device, descriptorPool, nullptr);
 
@@ -112,6 +116,38 @@ void Scene::registerSceneImgui() {
     ImGui::End();
 }
 
+/*
+ * Uploads all the registered materials to the GPU.
+ */
+void Scene::createMaterialsBuffer(const VulkanBaseContext& context, const CommandContext& commandContext) {
+    VkDeviceSize bufferSize = sizeof(Material) * materials.size();
+
+    VkBuffer       stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(context, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer, stagingBufferMemory);
+
+    // void* data = (void*)vertices.data();
+    void* data;
+    vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+    // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
+    memcpy(data, materials.data(), (size_t)bufferSize);
+    vkUnmapMemory(context.device, stagingBufferMemory);
+
+    createBuffer(context, bufferSize,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+                     | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, materialsBuffer, materialsBufferMemory);
+
+    copyBuffer(context, commandContext, stagingBuffer, materialsBuffer, bufferSize);
+
+    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+}
+
 void Scene::createDescriptorPool() {
     std::array<VkDescriptorPoolSize, 1> poolSizes{};
 
@@ -140,6 +176,8 @@ void Scene::createDescriptorSets(RenderContext &renderContext) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
+    std::vector<VkWriteDescriptorSet> descriptorWrites;
+
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = uniformBuffer;
     bufferInfo.offset = 0;
@@ -159,16 +197,34 @@ void Scene::createDescriptorSets(RenderContext &renderContext) {
         */
 
 
-
     VkWriteDescriptorSet descriptorWrite;
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrite.pNext = nullptr;
     descriptorWrite.dstSet = descriptorSet;
-    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstBinding = SceneBindings::eCamera;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptorWrite.descriptorCount = 1;
     descriptorWrite.pBufferInfo = &bufferInfo;
+
+    descriptorWrites.emplace_back(descriptorWrite);
+
+    // TODO: create an own DescriptorSet for materials and textures -> own bindings
+    // descriptor for materials buffer
+    VkDescriptorBufferInfo materialsBufferInfo{};
+    materialsBufferInfo.buffer = materialsBuffer;
+    materialsBufferInfo.offset = 0;
+    materialsBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet materialsDescriptorWrite;
+    materialsDescriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    materialsDescriptorWrite.pNext           = nullptr;
+    materialsDescriptorWrite.dstSet          = descriptorSet;
+    materialsDescriptorWrite.dstBinding      = SceneBindings::eMaterials;
+    materialsDescriptorWrite.dstArrayElement = 0;
+    materialsDescriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    materialsDescriptorWrite.descriptorCount = static_cast<uint32_t>(materials.size());
+    materialsDescriptorWrite.pBufferInfo     = &materialsBufferInfo;
 
     /*
     descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -183,9 +239,9 @@ void Scene::createDescriptorSets(RenderContext &renderContext) {
     descriptorWrites[1].pImageInfo = imageInfos.data();
     */
 
-    vkUpdateDescriptorSets(m_baseContext.device, 1, &descriptorWrite, 0, nullptr);
-
-
+    vkUpdateDescriptorSets(m_baseContext.device,
+                           static_cast<uint32_t>(descriptorWrites.size()),
+                           descriptorWrites.data(), 0, nullptr);
 }
 
 void *Scene::getUniformBufferMapping() {
