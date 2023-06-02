@@ -363,7 +363,7 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
                              std::vector<tinygltf::Buffer>     buffers,
                              VulkanBaseContext                 context,
                              CommandContext                    commandContext) {
-    Mesh                      out;
+    Mesh                      mesh;
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
 
@@ -410,33 +410,36 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     }
 
     // default parsing function (if indices are stored as byte)
-    auto function = bytesFromUnsignedCharToUnsignedInt;
+    auto parseIndex = bytesFromUnsignedCharToUnsignedInt;
     // size of one index in bytes
-    int indexStride = 1;
+    int indexStride   = 1;
+    int componentType = accessors[primitive.indices].componentType;
 
-    // choose parsing function based on the numeric type that the index is stored as
-    if(accessors[primitive.indices].componentType == COMPONENT_TYPE_UINT) {
-        function    = bytesToUnsignedInt;
+    // choose parsing function based on the numeric type that the index is stored as in the glTF file
+    if(componentType == COMPONENT_TYPE_UINT) {
+        parseIndex  = bytesToUnsignedInt;
         indexStride = 4;
-    } else if(accessors[primitive.indices].componentType == COMPONENT_TYPE_USHORT) {
-        function    = bytesFromUnsignedShortToUnsignedInt;
+    } else if(componentType == COMPONENT_TYPE_USHORT) {
+        parseIndex  = bytesFromUnsignedShortToUnsignedInt;
         indexStride = 2;
     }
 
+    int   indexBufferIndex = bufferViews[primitive.indices].buffer;
+    int   indexOffset      = bufferViews[primitive.indices].byteOffset;
+    auto* indexBuffer      = &buffers[indexBufferIndex].data;
+
     // convert indices into internal format
-    int componentType = accessors[primitive.indices].componentType;
     for(int i = 0; i < accessors[primitive.indices].count; i++) {
-        unsigned int index =
-            function(&buffers[bufferViews[primitive.indices].buffer]
-                          .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
+        auto indexAddress  = &(*indexBuffer)[indexOffset + i * indexStride];
+        unsigned int index = parseIndex(indexAddress);
         indices.push_back(index);
     }
 
-    out.verticesCount = vertices.size();
-    out.indicesCount  = indices.size();
-    createMeshBuffers(context, commandContext, vertices, indices, out);
+    mesh.verticesCount = vertices.size();
+    mesh.indicesCount  = indices.size();
+    createMeshBuffers(context, commandContext, vertices, indices, mesh);
     // TODO: calculate Mesh.radius for later frustum culling
-    return out;
+    return mesh;
 }
 
 // TODO: implement this -> will need vulkan tutorial for it
