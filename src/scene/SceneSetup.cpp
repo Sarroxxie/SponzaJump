@@ -180,14 +180,10 @@ EntityId addPhysicsEntity(Scene &scene,
     // attaches a given model to the entity
     auto* modelComponent    = scene.assign<ModelInstance>(dynamicEntity);
     modelComponent->modelID = modelID;
-    // sets the scale of the model to be the same as the scale of the collision
-    // box (will be multiplied with a transform component to get the final tranformation matrix)
-    glm::mat4 scale =
-        glm::scale(glm::mat4(1.0f), glm::vec3(halfSize[0], halfSize[1], halfSize[2]));
-    modelComponent->transformation = scale;
 
     auto *pDynamicTransform = scene.assign<Transformation>(dynamicEntity);
     *pDynamicTransform = transformation;
+    pDynamicTransform->scaling *= glm::vec3(halfSize[0], halfSize[1], halfSize[2]);
 
     auto *pDynamicPhysicsComponent = scene.assign<PhysicsComponent>(dynamicEntity);
 
@@ -223,14 +219,10 @@ EntityId addPlayerEntity(Scene &scene, const VulkanBaseContext &context, const C
     // attaches a given model to the entity
     auto* modelComponent    = scene.assign<ModelInstance>(playerEntity);
     modelComponent->modelID = modelID;
-    // sets the scale of the model to be the same as the scale of the collision
-    // box (will be multiplied with a transform component to get the final tranformation matrix)
-    glm::mat4 scale =
-        glm::scale(glm::mat4(1.0f), glm::vec3(halfSize[0], halfSize[1], halfSize[2]));
-    modelComponent->transformation = scale;
 
     auto *pDynamicTransform = scene.assign<Transformation>(playerEntity);
     *pDynamicTransform = transformation;
+    pDynamicTransform->scaling *= glm::vec3(halfSize[0], halfSize[1], halfSize[2]);
 
     auto *pDynamicPhysicsComponent = scene.assign<PhysicsComponent>(playerEntity);
 

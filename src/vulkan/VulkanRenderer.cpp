@@ -165,7 +165,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
     // render entities
     for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
-        auto* modelComponent      = scene.getComponent<ModelInstance>(id);
+        auto* modelComponent     = scene.getComponent<ModelInstance>(id);
         auto* transformComponent = scene.getComponent<Transformation>(id);
 
         for(auto& meshPartIndex : scene.getModels()[modelComponent->modelID].meshPartIndices) {
@@ -179,15 +179,13 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
             vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
                                  mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-            glm::mat4 combinedTransform =
-                transformComponent->getMatrix() * modelComponent->transformation;
             vkCmdPushConstants(
                 m_Context.commandContext.commandBuffer,
                 m_RenderContext.renderPassContext
                     .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
                 VK_SHADER_STAGE_VERTEX_BIT,
                 0,  // offset
-                sizeof(glm::mat4), &combinedTransform);
+                sizeof(glm::mat4), &transformComponent->getMatrix());
 
             vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                              mesh.indicesCount, 1, 0, 0, 0);
@@ -196,12 +194,12 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
     // render non-entity models
     for(auto& instance : scene.getInstances()) {
-        Model model = scene.getModels()[instance.modelID];
+        Model     model          = scene.getModels()[instance.modelID];
         glm::mat4 transformation = instance.transformation;
         for(auto& meshPartIndex : model.meshPartIndices) {
-            MeshPart meshPart = scene.getMeshParts()[meshPartIndex];
-            Mesh     mesh     = scene.getMeshes()[meshPart.meshIndex];
-            VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+            MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
+            Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+            VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
             VkDeviceSize offsets[]       = {0};
 
             vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
@@ -211,12 +209,12 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
                                  mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             vkCmdPushConstants(
-                    m_Context.commandContext.commandBuffer,
-                    m_RenderContext.renderPassContext
-                            .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
-                    VK_SHADER_STAGE_VERTEX_BIT,
-                    0,  // offset
-                    sizeof(glm::mat4), &transformation);
+                m_Context.commandContext.commandBuffer,
+                m_RenderContext.renderPassContext
+                    .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+                VK_SHADER_STAGE_VERTEX_BIT,
+                0,  // offset
+                sizeof(glm::mat4), &transformation);
 
             vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                              mesh.indicesCount, 1, 0, 0, 0);
