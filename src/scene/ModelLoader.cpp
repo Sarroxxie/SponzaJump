@@ -267,7 +267,7 @@ bool ModelLoader::loadModel(const std::string&  filename,
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
         materials.push_back(
-            createMaterial(gltfMaterial, gltfModel.textures, gltfModel.images));
+            createMaterial(gltfMaterial, offsets.texturesOffset, gltfModel.textures, gltfModel.images));
     }
 
     // 3. create ModelInstances (from list of Nodes)
@@ -308,6 +308,7 @@ glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
  * material to point at them.
  */
 Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
+                                     int                 texturesOffset,
                                      std::vector<tinygltf::Texture>& gltfTextures,
                                      std::vector<tinygltf::Image>& gltfImages) {
     Material material;
@@ -318,7 +319,7 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
                 [gltfTextures[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index]
                      .source]
                     .uri));
-        material.albedoTextureID = textures.size() - 1;
+        material.albedoTextureID = textures.size() - 1 + texturesOffset;
     } else {
         material.albedo =
             glm::vec3(gltfMaterial.pbrMetallicRoughness.baseColorFactor[0],
@@ -328,12 +329,12 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
     if(gltfMaterial.normalTexture.index != -1) {
         textures.push_back(createTexture(
             gltfImages[gltfTextures[gltfMaterial.normalTexture.index].source].uri));
-        material.normalTextureID = textures.size() - 1;
+        material.normalTextureID = textures.size() - 1 + texturesOffset;
     }
     if(gltfMaterial.occlusionTexture.index != -1) {
         textures.push_back(createTexture(
             gltfImages[gltfTextures[gltfMaterial.occlusionTexture.index].source].uri));
-        material.aoRoughnessMetallicTextureID = textures.size() - 1;
+        material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
     } else {
         material.aoRoughnessMetallic.r = 1;
     }
@@ -344,7 +345,7 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
                                         .metallicRoughnessTexture.index]
                            .source]
                 .uri));
-        material.aoRoughnessMetallicTextureID = textures.size() - 1;
+        material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
     } else {
         material.aoRoughnessMetallic.g = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
         material.aoRoughnessMetallic.b = gltfMaterial.pbrMetallicRoughness.metallicFactor;
