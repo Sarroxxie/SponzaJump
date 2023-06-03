@@ -179,13 +179,17 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
 
             vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
                                  mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            glm::mat4 transform = transformComponent->getMatrix();
+
             vkCmdPushConstants(
                 m_Context.commandContext.commandBuffer,
                 m_RenderContext.renderPassContext
                     .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
                 VK_SHADER_STAGE_VERTEX_BIT,
                 0,  // offset
-                sizeof(glm::mat4), &transformComponent->getMatrix());
+                sizeof(glm::mat4),
+                &transform);
 
             vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                              mesh.indicesCount, 1, 0, 0, 0);
