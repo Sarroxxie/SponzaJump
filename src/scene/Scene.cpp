@@ -148,17 +148,55 @@ void Scene::createMaterialsBuffer(const VulkanBaseContext& context, const Comman
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 }
 
-void Scene::createDescriptorPool() {
-    std::array<VkDescriptorPoolSize, 1> poolSizes{};
+// TODO: need to put this into the header file
+void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &renderContext.renderPassContext.materialsDescriptorSetLayout;
 
+    if(vkAllocateDescriptorSets(m_baseContext.device, &allocInfo, &materialsDescriptorSet)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+
+    // TODO: create an own DescriptorSet for materials and textures -> own bindings
+    // descriptor for materials buffer
+    VkDescriptorBufferInfo materialsBufferInfo{};
+    materialsBufferInfo.buffer = materialsBuffer;
+    materialsBufferInfo.offset = 0;
+    materialsBufferInfo.range = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet materialsDescriptorWrite;
+    materialsDescriptorWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    materialsDescriptorWrite.pNext  = nullptr;
+    materialsDescriptorWrite.dstSet     = materialsDescriptorSet;
+    materialsDescriptorWrite.dstBinding      = MaterialsBindings::eMaterials;
+    materialsDescriptorWrite.dstArrayElement = 0;
+    materialsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    materialsDescriptorWrite.descriptorCount = 1;
+    materialsDescriptorWrite.pBufferInfo = &materialsBufferInfo;
+
+    vkUpdateDescriptorSets(m_baseContext.device, 1, &materialsDescriptorWrite, 0, nullptr);
+}
+
+void Scene::createDescriptorPool() {
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+
+    // camera matrices
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = 1;
+
+    // materials buffer (and later textures)
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[1].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1;
+    poolInfo.maxSets = 2;
 
     if (vkCreateDescriptorPool(m_baseContext.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
@@ -220,7 +258,7 @@ void Scene::createDescriptorSets(RenderContext &renderContext) {
     materialsDescriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     materialsDescriptorWrite.pNext           = nullptr;
     materialsDescriptorWrite.dstSet          = descriptorSet;
-    materialsDescriptorWrite.dstBinding      = SceneBindings::eMaterials;
+    materialsDescriptorWrite.dstBinding      = MaterialsBindings::eMaterials;
     materialsDescriptorWrite.dstArrayElement = 0;
     materialsDescriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     materialsDescriptorWrite.descriptorCount = static_cast<uint32_t>(materials.size());
@@ -250,6 +288,10 @@ void *Scene::getUniformBufferMapping() {
 
 VkDescriptorSet *Scene::getDescriptorSet() {
     return &descriptorSet;
+}
+
+VkDescriptorSet* Scene::getMaterialsDescriptorSet() {
+    return &materialsDescriptorSet;
 }
 
 EntityId Scene::addEntity() {

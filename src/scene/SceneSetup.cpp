@@ -25,6 +25,8 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
         scene.addObject(loader);
     }
     // create materials buffer after all models are loaded
+    // TODO: remove this -> it's for debugging only, so there is a color in the shader
+    scene.getMaterials()[0].albedo = glm::vec3(1,0,0);
     scene.createMaterialsBuffer(context.baseContext, context.commandContext);
 
     // remove the cube from the instances, because it will not be rendered directly, but added per Entity

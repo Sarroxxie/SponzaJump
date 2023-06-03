@@ -42,6 +42,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
 
 void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription) {
     createDescriptorSetLayout(appContext.baseContext, renderContext.renderPassContext, renderSetupDescription.bindings);
+    createMaterialsBufferDescriptorSet(appContext.baseContext, renderContext.renderPassContext);
 
     initializeRenderPassContext(appContext, renderContext, renderSetupDescription);
     createFrameBuffers(appContext, renderContext);
@@ -74,12 +75,41 @@ void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassConte
     }
 }
 
+void createMaterialsBufferDescriptorSet(const VulkanBaseContext& context,
+    RenderPassContext& renderContext) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    VkDescriptorSetLayoutBinding materialsBinding;
+    materialsBinding.binding         = MaterialsBindings::eMaterials;
+    materialsBinding.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    materialsBinding.descriptorCount = 1;
+    materialsBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    bindings.push_back(materialsBinding);
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings    = bindings.data();
+
+    if(vkCreateDescriptorSetLayout(context.device, &layoutInfo, nullptr,
+                                   &renderContext.materialsDescriptorSetLayout)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to create materials descriptor set layout!");
+    }
+}
+
 void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderContext &renderContext) {
     if (renderContext.usesImgui) {
         cleanupImGuiContext(baseContext, renderContext);
     }
 
-    vkDestroyDescriptorSetLayout(baseContext.device, renderContext.renderPassContext.descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 renderContext.renderPassContext.descriptorSetLayout,
+                                 nullptr);
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 renderContext.renderPassContext.materialsDescriptorSetLayout,
+                                 nullptr);
 
     // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
     vkDestroyPipeline(baseContext.device, renderContext.renderPassContext.graphicsPipelines[0], nullptr);
@@ -318,12 +348,16 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
+    // get both descriptor set layouts
+    std::vector<VkDescriptorSetLayout> layouts;
+    layouts.push_back(renderContext.descriptorSetLayout);
+    layouts.push_back(renderContext.materialsDescriptorSetLayout);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &renderContext.descriptorSetLayout;
-
+    pipelineLayoutInfo.setLayoutCount = layouts.size();
+    pipelineLayoutInfo.pSetLayouts = layouts.data();
 
     VkPushConstantRange pushConstantRange;
     //this push constant range starts at the beginning

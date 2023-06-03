@@ -9,8 +9,10 @@ layout(location = 1) in vec3 fragColor;
 layout(location = 0) out vec4 outColor;
 
 // TODO: needs descriptor set
-//layout(set = 0, binding = 1) buffer Materials {MaterialDescription m[];} ; // materials array
+layout(set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials; // materials array
 
 void main() {
-    outColor = vec4(fragColor, 1);
+    MaterialDescription mat = materials.m[0];
+    //outColor = vec4(fragColor, 1);
+    outColor = vec4(mat.albedo, 1);
 }

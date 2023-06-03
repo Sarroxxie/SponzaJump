@@ -21,11 +21,17 @@ using uint = unsigned int;
 #endif
 
 // access for descriptor sets
+// note that the names have to be unique, because they are unique in the shader
 START_BINDING(SceneBindings)
-    eCamera    = 0,  // Global uniform containing camera matrices
-    eMaterials = 1,      // Access to the object descriptions
-    eTextures  = 2       // Access to textures
+    eCamera    = 0  // Global uniform containing camera matrices
 END_BINDING();
+
+START_BINDING(MaterialsBindings)
+    eMaterials = 0,  // storage buffer containing materials
+    eTextures  = 1      // storage buffer containing image views
+END_BINDING();
+
+
 // clang-format on
 
 // copy of "Material"-struct from "scene/Model.h" for use on GPU

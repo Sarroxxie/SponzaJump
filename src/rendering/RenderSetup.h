@@ -16,6 +16,8 @@ void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext
 
 void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassContext &renderContext, const std::vector<VkDescriptorSetLayoutBinding> &bindings);
 
+void createMaterialsBufferDescriptorSet(const VulkanBaseContext& context, RenderPassContext& renderContext);
+
 void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
 
 void cleanupRenderContext(const VulkanBaseContext &baseContext, RenderContext &renderContext);
