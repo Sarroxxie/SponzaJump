@@ -163,6 +163,7 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     // TODO: from my understanding, this descriptor set only has to be bound
     //       once, but I got errors when doing so
     //        -> should make it possible for performance reasons
+    //        -> use separate command buffer that is only updated when the graphics pipeline is changed
     
     //bind DescriptorSet 1 (Materials)
     vkCmdBindDescriptorSets(

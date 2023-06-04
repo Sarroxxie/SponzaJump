@@ -13,6 +13,6 @@ layout(std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescript
 
 void main() {
     MaterialDescription mat = materials.m[0];
-    //outColor = vec4(fragColor, 1);
     outColor = vec4(mat.albedo, 1);
+    outColor = vec4(fragColor, 1);
 }
