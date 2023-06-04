@@ -8,13 +8,12 @@
 struct Material
 {
     // these default values match the defaults of tinygltf
-    alignas(4) glm::vec3 albedo              = glm::vec3(1, 1, 1);
-    alignas(4) glm::vec3 aoRoughnessMetallic = glm::vec3(1, 1, 1);
+    alignas(16) glm::vec3 albedo              = glm::vec3(1, 1, 1);
+    alignas(16) glm::vec3 aoRoughnessMetallic = glm::vec3(1, 1, 1);
     // these IDs reference textures in the texture data array inside Scene
-    int         albedoTextureID              = -1;
-    int         normalTextureID              = -1;
-    int         aoRoughnessMetallicTextureID = -1;
-    int         unused                       = 0;
+    alignas(4) int albedoTextureID              = -1;
+    alignas(4) int normalTextureID              = -1;
+    alignas(4) int aoRoughnessMetallicTextureID = -1;
     // this is the unique identifier for new materials
     bool operator==(const Material& other) const {
         return albedo == other.albedo && aoRoughnessMetallic == other.aoRoughnessMetallic

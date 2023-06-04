@@ -8,8 +8,8 @@ layout(location = 1) in vec3 fragColor;
 
 layout(location = 0) out vec4 outColor;
 
-// TODO: needs descriptor set
-layout(set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials; // materials array
+// materials array
+layout(std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
 
 void main() {
     MaterialDescription mat = materials.m[0];

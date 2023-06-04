@@ -348,14 +348,13 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    // get both descriptor set layouts
+    // Get all Descriptor Set Layouts
     std::vector<VkDescriptorSetLayout> layouts;
     layouts.push_back(renderContext.descriptorSetLayout);
     layouts.push_back(renderContext.materialsDescriptorSetLayout);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
     pipelineLayoutInfo.setLayoutCount = layouts.size();
     pipelineLayoutInfo.pSetLayouts = layouts.data();
 
@@ -506,16 +505,9 @@ void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext &
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    // TODO: is this line necessary?
-    //io.IniFilename = nullptr;
-    //io.LogFilename = nullptr;
     ImGui::StyleColorsDark();
 
     // Create Descriptor Pool for ImGui
-    //ImGui_ImplGlfw_InitForVulkan(appContext.window->getWindowHandle(), true);
-    // TODO: need to call
-    // "vkDestroyDescriptorPool(g_Device, g_DescriptorPool, nullptr);" somewhere!!
-    //       -> save handle to descriptor pool somewhere
     VkDescriptorPoolSize poolSizes[]    = {
             {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},

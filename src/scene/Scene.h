@@ -122,7 +122,8 @@ public:
     void registerSceneImgui();
 
     void createMaterialsBuffer(const VulkanBaseContext& context,
-                               const CommandContext&    commandContext);
+                               const CommandContext&    commandContext,
+                               RenderContext&           renderContext);
 
     void createMaterialsBufferDescriptorSet(RenderContext& renderContext);
 

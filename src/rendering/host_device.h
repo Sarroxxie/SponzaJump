@@ -37,7 +37,6 @@ END_BINDING();
 // copy of "Material"-struct from "scene/Model.h" for use on GPU
 struct MaterialDescription
 {
-    // TODO: find out if we even allow non-textured materials
     vec3 albedo;
     vec3 aoRoughnessMetallic;
     int  albedoTextureID;

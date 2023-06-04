@@ -31,7 +31,7 @@ int main() {
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
-    scene.createMaterialsBufferDescriptorSet(renderContext);
+    scene.createMaterialsBuffer(appContext.baseContext, appContext.commandContext, renderContext);
     
     VulkanRenderer renderer(appContext, renderContext);
 

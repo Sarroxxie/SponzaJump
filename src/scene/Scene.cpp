@@ -33,7 +33,9 @@ void Scene::cleanup() {
     }
 }
 
-// TODO: need to make sure all the IDs in meshparts, etc. are correctly offset by the ModelLoader
+/*
+* Adds a loaded object to the scene.
+*/
 void Scene::addObject(ModelLoader loader) {
     meshes.insert(meshes.end(), loader.meshes.begin(), loader.meshes.end());
     meshParts.insert(meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
@@ -41,16 +43,6 @@ void Scene::addObject(ModelLoader loader) {
     materials.insert(materials.end(), loader.materials.begin(), loader.materials.end());
     models.insert(models.end(), loader.models.begin(), loader.models.end());
     instances.insert(instances.end(), loader.instances.begin(), loader.instances.end());
-
-    /*std::copy(loader.meshes.begin(), loader.meshes.end(), std::back_inserter(meshes));
-    std::copy(loader.meshParts.begin(), loader.meshParts.end(),
-              std::back_inserter(meshParts));
-    std::copy(loader.textures.begin(), loader.textures.end(), std::back_inserter(textures));
-    std::copy(loader.materials.begin(), loader.materials.end(),
-              std::back_inserter(materials));
-    std::copy(loader.models.begin(), loader.models.end(), std::back_inserter(models));
-    std::copy(loader.instances.begin(), loader.instances.end(),
-              std::back_inserter(instances));*/
 }
 
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {
@@ -117,9 +109,12 @@ void Scene::registerSceneImgui() {
 }
 
 /*
- * Uploads all the registered materials to the GPU.
+ * Uploads all the registered materials to the GPU. Needs to be called before
+ * the scene is rendered, but after all needed materials are added to the scene.
  */
-void Scene::createMaterialsBuffer(const VulkanBaseContext& context, const CommandContext& commandContext) {
+void Scene::createMaterialsBuffer(const VulkanBaseContext& context,
+                                  const CommandContext&    commandContext,
+                                  RenderContext&           renderContext) {
     VkDeviceSize bufferSize = sizeof(Material) * materials.size();
 
     VkBuffer       stagingBuffer;
@@ -129,7 +124,6 @@ void Scene::createMaterialsBuffer(const VulkanBaseContext& context, const Comman
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  stagingBuffer, stagingBufferMemory);
 
-    // void* data = (void*)vertices.data();
     void* data;
     vkMapMemory(context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
@@ -146,9 +140,13 @@ void Scene::createMaterialsBuffer(const VulkanBaseContext& context, const Comman
 
     vkDestroyBuffer(context.device, stagingBuffer, nullptr);
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+
+    createMaterialsBufferDescriptorSet(renderContext);
 }
 
-// TODO: need to put this into the header file
+/*
+* Creates Descriptor Set for the materials (set = 1).
+*/
 void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -161,8 +159,6 @@ void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
-    // TODO: create an own DescriptorSet for materials and textures -> own bindings
-    // descriptor for materials buffer
     VkDescriptorBufferInfo materialsBufferInfo{};
     materialsBufferInfo.buffer = materialsBuffer;
     materialsBufferInfo.offset = 0;
@@ -246,23 +242,6 @@ void Scene::createDescriptorSets(RenderContext &renderContext) {
     descriptorWrite.pBufferInfo = &bufferInfo;
 
     descriptorWrites.emplace_back(descriptorWrite);
-
-    // TODO: create an own DescriptorSet for materials and textures -> own bindings
-    // descriptor for materials buffer
-    VkDescriptorBufferInfo materialsBufferInfo{};
-    materialsBufferInfo.buffer = materialsBuffer;
-    materialsBufferInfo.offset = 0;
-    materialsBufferInfo.range  = VK_WHOLE_SIZE;
-
-    VkWriteDescriptorSet materialsDescriptorWrite;
-    materialsDescriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    materialsDescriptorWrite.pNext           = nullptr;
-    materialsDescriptorWrite.dstSet          = descriptorSet;
-    materialsDescriptorWrite.dstBinding      = MaterialsBindings::eMaterials;
-    materialsDescriptorWrite.dstArrayElement = 0;
-    materialsDescriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    materialsDescriptorWrite.descriptorCount = static_cast<uint32_t>(materials.size());
-    materialsDescriptorWrite.pBufferInfo     = &materialsBufferInfo;
 
     /*
     descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
