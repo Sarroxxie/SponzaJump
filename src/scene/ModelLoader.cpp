@@ -252,7 +252,6 @@ bool ModelLoader::loadModel(const std::string&  filename,
                     }
                 }
                 if(!meshPartExists) {
-                    std::cout << "in\n";
                     // create the MeshPart that points to the found Mesh and
                     // the material of the primitive
                     meshParts.push_back(MeshPart(meshIndex + offsets.meshesOffset,
@@ -286,19 +285,23 @@ bool ModelLoader::loadModel(const std::string&  filename,
 glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
     glm::mat4 transform = glm::mat4(1.0f);
 
-    if(node.scale.size() != 0) {
-        transform *= glm::scale(glm::mat4(1),
-                                glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
-    }
-    if(node.rotation.size() != 0) {
-        glm::quat quat(node.rotation[0], node.rotation[1], node.rotation[2],
-                       node.rotation[3]);
-        transform *= glm::toMat4(quat);
-    }
     if(node.translation.size() != 0) {
         transform *= glm::translate(glm::mat4(1), glm::vec3(node.translation[0],
                                                             node.translation[1],
                                                             node.translation[2]));
+    }
+    if(node.rotation.size() != 0) {
+        glm::quat quat;
+        quat.x = node.rotation[0];
+        quat.y = node.rotation[1];
+        quat.z = node.rotation[2];
+        quat.w = node.rotation[3];
+
+        transform *= glm::toMat4(quat);
+    }
+    if(node.scale.size() != 0) {
+        transform *= glm::scale(glm::mat4(1),
+                                glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
     }
     return transform;
 }
@@ -366,6 +369,7 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     Mesh                      mesh;
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
+    // TODO: needs try catch and error handling
 
     tinygltf::Accessor position = accessors[primitive.attributes.at("POSITION")];
     tinygltf::Accessor normal   = accessors[primitive.attributes.at("NORMAL")];
