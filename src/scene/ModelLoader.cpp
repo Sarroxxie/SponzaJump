@@ -252,7 +252,6 @@ bool ModelLoader::loadModel(const std::string&  filename,
                     }
                 }
                 if(!meshPartExists) {
-                    std::cout << "in\n";
                     // create the MeshPart that points to the found Mesh and
                     // the material of the primitive
                     meshParts.push_back(MeshPart(meshIndex + offsets.meshesOffset,
@@ -267,7 +266,7 @@ bool ModelLoader::loadModel(const std::string&  filename,
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
         materials.push_back(
-            createMaterial(gltfMaterial, gltfModel.textures, gltfModel.images));
+            createMaterial(gltfMaterial, offsets.texturesOffset, gltfModel.textures, gltfModel.images));
     }
 
     // 3. create ModelInstances (from list of Nodes)
@@ -286,19 +285,23 @@ bool ModelLoader::loadModel(const std::string&  filename,
 glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
     glm::mat4 transform = glm::mat4(1.0f);
 
-    if(node.scale.size() != 0) {
-        transform *= glm::scale(glm::mat4(1),
-                                glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
-    }
-    if(node.rotation.size() != 0) {
-        glm::quat quat(node.rotation[0], node.rotation[1], node.rotation[2],
-                       node.rotation[3]);
-        transform *= glm::toMat4(quat);
-    }
     if(node.translation.size() != 0) {
         transform *= glm::translate(glm::mat4(1), glm::vec3(node.translation[0],
                                                             node.translation[1],
                                                             node.translation[2]));
+    }
+    if(node.rotation.size() != 0) {
+        glm::quat quat;
+        quat.x = node.rotation[0];
+        quat.y = node.rotation[1];
+        quat.z = node.rotation[2];
+        quat.w = node.rotation[3];
+
+        transform *= glm::toMat4(quat);
+    }
+    if(node.scale.size() != 0) {
+        transform *= glm::scale(glm::mat4(1),
+                                glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
     }
     return transform;
 }
@@ -308,46 +311,48 @@ glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
  * material to point at them.
  */
 Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
+                                     int                 texturesOffset,
                                      std::vector<tinygltf::Texture>& gltfTextures,
                                      std::vector<tinygltf::Image>& gltfImages) {
     Material material;
-    material.name = gltfMaterial.name;
-    if(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
-        textures.push_back(createTexture(
-            gltfImages
-                [gltfTextures[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index]
-                     .source]
-                    .uri));
-        material.albedoTextureID = textures.size() - 1;
+    auto     pbrSection = gltfMaterial.pbrMetallicRoughness;
+    if(pbrSection.baseColorTexture.index != -1) {
+        int imageIndex = gltfTextures[pbrSection.baseColorTexture.index].source;
+        std::string uri     = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.push_back(texture);
+        material.albedoTextureID = textures.size() - 1 + texturesOffset;
     } else {
-        material.albedo =
-            glm::vec3(gltfMaterial.pbrMetallicRoughness.baseColorFactor[0],
-                      gltfMaterial.pbrMetallicRoughness.baseColorFactor[1],
-                      gltfMaterial.pbrMetallicRoughness.baseColorFactor[2]);
+        material.albedo = glm::vec3(pbrSection.baseColorFactor[0],
+                                    pbrSection.baseColorFactor[1],
+                                    pbrSection.baseColorFactor[2]);
     }
     if(gltfMaterial.normalTexture.index != -1) {
-        textures.push_back(createTexture(
-            gltfImages[gltfTextures[gltfMaterial.normalTexture.index].source].uri));
-        material.normalTextureID = textures.size() - 1;
+        int imageIndex  = gltfTextures[gltfMaterial.normalTexture.index].source;
+        std::string uri = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.push_back(texture);
+        material.normalTextureID = textures.size() - 1 + texturesOffset;
     }
     if(gltfMaterial.occlusionTexture.index != -1) {
-        textures.push_back(createTexture(
-            gltfImages[gltfTextures[gltfMaterial.occlusionTexture.index].source].uri));
-        material.aoRoughnessMetallicTextureID = textures.size() - 1;
+        int imageIndex = gltfTextures[gltfMaterial.occlusionTexture.index].source;
+        std::string uri     = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.push_back(texture);
+        material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
     } else {
         material.aoRoughnessMetallic.r = 1;
     }
-    if(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index != -1
+    if(pbrSection.metallicRoughnessTexture.index != -1
        && material.aoRoughnessMetallicTextureID == -1) {
-        textures.emplace_back(createTexture(
-            gltfImages[gltfTextures[gltfMaterial.pbrMetallicRoughness
-                                        .metallicRoughnessTexture.index]
-                           .source]
-                .uri));
-        material.aoRoughnessMetallicTextureID = textures.size() - 1;
+        int imageIndex = gltfTextures[pbrSection.metallicRoughnessTexture.index].source;
+        std::string uri     = gltfImages[imageIndex].uri;
+        Texture     texture = createTexture(uri);
+        textures.emplace_back(texture);
+        material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
     } else {
-        material.aoRoughnessMetallic.g = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
-        material.aoRoughnessMetallic.b = gltfMaterial.pbrMetallicRoughness.metallicFactor;
+        material.aoRoughnessMetallic.g = pbrSection.roughnessFactor;
+        material.aoRoughnessMetallic.b = pbrSection.metallicFactor;
     }
     return material;
 }
@@ -361,66 +366,84 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
                              std::vector<tinygltf::Buffer>     buffers,
                              VulkanBaseContext                 context,
                              CommandContext                    commandContext) {
-    Mesh                      out;
+    Mesh                      mesh;
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
+    // TODO: needs try catch and error handling
 
     tinygltf::Accessor position = accessors[primitive.attributes.at("POSITION")];
     tinygltf::Accessor normal   = accessors[primitive.attributes.at("NORMAL")];
     tinygltf::Accessor tangents = accessors[primitive.attributes.at("TANGENT")];
     tinygltf::Accessor texCoord0 = accessors[primitive.attributes.at("TEXCOORD_0")];
 
-    // every vertex has to have every attribute
+    // every vertex has to support internal format
     assert(position.count == normal.count && position.count == tangents.count
            && position.count == texCoord0.count);
 
+    int   positionBufferIndex = bufferViews[position.bufferView].buffer;
+    int   positionOffset      = bufferViews[position.bufferView].byteOffset;
+    auto* positionBuffer      = &buffers[positionBufferIndex].data;
+
+    int   normalBufferIndex = bufferViews[normal.bufferView].buffer;
+    int   normalOffset      = bufferViews[normal.bufferView].byteOffset;
+    auto* normalBuffer      = &buffers[normalBufferIndex].data;
+
+    int   tangentsBufferIndex = bufferViews[tangents.bufferView].buffer;
+    int   tangentsOffset      = bufferViews[tangents.bufferView].byteOffset;
+    auto* tangentsBuffer      = &buffers[tangentsBufferIndex].data;
+
+    int   texCoordBufferIndex = bufferViews[texCoord0.bufferView].buffer;
+    int   texCoordOffset      = bufferViews[texCoord0.bufferView].byteOffset;
+    auto* texCoordBuffer      = &buffers[texCoordBufferIndex].data;
+
     // convert vertices into internal format
     for(int i = 0; i < position.count; i++) {
-        // last number from the multiplication is the number of components in the vector
         Vertex vert;
-        vert.pos = bytesToVec3(
-            &buffers[bufferViews[position.bufferView].buffer]
-                 .data[bufferViews[position.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
-        vert.nrm = bytesToVec3(
-            &buffers[bufferViews[normal.bufferView].buffer]
-                 .data[bufferViews[normal.bufferView].byteOffset + i * FLOAT_SIZE * 3]);
-        vert.tangents = bytesToVec4(
-            &buffers[bufferViews[tangents.bufferView].buffer]
-                 .data[bufferViews[tangents.bufferView].byteOffset + i * FLOAT_SIZE * 4]);
-        vert.texCoord = bytesToVec2(
-            &buffers[bufferViews[texCoord0.bufferView].buffer]
-                 .data[bufferViews[texCoord0.bufferView].byteOffset + i * FLOAT_SIZE * 2]);
+        // last number from the multiplication is the number of components in the vector
+        auto positionAddress = &(*positionBuffer)[positionOffset + i * FLOAT_SIZE * 3];
+        auto normalAddress = &(*normalBuffer)[normalOffset + i * FLOAT_SIZE * 3];
+        auto tangentsAddress = &(*tangentsBuffer)[tangentsOffset + i * FLOAT_SIZE * 3];
+        auto texCoordAddress = &(*texCoordBuffer)[texCoordOffset + i * FLOAT_SIZE * 3];
+
+        // extract data from byte array
+        vert.pos      = bytesToVec3(positionAddress);
+        vert.nrm      = bytesToVec3(normalAddress);
+        vert.tangents = bytesToVec4(tangentsAddress);
+        vert.texCoord = bytesToVec2(texCoordAddress);
         vertices.push_back(vert);
     }
 
     // default parsing function (if indices are stored as byte)
-    auto function = bytesFromUnsignedCharToUnsignedInt;
+    auto parseIndex = bytesFromUnsignedCharToUnsignedInt;
     // size of one index in bytes
-    int indexStride = 1;
+    int indexStride   = 1;
+    int componentType = accessors[primitive.indices].componentType;
 
-    // choose parsing function based on the numeric type that the index is stored as
-    if(accessors[primitive.indices].componentType == COMPONENT_TYPE_UINT) {
-        function    = bytesToUnsignedInt;
+    // choose parsing function based on the numeric type that the index is stored as in the glTF file
+    if(componentType == COMPONENT_TYPE_UINT) {
+        parseIndex  = bytesToUnsignedInt;
         indexStride = 4;
-    } else if(accessors[primitive.indices].componentType == COMPONENT_TYPE_USHORT) {
-        function    = bytesFromUnsignedShortToUnsignedInt;
+    } else if(componentType == COMPONENT_TYPE_USHORT) {
+        parseIndex  = bytesFromUnsignedShortToUnsignedInt;
         indexStride = 2;
     }
 
+    int   indexBufferIndex = bufferViews[primitive.indices].buffer;
+    int   indexOffset      = bufferViews[primitive.indices].byteOffset;
+    auto* indexBuffer      = &buffers[indexBufferIndex].data;
+
     // convert indices into internal format
-    int componentType = accessors[primitive.indices].componentType;
     for(int i = 0; i < accessors[primitive.indices].count; i++) {
-        unsigned int index =
-            function(&buffers[bufferViews[primitive.indices].buffer]
-                         .data[bufferViews[primitive.indices].byteOffset + i * indexStride]);
+        auto indexAddress  = &(*indexBuffer)[indexOffset + i * indexStride];
+        unsigned int index = parseIndex(indexAddress);
         indices.push_back(index);
     }
 
-    out.verticesCount = vertices.size();
-    out.indicesCount  = indices.size();
-    createMeshBuffers(context, commandContext, vertices, indices, out);
+    mesh.verticesCount = vertices.size();
+    mesh.indicesCount  = indices.size();
+    createMeshBuffers(context, commandContext, vertices, indices, mesh);
     // TODO: calculate Mesh.radius for later frustum culling
-    return out;
+    return mesh;
 }
 
 // TODO: implement this -> will need vulkan tutorial for it

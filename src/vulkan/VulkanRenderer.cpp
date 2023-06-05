@@ -153,15 +153,24 @@ void VulkanRenderer::recordCommandBuffer(Scene &scene, uint32_t imageIndex) {
     // Without Index Buffer
     // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
 
+    // bind DescriptorSet 0 (Camera Transformations)
+    vkCmdBindDescriptorSets(
+        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_RenderContext.renderPassContext
+            .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+        0, 1, scene.getDescriptorSet(), 0, nullptr);
 
-    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            m_RenderContext.renderPassContext.pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
-                            0,
-                            1,
-                            scene.getDescriptorSet(),
-                            0,
-                            nullptr);
+    // TODO: from my understanding, this descriptor set only has to be bound
+    //       once, but I got errors when doing so
+    //        -> should make it possible for performance reasons
+    //        -> use separate command buffer that is only updated when the graphics pipeline is changed
+    
+    //bind DescriptorSet 1 (Materials)
+    vkCmdBindDescriptorSets(
+        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_RenderContext.renderPassContext
+            .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+        1, 1, scene.getMaterialsDescriptorSet(), 0, nullptr);
 
     // render entities
     for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {

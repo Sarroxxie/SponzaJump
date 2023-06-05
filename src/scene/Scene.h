@@ -43,8 +43,12 @@ private:
     VkDeviceMemory uniformBufferMemory;
     void* uniformBufferMapped;
 
+    VkBuffer       materialsBuffer;
+    VkDeviceMemory materialsBufferMemory;
+
     VkDescriptorPool descriptorPool;
     VkDescriptorSet descriptorSet;
+    VkDescriptorSet  materialsDescriptorSet;
 
     VulkanBaseContext m_baseContext;
 
@@ -113,7 +117,15 @@ public:
 
     VkDescriptorSet *getDescriptorSet();
 
+    VkDescriptorSet* getMaterialsDescriptorSet();
+
     void registerSceneImgui();
+
+    void createMaterialsBuffer(const VulkanBaseContext& context,
+                               const CommandContext&    commandContext,
+                               RenderContext&           renderContext);
+
+    void createMaterialsBufferDescriptorSet(RenderContext& renderContext);
 
     float currentAngleY = 0;
     float currentAngleX = 0;

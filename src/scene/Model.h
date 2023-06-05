@@ -7,21 +7,19 @@
 // in "rendering/host_device.h" is a copy of this called "MaterialDescription" for use on GPU
 struct Material
 {
-    std::string name                         = "default";
-    glm::vec3   albedo                       = glm::vec3(1, 0, 0);
-    glm::vec3   aoRoughnessMetallic          = glm::vec3(1, 1, 0);
+    // these default values match the defaults of tinygltf
+    alignas(16) glm::vec3 albedo              = glm::vec3(1, 1, 1);
+    alignas(16) glm::vec3 aoRoughnessMetallic = glm::vec3(1, 1, 1);
     // these IDs reference textures in the texture data array inside Scene
-    int         albedoTextureID              = -1;
-    int         normalTextureID              = -1;
-    int         aoRoughnessMetallicTextureID = -1;
-
+    alignas(4) int albedoTextureID              = -1;
+    alignas(4) int normalTextureID              = -1;
+    alignas(4) int aoRoughnessMetallicTextureID = -1;
     // this is the unique identifier for new materials
     bool operator==(const Material& other) const {
         return albedo == other.albedo && aoRoughnessMetallic == other.aoRoughnessMetallic
                && albedoTextureID == other.albedoTextureID
                && normalTextureID == other.normalTextureID
-               && aoRoughnessMetallicTextureID == other.aoRoughnessMetallicTextureID
-               && name == other.name;
+               && aoRoughnessMetallicTextureID == other.aoRoughnessMetallicTextureID;
     }
 };
 

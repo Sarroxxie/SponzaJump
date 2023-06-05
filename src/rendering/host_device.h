@@ -21,17 +21,22 @@ using uint = unsigned int;
 #endif
 
 // access for descriptor sets
+// note that the names have to be unique, because they are unique in the shader
 START_BINDING(SceneBindings)
-    eGlobals  = 0,  // Global uniform containing camera matrices
-    eObjDescs = 1,      // Access to the object descriptions
-    eTextures = 2       // Access to textures
+    eCamera    = 0  // Global uniform containing camera matrices
 END_BINDING();
+
+START_BINDING(MaterialsBindings)
+    eMaterials = 0,  // storage buffer containing materials
+    eTextures  = 1      // storage buffer containing image views
+END_BINDING();
+
+
 // clang-format on
 
 // copy of "Material"-struct from "scene/Model.h" for use on GPU
 struct MaterialDescription
 {
-    // TODO: find out if we even allow non-textured materials
     vec3 albedo;
     vec3 aoRoughnessMetallic;
     int  albedoTextureID;

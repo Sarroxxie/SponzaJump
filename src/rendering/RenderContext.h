@@ -25,6 +25,7 @@ typedef struct
     bool activePipelineIndex = 0;
 
     VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorSetLayout materialsDescriptorSetLayout;
 } RenderPassContext;
 
 typedef struct {

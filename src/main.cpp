@@ -31,7 +31,7 @@ int main() {
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
-
+    scene.createMaterialsBuffer(appContext.baseContext, appContext.commandContext, renderContext);
     
     VulkanRenderer renderer(appContext, renderContext);
 
@@ -41,7 +41,6 @@ int main() {
     CallbackData callbackData;
     callbackData.renderer = &renderer;
     callbackData.inputController = &inputController;
-
 
     scene.getWorld().SetContactListener((b2ContactListener *) &contactListener);
 
@@ -57,7 +56,6 @@ int main() {
     std::chrono::milliseconds accumulatedDelta = std::chrono::milliseconds(0);
 
     std::chrono::milliseconds targetPhysicsRate = std::chrono::milliseconds(20);
-
 
     while (!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();
