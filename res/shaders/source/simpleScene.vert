@@ -13,15 +13,13 @@ layout(set = 0, binding = eCamera) uniform SceneTransform {
     mat4 view;
 } sceneTransform;
 
-layout( push_constant ) uniform ObjectTransform {
-    mat4 obj;
-} objectTransform;
+layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
 layout(location = 0) out vec2 fragPos;
 layout(location = 1) out vec3 fragColor;
 
 void main() {
-    gl_Position = sceneTransform.proj * sceneTransform.view * objectTransform.obj * vec4(inPosition, 1);
+    gl_Position = sceneTransform.proj * sceneTransform.view * pushConstant.transformation * vec4(inPosition, 1);
     fragColor = (inNormal + 1) * 0.5;
     //fragColor = normal;
 }

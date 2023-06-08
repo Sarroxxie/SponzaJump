@@ -35,7 +35,8 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
     bindings.push_back(samplerLayoutBinding);
     */
 
-    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(0, sizeof(glm::mat4), ShaderStage::VERTEX_SHADER));
+    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(
+        0, sizeof(PushConstant), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
 
     initializeRenderContext(appContext, renderContext, renderSetupDescription);
 }
@@ -361,10 +362,10 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
     VkPushConstantRange pushConstantRange;
     //this push constant range starts at the beginning
     pushConstantRange.offset = 0;
-    //this push constant range takes up the size of a MeshPushConstants struct
-    pushConstantRange.size = sizeof(glm::mat4);
-    //this push constant range is accessible only in the vertex shader
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    //this push constant range takes up the size of a PushConstant struct
+    pushConstantRange.size = sizeof(PushConstant);
+    //this push constant range is accessible in the vertex and fragment shader
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
@@ -487,13 +488,13 @@ VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, 
     return layoutBinding;
 }
 
-VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage) {
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, VkShaderStageFlags flags) {
     VkPushConstantRange pushConstantRange;
 
     pushConstantRange.offset = offset;
     pushConstantRange.size = size;
 
-    pushConstantRange.stageFlags = getStageFlag(shaderStage);
+    pushConstantRange.stageFlags = flags;
 
     return pushConstantRange;
 }

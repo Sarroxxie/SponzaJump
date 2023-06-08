@@ -40,7 +40,7 @@ bool swapGraphicsPipeline(const ApplicationVulkanContext &appContext, RenderCont
 
 VkDescriptorSetLayoutBinding createUniformBufferLayoutBinding(uint32_t binding, uint32_t descriptorCount, ShaderStage shaderStage);
 
-VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage);
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, VkShaderStageFlags flags);
 
 void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext &renderContext);
 
