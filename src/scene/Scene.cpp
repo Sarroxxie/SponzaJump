@@ -29,7 +29,8 @@ void Scene::cleanup() {
     }
 
     for (auto &texture: textures) {
-        // TODO: need to implement texture cleanup
+        vkDestroyImage(m_baseContext.device, texture.image, nullptr);
+        vkFreeMemory(m_baseContext.device, texture.imageMemory, nullptr);
     }
 }
 

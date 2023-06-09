@@ -8,6 +8,10 @@ constexpr int COMPONENT_TYPE_UBYTE  = 5121;
 constexpr int COMPONENT_TYPE_USHORT = 5123;
 constexpr int COMPONENT_TYPE_UINT   = 5125;
 
+constexpr char* TEXTURES_DIRECTORY_NAME      = "textures/";
+constexpr int   TEXTURES_DIRECTORY_NAME_SIZE = 9;
+constexpr char* ASSETS_DIRECTORY_PATH        = "res/assets/";
+
 /**
  * TODO: keep track of uploaded textures somewhere in a map (uri + TextureStruct)
  *       -> probably create a class to handle all model loading
@@ -265,8 +269,9 @@ bool ModelLoader::loadModel(const std::string&  filename,
     }
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
-        materials.push_back(
-            createMaterial(gltfMaterial, offsets.texturesOffset, gltfModel.textures, gltfModel.images));
+        materials.push_back(createMaterial(gltfMaterial, offsets.texturesOffset,
+                                           gltfModel.textures, gltfModel.images,
+                                           context, commandContext));
     }
 
     // 3. create ModelInstances (from list of Nodes)
@@ -313,15 +318,16 @@ glm::mat4 ModelLoader::getTransform(tinygltf::Node node) {
 Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
                                      int                 texturesOffset,
                                      std::vector<tinygltf::Texture>& gltfTextures,
-                                     std::vector<tinygltf::Image>& gltfImages) {
+                                     std::vector<tinygltf::Image>& gltfImages,
+                                     VulkanBaseContext             context,
+                                     CommandContext commandContext) {
     Material material;
     auto     pbrSection = gltfMaterial.pbrMetallicRoughness;
     if(pbrSection.baseColorTexture.index != -1) {
         int imageIndex = gltfTextures[pbrSection.baseColorTexture.index].source;
         std::string uri     = gltfImages[imageIndex].uri;
-        Texture     texture = createTexture(uri);
-        textures.push_back(texture);
-        material.albedoTextureID = textures.size() - 1 + texturesOffset;
+        int textureID = createTexture(uri, texturesOffset, context, commandContext);
+        material.albedoTextureID = textureID;
     } else {
         material.albedo = glm::vec3(pbrSection.baseColorFactor[0],
                                     pbrSection.baseColorFactor[1],
@@ -330,16 +336,14 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
     if(gltfMaterial.normalTexture.index != -1) {
         int imageIndex  = gltfTextures[gltfMaterial.normalTexture.index].source;
         std::string uri = gltfImages[imageIndex].uri;
-        Texture     texture = createTexture(uri);
-        textures.push_back(texture);
-        material.normalTextureID = textures.size() - 1 + texturesOffset;
+        int textureID = createTexture(uri, texturesOffset, context, commandContext);
+        material.normalTextureID = textureID;
     }
     if(gltfMaterial.occlusionTexture.index != -1) {
         int imageIndex = gltfTextures[gltfMaterial.occlusionTexture.index].source;
         std::string uri     = gltfImages[imageIndex].uri;
-        Texture     texture = createTexture(uri);
-        textures.push_back(texture);
-        material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
+        int textureID = createTexture(uri, texturesOffset, context, commandContext);
+        material.aoRoughnessMetallicTextureID = textureID;
     } else {
         material.aoRoughnessMetallic.r = 1;
     }
@@ -347,9 +351,8 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
        && material.aoRoughnessMetallicTextureID == -1) {
         int imageIndex = gltfTextures[pbrSection.metallicRoughnessTexture.index].source;
         std::string uri     = gltfImages[imageIndex].uri;
-        Texture     texture = createTexture(uri);
-        textures.emplace_back(texture);
-        material.aoRoughnessMetallicTextureID = textures.size() - 1 + texturesOffset;
+        int textureID = createTexture(uri, texturesOffset, context, commandContext);
+        material.aoRoughnessMetallicTextureID = textureID;
     } else {
         material.aoRoughnessMetallic.g = pbrSection.roughnessFactor;
         material.aoRoughnessMetallic.b = pbrSection.metallicFactor;
@@ -447,8 +450,23 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
 }
 
 // TODO: implement this -> will need vulkan tutorial for it
-Texture ModelLoader::createTexture(std::string uri) {
-    return Texture();
+int ModelLoader::createTexture(std::string       uri,
+                               int               texturesOffset,
+                               VulkanBaseContext context,
+                               CommandContext    commandContext) {
+    // TODO: check for duplicate URIs -> need access to the "textures" list of the scene
+
+    Texture texture;
+    // the URI that is saved with the texture is the name of the file inside the "textures/" directory
+    uri = uri.substr(uri.find(TEXTURES_DIRECTORY_NAME) + TEXTURES_DIRECTORY_NAME_SIZE);
+    texture.uri = uri;
+    // prepend the path to the "textures/" directory so the image loader finds the file
+    std::string path = std::string(ASSETS_DIRECTORY_PATH)
+                       + std::string(TEXTURES_DIRECTORY_NAME) + uri;
+    createTextureImage(context, commandContext, path, texture.image, texture.imageMemory);
+
+    textures.push_back(texture);
+    return textures.size() - 1 + texturesOffset;
 }
 
 /*

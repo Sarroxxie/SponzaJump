@@ -26,7 +26,8 @@ struct Material
 struct Texture
 {
     std::string uri = "";
-    // TODO: needs handles to the GPU references
+    VkImage image;
+    VkDeviceMemory imageMemory;
 };
 
 struct Mesh
