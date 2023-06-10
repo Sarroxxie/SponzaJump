@@ -8,7 +8,8 @@
 
 // --- Sample Render Setups
 
-void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext);
+RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
+                                                          RenderContext& renderContext);
 // ---
 
 

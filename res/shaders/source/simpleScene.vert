@@ -17,9 +17,11 @@ layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
 layout(location = 0) out vec2 fragPos;
 layout(location = 1) out vec3 fragColor;
+layout(location = 2) out vec2 fragTexCoords;
 
 void main() {
     gl_Position = sceneTransform.proj * sceneTransform.view * pushConstant.transformation * vec4(inPosition, 1);
     fragColor = (inNormal + 1) * 0.5;
+    fragTexCoords = texCoords;
     //fragColor = normal;
 }

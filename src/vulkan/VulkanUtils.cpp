@@ -28,6 +28,18 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 }
 
 bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+    // check for bindless support
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr};
+    VkPhysicalDeviceFeatures2 deviceFeatures2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+                                              &indexingFeatures};
+
+    vkGetPhysicalDeviceFeatures2(device, &deviceFeatures2);
+    bool bindlessSupported = indexingFeatures.descriptorBindingPartiallyBound
+                              && indexingFeatures.runtimeDescriptorArray;
+    if(!bindlessSupported)
+        return false;
+
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);

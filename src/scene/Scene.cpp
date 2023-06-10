@@ -229,6 +229,8 @@ void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
     texturesWrite.descriptorCount = textureSamplers.size();
     texturesWrite.pImageInfo      = textureSamplers.data();
 
+    descriptorWrites.push_back(texturesWrite);
+
     vkUpdateDescriptorSets(m_baseContext.device, static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
 }

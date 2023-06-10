@@ -5,7 +5,8 @@
 #include "utils/FileUtils.h"
 #include "rendering/host_device.h"
 
-void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
+RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
+                                                          RenderContext& renderContext) {
     auto &settings = renderContext.renderSettings;
     settings.fov = glm::radians(45.0f);
     settings.nearPlane = 0.1;
@@ -39,6 +40,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext &appContext, Re
         0, sizeof(PushConstant), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
 
     initializeRenderContext(appContext, renderContext, renderSetupDescription);
+    return renderSetupDescription;
 }
 
 void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription) {
@@ -57,11 +59,11 @@ void initializeRenderContext(ApplicationVulkanContext &appContext, RenderContext
 void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription) {
     createRenderPass(appContext, renderContext);
 
-    createGraphicsPipeline(appContext,
+    /*createGraphicsPipeline(appContext,
                            renderContext.renderPassContext,
                            renderContext.renderPassContext.pipelineLayouts[0],
                            renderContext.renderPassContext.graphicsPipelines[0],
-                           renderSetupDescription);
+                           renderSetupDescription);*/
 }
 
 void createDescriptorSetLayout(const VulkanBaseContext &context, RenderPassContext &renderContext, const std::vector<VkDescriptorSetLayoutBinding> &bindings) {
@@ -327,7 +329,6 @@ void createGraphicsPipeline(const ApplicationVulkanContext &appContext,
     // Get all Descriptor Set Layouts
     std::vector<VkDescriptorSetLayout> layouts;
     layouts.push_back(renderContext.descriptorSetLayout);
-    // TODO: this can't exist there yet
     layouts.push_back(renderContext.materialsDescriptorSetLayout);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
