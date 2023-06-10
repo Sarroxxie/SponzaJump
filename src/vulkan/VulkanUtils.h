@@ -128,7 +128,11 @@ void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
                         std::string        path,
                         VkImage&           image,
-                        VkDeviceMemory&    imageMemory);
+                        VkDeviceMemory&    imageMemory,
+                        VkImageView&       imageView,
+                        VkSampler&         textureSampler);
+
+void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler);
 
 void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 

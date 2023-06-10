@@ -1,5 +1,6 @@
 #pragma once
-#include "scene/RenderableObject.h"
+#include <vulkan/vulkan_core.h>
+#include "vulkan/ApplicationContext.h"
 #include "tiny_gltf.h"
 #include <vector>
 #include <glm/mat4x4.hpp>
@@ -25,9 +26,21 @@ struct Material
 
 struct Texture
 {
-    std::string uri = "";
-    VkImage image;
+    std::string    uri = "";
+    VkImage        image;
     VkDeviceMemory imageMemory;
+    VkImageView    imageView;
+    VkSampler      sampler;
+    // TODO: this has to be created per texture!
+    VkDescriptorImageInfo descriptorInfo;
+
+    void cleanup(VulkanBaseContext& baseContext) {
+        vkDestroySampler(baseContext.device, sampler, nullptr);
+        vkDestroyImageView(baseContext.device, imageView, nullptr);
+
+        vkDestroyImage(baseContext.device, image, nullptr);
+        vkFreeMemory(baseContext.device, imageMemory, nullptr);
+    }
 };
 
 struct Mesh
@@ -49,7 +62,7 @@ struct Mesh
 
         vkDestroyBuffer(baseContext.device, vertexBuffer, nullptr);
         vkFreeMemory(baseContext.device, vertexBufferMemory, nullptr);
-    };
+    }
 };
 
 struct MeshPart

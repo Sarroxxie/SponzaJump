@@ -29,8 +29,7 @@ void Scene::cleanup() {
     }
 
     for (auto &texture: textures) {
-        vkDestroyImage(m_baseContext.device, texture.image, nullptr);
-        vkFreeMemory(m_baseContext.device, texture.imageMemory, nullptr);
+        texture.cleanup(m_baseContext);
     }
 }
 

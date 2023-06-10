@@ -255,11 +255,13 @@ void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
                         std::string        path,
                         VkImage&           image,
-                        VkDeviceMemory&    imageMemory) {
+                        VkDeviceMemory&    imageMemory,
+                        VkImageView&       imageView,
+                        VkSampler&         textureSampler) {
     int texWidth, texHeight, texChannels;
     // load image to CPU
-    stbi_uc*    pixels = stbi_load(path.c_str(),
-                                &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels =
+        stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
@@ -269,7 +271,7 @@ void createTextureImage(VulkanBaseContext& context,
     }
 
     // load image into staging buffer on GPU
-    VkBuffer stagingBuffer;
+    VkBuffer       stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
     createBuffer(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -284,7 +286,8 @@ void createTextureImage(VulkanBaseContext& context,
     // free image from CPU
     stbi_image_free(pixels);
 
-    // allocate memory and create image
+    // TODO: format needs to be taken into account (VK_FORMAT_R8G8B8A8_UNORM for
+    //       non-color) allocate memory and create image
     createImage(context, texWidth, texHeight, 1, VK_SAMPLE_COUNT_1_BIT,
                 VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -303,6 +306,37 @@ void createTextureImage(VulkanBaseContext& context,
     // cleanup buffers
     vkDestroyBuffer(context.device, stagingBuffer, nullptr);
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+
+    // create image view
+    imageView = createImageView(context, image, VK_FORMAT_R8G8B8A8_SRGB,
+                                VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    // create texture sampler
+    createTextureSampler(context, textureSampler);
+}
+
+void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler) {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter               = VK_FILTER_LINEAR;
+    samplerInfo.minFilter               = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable        = VK_TRUE;
+    samplerInfo.maxAnisotropy           = context.maxSamplerAnisotropy;
+    samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable           = VK_FALSE;
+    samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias              = 0.0f;
+    samplerInfo.minLod                  = 0.0f;
+    samplerInfo.maxLod                  = 0.0f;
+
+    if(vkCreateSampler(context.device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create texture sampler!");
+    }
 }
 
 void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {

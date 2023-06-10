@@ -195,6 +195,7 @@ void pickPhysicalDevice(VulkanBaseContext &context, GraphicSettings &graphicSett
     std::cout << "Using " << graphicSettings.msaaSamples << " msaa samples" << std::endl;
 
     context.maxSupportedMinorVersion = VK_API_VERSION_MINOR(deviceProperties.apiVersion);
+    context.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;
 
     if (context.physicalDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("failed to find a suitable GPU!");
