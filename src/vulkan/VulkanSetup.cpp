@@ -262,6 +262,7 @@ void createSwapChain(VulkanBaseContext &context, SwapchainContext &swapchainCont
     if (swapChainSupport.capabilities.maxImageCount > 0 &&
         imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
+        imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
     VkSwapchainCreateInfoKHR createInfo{};

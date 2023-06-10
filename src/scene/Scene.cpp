@@ -144,10 +144,46 @@ void Scene::createMaterialsBuffer(const VulkanBaseContext& context,
     createMaterialsBufferDescriptorSet(renderContext);
 }
 
+void Scene::createMaterialsDescriptorSetLayout(RenderPassContext& renderPassContext) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    // materials buffer
+    VkDescriptorSetLayoutBinding materialsBinding;
+    materialsBinding.binding         = MaterialsBindings::eMaterials;
+    materialsBinding.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    materialsBinding.descriptorCount = 1;
+    materialsBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    bindings.push_back(materialsBinding);
+
+    // texture samplers
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = MaterialsBindings::eTextures;
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.descriptorCount = static_cast<uint32_t>(this->textures.size());
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    bindings.push_back(samplerLayoutBinding);
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings    = bindings.data();
+
+    if(vkCreateDescriptorSetLayout(m_baseContext.device, &layoutInfo, nullptr,
+                                   &renderPassContext.materialsDescriptorSetLayout)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to create materials descriptor set layout!");
+    }
+}
+
 /*
 * Creates Descriptor Set for the materials (set = 1).
 */
 void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
+    createMaterialsDescriptorSetLayout(renderContext.renderPassContext);
+
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
@@ -159,6 +195,8 @@ void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
+    std::vector<VkWriteDescriptorSet> descriptorWrites;
+
     VkDescriptorBufferInfo materialsBufferInfo{};
     materialsBufferInfo.buffer = materialsBuffer;
     materialsBufferInfo.offset = 0;
@@ -167,26 +205,48 @@ void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
     VkWriteDescriptorSet materialsDescriptorWrite;
     materialsDescriptorWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     materialsDescriptorWrite.pNext  = nullptr;
-    materialsDescriptorWrite.dstSet     = materialsDescriptorSet;
+    materialsDescriptorWrite.dstSet = materialsDescriptorSet;
     materialsDescriptorWrite.dstBinding      = MaterialsBindings::eMaterials;
     materialsDescriptorWrite.dstArrayElement = 0;
     materialsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     materialsDescriptorWrite.descriptorCount = 1;
-    materialsDescriptorWrite.pBufferInfo = &materialsBufferInfo;
+    materialsDescriptorWrite.pBufferInfo     = &materialsBufferInfo;
 
-    vkUpdateDescriptorSets(m_baseContext.device, 1, &materialsDescriptorWrite, 0, nullptr);
+    descriptorWrites.push_back(materialsDescriptorWrite);
+
+     // All texture samplers
+    std::vector<VkDescriptorImageInfo> textureSamplers;
+    for(auto& texture : textures) {
+        textureSamplers.emplace_back(texture.descriptorInfo);
+    }
+
+    VkWriteDescriptorSet texturesWrite{};
+    texturesWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    texturesWrite.dstSet          = materialsDescriptorSet;
+    texturesWrite.dstBinding      = MaterialsBindings::eTextures;
+    texturesWrite.dstArrayElement = 0;
+    texturesWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    texturesWrite.descriptorCount = textureSamplers.size();
+    texturesWrite.pImageInfo      = textureSamplers.data();
+
+    vkUpdateDescriptorSets(m_baseContext.device, static_cast<uint32_t>(descriptorWrites.size()),
+                           descriptorWrites.data(), 0, nullptr);
 }
 
 void Scene::createDescriptorPool() {
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{};
 
     // camera matrices
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = 1;
 
-    // materials buffer (and later textures)
+    // materials buffer
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[1].descriptorCount = 1;
+
+    // texture buffer
+    poolSizes[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[2].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

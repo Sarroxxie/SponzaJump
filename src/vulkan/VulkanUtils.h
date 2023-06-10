@@ -124,13 +124,14 @@ void createImage(VulkanBaseContext &context, uint32_t width, uint32_t height, ui
 void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
-void createTextureImage(VulkanBaseContext& context,
-                        CommandContext&    commandContext,
-                        std::string        path,
-                        VkImage&           image,
-                        VkDeviceMemory&    imageMemory,
-                        VkImageView&       imageView,
-                        VkSampler&         textureSampler);
+void createTextureImage(VulkanBaseContext&     context,
+                        CommandContext&        commandContext,
+                        std::string            path,
+                        VkImage&               image,
+                        VkDeviceMemory&        imageMemory,
+                        VkImageView&           imageView,
+                        VkSampler&             textureSampler,
+                        VkDescriptorImageInfo& descriptorInfo);
 
 void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler);
 

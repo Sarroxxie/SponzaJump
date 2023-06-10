@@ -251,13 +251,14 @@ void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferU
 }
 
 // TODO: instead of using "beginSingleTimeCommands", record everything into one command buffer
-void createTextureImage(VulkanBaseContext& context,
-                        CommandContext&    commandContext,
-                        std::string        path,
-                        VkImage&           image,
-                        VkDeviceMemory&    imageMemory,
-                        VkImageView&       imageView,
-                        VkSampler&         textureSampler) {
+void createTextureImage(VulkanBaseContext&     context,
+                        CommandContext&        commandContext,
+                        std::string            path,
+                        VkImage&               image,
+                        VkDeviceMemory&        imageMemory,
+                        VkImageView&           imageView,
+                        VkSampler&             textureSampler,
+                        VkDescriptorImageInfo& descriptorInfo) {
     int texWidth, texHeight, texChannels;
     // load image to CPU
     stbi_uc* pixels =
@@ -313,6 +314,11 @@ void createTextureImage(VulkanBaseContext& context,
 
     // create texture sampler
     createTextureSampler(context, textureSampler);
+
+    // create descriptor info
+    descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    descriptorInfo.imageView   = imageView;
+    descriptorInfo.sampler     = textureSampler;
 }
 
 void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler) {

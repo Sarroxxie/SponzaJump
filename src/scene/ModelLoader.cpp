@@ -464,7 +464,8 @@ int ModelLoader::createTexture(std::string       uri,
     // prepend the path to the "textures/" directory so the image loader finds the file
     std::string path = std::string(ASSETS_DIRECTORY_PATH)
                        + std::string(TEXTURES_DIRECTORY_NAME) + uri;
-    createTextureImage(context, commandContext, path, texture.image, texture.imageMemory, texture.imageView, texture.sampler);
+    createTextureImage(context, commandContext, path, texture.image, texture.imageMemory,
+                       texture.imageView, texture.sampler, texture.descriptorInfo);
 
     textures.push_back(texture);
     return textures.size() - 1 + texturesOffset;

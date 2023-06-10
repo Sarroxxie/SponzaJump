@@ -32,6 +32,7 @@ int main() {
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
     scene.createMaterialsBuffer(appContext.baseContext, appContext.commandContext, renderContext);
+    // TODO: create graphics pipeline here (all texture data is only available from here on)
     
     VulkanRenderer renderer(appContext, renderContext);
 

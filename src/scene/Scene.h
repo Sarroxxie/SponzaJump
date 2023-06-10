@@ -117,6 +117,8 @@ public:
 
     VkDescriptorSet *getDescriptorSet();
 
+    void createMaterialsDescriptorSetLayout(RenderPassContext& renderPassContext);
+
     VkDescriptorSet* getMaterialsDescriptorSet();
 
     void registerSceneImgui();
