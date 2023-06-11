@@ -13,20 +13,69 @@ typedef struct
     alignas(16) glm::mat4 cameraTransform;
 } SceneTransform;
 
-typedef struct
-{
-    // TODO how to use multiple Renderpasses, multiple pipelines ?
+
+
+typedef struct  {
     VkRenderPass renderPass;
 
-    // allows swapping between graphics pipeline at runtime
     VkPipelineLayout pipelineLayouts[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
     VkPipeline graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
 
     bool activePipelineIndex = 0;
 
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkDescriptorSetLayout materialsDescriptorSetLayout;
+    RenderPassDescription renderPassDescription;
+
+    // redundant information used to recreate graphic pipelines
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
 } RenderPassContext;
+
+typedef struct {
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
+    void* bufferMemoryMapping = VK_NULL_HANDLE;
+} BufferResources;
+
+typedef struct {
+    VkImage image = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView imageView = VK_NULL_HANDLE;
+} ImageResources;
+
+typedef struct {
+    ImageResources depthImage;
+    VkFramebuffer depthFrameBuffer;
+
+    BufferResources transformBuffer;
+
+    VkDescriptorSetLayout transformDescriptorSetLayout;
+    VkDescriptorSet transformDescriptorSet;
+
+    uint32_t shadowMapWidth;
+    uint32_t shadowMapHeight;
+
+    RenderPassContext renderPassContext;
+} ShadowPass;
+
+typedef struct {
+    VkDescriptorSetLayout transformDescriptorSetLayout;
+    VkDescriptorSet transformDescriptorSet;
+
+    BufferResources transformBuffer;
+
+    VkDescriptorSetLayout materialDescriptorSetLayout;
+    VkDescriptorSet materialDescriptorSet;
+
+    BufferResources materialBuffer;
+
+    RenderPassContext renderPassContext;
+} MainPass;
+
+typedef struct
+{
+    MainPass mainPass;
+
+    ShadowPass shadowPass;
+} RenderPasses;
 
 typedef struct {
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -43,7 +92,9 @@ static inline glm::mat4 getPerspectiveMatrix(RenderSettings renderSettings, size
 }
 
 typedef struct {
-    RenderPassContext renderPassContext;
+    RenderPasses renderPasses;
+
+    VkDescriptorPool descriptorPool;
 
     bool usesImgui;
     ImguiContext imguiContext;

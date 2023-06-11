@@ -31,8 +31,10 @@ int main() {
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
-    scene.createMaterialsBuffer(appContext.baseContext, appContext.commandContext, renderContext);
-    
+
+    createMainPassResources(appContext, renderContext, scene.getMaterials());
+    createMainPassDescriptorSets(appContext, renderContext);
+
     VulkanRenderer renderer(appContext, renderContext);
 
     InputController inputController;

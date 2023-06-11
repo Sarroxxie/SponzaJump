@@ -39,17 +39,6 @@ private:
 
     InputController *m_InputController = nullptr;
 
-    VkBuffer uniformBuffer;
-    VkDeviceMemory uniformBufferMemory;
-    void* uniformBufferMapped;
-
-    VkBuffer       materialsBuffer;
-    VkDeviceMemory materialsBufferMemory;
-
-    VkDescriptorPool descriptorPool;
-    VkDescriptorSet descriptorSet;
-    VkDescriptorSet  materialsDescriptorSet;
-
     VulkanBaseContext m_baseContext;
 
 public:
@@ -112,35 +101,14 @@ public:
     void handleUserInput();
 
     void cleanup();
-
-    void *getUniformBufferMapping();
-
-    VkDescriptorSet *getDescriptorSet();
-
-    VkDescriptorSet* getMaterialsDescriptorSet();
-
     void registerSceneImgui();
-
-    void createMaterialsBuffer(const VulkanBaseContext& context,
-                               const CommandContext&    commandContext,
-                               RenderContext&           renderContext);
-
-    void createMaterialsBufferDescriptorSet(RenderContext& renderContext);
 
     float currentAngleY = 0;
     float currentAngleX = 0;
 
     float cameraAngleY = 0;
     float cameraDist = 45;
-
-private:
-    void createUniformBuffers();
-
-    void createDescriptorPool();
-
-    void createDescriptorSets(RenderContext &renderContext);
-
-};
+    };
 
 template <typename... ComponentTypes>
 struct SceneView {

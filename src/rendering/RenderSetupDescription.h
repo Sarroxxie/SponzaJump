@@ -10,11 +10,16 @@ typedef struct
     Shader vertexShader;
     Shader fragmentShader;
 
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-
     std::vector<VkPushConstantRange> pushConstantRanges;
+}RenderPassDescription;
 
-    bool enableImgui;
+typedef struct
+{
+    RenderPassDescription mainRenderPassDescription;
+
+    RenderPassDescription shadowPassDescription;
+
+    bool enableImgui = false;
 } RenderSetupDescription;
 
 #endif //GRAPHICSPRAKTIKUM_RENDERSETUPDESCRIPTION_H

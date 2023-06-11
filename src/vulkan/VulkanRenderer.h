@@ -40,6 +40,10 @@ public:
 private:
     void recordCommandBuffer(Scene &scene, uint32_t imageIndex);
 
+    void recordShadowPass(Scene &scene, uint32_t imageIndex);
+
+    void recordMainRenderPass(Scene &scene, uint32_t imageIndex);
+
     void createSyncObjects(VulkanBaseContext &baseContext);
 
     void updateUniformBuffer(Scene &scene);

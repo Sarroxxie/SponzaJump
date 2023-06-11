@@ -44,8 +44,6 @@ void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &rend
 
 void createImageViews(VulkanBaseContext &context, SwapchainContext &swapchainContext);
 
-VkImageView createImageView(VulkanBaseContext &context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
-
 void createCommandPool(VulkanBaseContext &baseContext, CommandContext &commandContext);
 
 void createColorResources(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext, GraphicSettings &graphicSettings);
