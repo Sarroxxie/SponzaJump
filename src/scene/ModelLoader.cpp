@@ -406,8 +406,8 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
         // last number from the multiplication is the number of components in the vector
         auto positionAddress = &(*positionBuffer)[positionOffset + i * FLOAT_SIZE * 3];
         auto normalAddress = &(*normalBuffer)[normalOffset + i * FLOAT_SIZE * 3];
-        auto tangentsAddress = &(*tangentsBuffer)[tangentsOffset + i * FLOAT_SIZE * 3];
-        auto texCoordAddress = &(*texCoordBuffer)[texCoordOffset + i * FLOAT_SIZE * 3];
+        auto tangentsAddress = &(*tangentsBuffer)[tangentsOffset + i * FLOAT_SIZE * 4];
+        auto texCoordAddress = &(*texCoordBuffer)[texCoordOffset + i * FLOAT_SIZE * 2];
 
         // extract data from byte array
         vert.pos      = bytesToVec3(positionAddress);
