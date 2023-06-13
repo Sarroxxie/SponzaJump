@@ -21,6 +21,6 @@ void main() {
     outColor = vec4(fragColor, 1);
     vec2 normFragCoord = vec2(gl_FragCoord.x / 1920, gl_FragCoord.y / 1080);
     outColor = vec4(normFragCoord.x, normFragCoord.y, 0, 1);
-    float val = texture(depthSampler, normFragCoord).z;
+    float val = texture(depthSampler, normFragCoord).x / 10;
     outColor = vec4(val, val, val, 1);
 }

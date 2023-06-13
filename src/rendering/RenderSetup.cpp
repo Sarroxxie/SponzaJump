@@ -327,7 +327,7 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     depthAttachment.format  = findDepthFormat(appContext.baseContext);
-    depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
     VkAttachmentReference depthAttachmentRef{};

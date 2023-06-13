@@ -8,5 +8,5 @@ layout(location = 0) in vec4 fragPos;
 
 
 void main() {
-    gl_FragDepth = 10;
+    // gl_FragDepth = 10;
 }
