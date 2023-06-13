@@ -9,8 +9,8 @@
 
 // ----- Sample Render Setups
 
-void initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
-                                        RenderContext& renderContext);
+RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
+                                                          RenderContext& renderContext);
 // ---
 
 
@@ -37,6 +37,10 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
 void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& shadowPass);
 
 // -----
+
+
+// TODO need this from merge ?
+// void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
 
 
 // ----- Main Pass
@@ -88,7 +92,7 @@ VkDescriptorSetLayoutBinding createLayoutBinding(uint32_t binding,
                                                  VkDescriptorType descriptorType,
                                                  VkShaderStageFlags shaderStageFlags);
 
-VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage);
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, VkShaderStageFlags flags);
 
 void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& renderContext);
 

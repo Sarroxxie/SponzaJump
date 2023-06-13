@@ -103,6 +103,10 @@ public:
     void cleanup();
     void registerSceneImgui();
 
+    // TODO how to include this
+    void createMaterialsDescriptorSetLayout(RenderPassContext& renderPassContext);
+
+
     float currentAngleY = 0;
     float currentAngleX = 0;
 

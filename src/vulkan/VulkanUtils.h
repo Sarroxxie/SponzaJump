@@ -126,7 +126,25 @@ VkImageView createImageView(const VulkanBaseContext &context, VkImage image, VkF
 void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
+void createTextureImage(VulkanBaseContext&     context,
+                        CommandContext&        commandContext,
+                        std::string            path,
+                        VkImage&               image,
+                        VkDeviceMemory&        imageMemory,
+                        VkImageView&           imageView,
+                        VkSampler&             textureSampler,
+                        VkDescriptorImageInfo& descriptorInfo);
+
+void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler);
+
 void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+void copyBufferToImage(const VulkanBaseContext& context,
+                       const CommandContext&    commandContext,
+                       VkBuffer                 buffer,
+                       VkImage                  image,
+                       uint32_t                 width,
+                       uint32_t                 height);
 
 VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext  &context, const CommandContext &commandContext);
 
@@ -148,4 +166,11 @@ void transitionImageLayout(const VulkanBaseContext& context,
                            uint32_t                 mipLevels);
 
 VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer);
+
+void transitionImageLayout(const VulkanBaseContext& context,
+                           const CommandContext&    commandContext,
+                           VkImage                  image,
+                           VkFormat                 format,
+                           VkImageLayout            oldLayout,
+                           VkImageLayout            newLayout);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

@@ -5,19 +5,21 @@
  */
 
 #ifdef __cplusplus
-#include "glm/glm.hpp"
-using vec3 = glm::vec3;
-using mat4 = glm::mat4;
-using uint = unsigned int;
+    #include "glm/glm.hpp"
+    using vec3 = glm::vec3;
+    using mat4 = glm::mat4;
+    using uint = unsigned int;
 #endif
 
 // clang-format off
 #ifdef __cplusplus  // Descriptor binding helper for C++ and GLSL
     #define START_BINDING(a) enum a {
     #define END_BINDING() }
+    #define ALIGN_AS(a) alignas(a)
 #else
     #define START_BINDING(a) const uint
     #define END_BINDING()
+    #define ALIGN_AS(a)
 #endif
 
 // access for descriptor sets
@@ -57,10 +59,8 @@ struct CameraUniform
 
 struct PushConstant
 {
-    vec3 lightPosition;
-    vec3 lightIntensity;
     // transformation matrix of the current instance
-    mat4 transformation;
+    ALIGN_AS(16) mat4 transformation;
     // index of the material (in the material buffer) for the current MeshPart
-    uint materialIndex;
+    ALIGN_AS(4) int materialIndex;
 };

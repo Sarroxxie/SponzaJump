@@ -4,6 +4,7 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
+#include "vulkan/VulkanUtils.h"
 
 struct VertexObj
 {
@@ -74,15 +75,17 @@ class ModelLoader
     Material  createMaterial(tinygltf::Material&             gltfMaterial,
                              int                             texturesOffset,
                              std::vector<tinygltf::Texture>& gltfTextures,
-                             std::vector<tinygltf::Image>&   gltfImages);
+                             std::vector<tinygltf::Image>&   gltfImages,
+                             VulkanBaseContext               context,
+                             CommandContext                  commandContext);
     Mesh      createMesh(tinygltf::Primitive&              primitive,
                          std::vector<tinygltf::Accessor>   accessors,
                          std::vector<tinygltf::BufferView> bufferViews,
                          std::vector<tinygltf::Buffer>     buffers,
                          VulkanBaseContext                 context,
                          CommandContext                    commandContext);
-    Texture   createTexture(std::string uri);
-    int       findGeometryData(tinygltf::Primitive& primitive);
+    int createTexture(std::string uri, int texturesOffset, VulkanBaseContext context, CommandContext commandContext);
+    int findGeometryData(tinygltf::Primitive& primitive);
 
     std::vector<MeshLookup> meshLookups;
 };

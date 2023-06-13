@@ -18,6 +18,7 @@ typedef struct {
     VkQueue presentQueue;
 
     uint32_t maxSupportedMinorVersion = 0;
+    float    maxSamplerAnisotropy;
 } VulkanBaseContext;
 
 typedef struct {

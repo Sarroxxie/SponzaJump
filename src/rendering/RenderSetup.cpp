@@ -6,7 +6,7 @@
 #include "rendering/host_device.h"
 #include "vulkan/VulkanSetup.h"
 
-void initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
+RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
                                         RenderContext& renderContext) {
     auto& settings     = renderContext.renderSettings;
     settings.fov       = glm::radians(45.0f);
@@ -42,6 +42,9 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
     mainRenderPassDescription.vertexShader.sourceDirectory = "res/shaders/source/";
     mainRenderPassDescription.vertexShader.spvDirectory = "res/shaders/spv/";
 
+    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(
+        0, sizeof(PushConstant), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
+
     mainRenderPassDescription.fragmentShader.shaderStage = ShaderStage::FRAGMENT_SHADER;
     mainRenderPassDescription.fragmentShader.shaderSourceName = "mainPass.frag";
     mainRenderPassDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
@@ -53,6 +56,7 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
     renderSetupDescription.mainRenderPassDescription = mainRenderPassDescription;
 
     initializeRenderContext(appContext, renderContext, renderSetupDescription);
+    return renderSetupDescription;
 }
 
 void initializeRenderContext(ApplicationVulkanContext& appContext,
@@ -125,11 +129,13 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
     mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.materialDescriptorSetLayout);
     mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.depthDescriptorSetLayout);
 
+    /*
     createGraphicsPipeline(
         appContext, renderContext.renderPasses.mainPass.renderPassContext,
         renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
         renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
         renderPassDescription, mainPassSetLayouts);
+    */
 
     renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription =
         renderPassDescription;
@@ -566,6 +572,16 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.setLayoutCount = layouts.size();
     pipelineLayoutInfo.pSetLayouts    = layouts.data();
 
+    VkPushConstantRange pushConstantRange;
+    //this push constant range starts at the beginning
+    pushConstantRange.offset = 0;
+    //this push constant range takes up the size of a PushConstant struct
+    pushConstantRange.size = sizeof(PushConstant);
+    //this push constant range is accessible in the vertex and fragment shader
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     pipelineLayoutInfo.pushConstantRangeCount =
         renderPassDescription.pushConstantRanges.size();
@@ -705,13 +721,14 @@ VkDescriptorSetLayoutBinding createMaterialsBufferLayoutBinding(uint32_t binding
 
     return layoutBinding;
 }
-VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, ShaderStage shaderStage) {
+
+VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, VkShaderStageFlags flags) {
     VkPushConstantRange pushConstantRange;
 
     pushConstantRange.offset = offset;
     pushConstantRange.size   = size;
 
-    pushConstantRange.stageFlags = getStageFlag(shaderStage);
+    pushConstantRange.stageFlags = flags;
 
     return pushConstantRange;
 }

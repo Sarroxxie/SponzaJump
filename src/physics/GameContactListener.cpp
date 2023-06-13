@@ -25,6 +25,8 @@ void GameContactListener::EndContact(b2Contact *contact) {
     if (contact->GetFixtureA() == playerFixture) fixture_id = 1;
     if (contact->GetFixtureB() == playerFixture) fixture_id = 2;
 
+    //contact->GetManifold()->pointCount = 2;
+
     if (!fixture_id) return;
 
     if (contactIsBelow(contact, fixture_id)) {

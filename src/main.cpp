@@ -26,11 +26,17 @@ int main() {
     initializeGraphicsApplication(appContext);
 
     RenderContext renderContext;
-    initializeSimpleSceneRenderContext(appContext, renderContext);
+    auto renderSetupDescription = initializeSimpleSceneRenderContext(appContext, renderContext);
 
     Scene scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
+
+    // TODO: create graphics pipeline here (all texture data is only available from here on)
+    createGraphicsPipeline(appContext, renderContext.renderPassContext,
+                           renderContext.renderPassContext.pipelineLayouts[0],
+                           renderContext.renderPassContext.graphicsPipelines[0],
+                           renderSetupDescription);
 
     createMainPassResources(appContext, renderContext, scene.getMaterials());
     createMainPassDescriptorSets(appContext, renderContext);
