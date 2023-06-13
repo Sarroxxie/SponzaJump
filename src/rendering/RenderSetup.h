@@ -60,6 +60,8 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
+void createDepthSampler(const ApplicationVulkanContext &appContext, MainPass &mainPass);
+
 // -----
 
 

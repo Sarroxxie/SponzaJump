@@ -31,6 +31,9 @@ START_BINDING(MaterialsBindings)
     eTextures  = 1      // storage buffer containing image views
 END_BINDING();
 
+START_BINDING(DepthBindings)
+    eShadowDepthBuffer = 0
+END_BINDING();
 
 // clang-format on
 

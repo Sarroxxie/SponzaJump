@@ -38,12 +38,12 @@ void initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
     RenderPassDescription mainRenderPassDescription;
 
     mainRenderPassDescription.vertexShader.shaderStage = ShaderStage::VERTEX_SHADER;
-    mainRenderPassDescription.vertexShader.shaderSourceName = "simpleScene.vert";
+    mainRenderPassDescription.vertexShader.shaderSourceName = "mainPass.vert";
     mainRenderPassDescription.vertexShader.sourceDirectory = "res/shaders/source/";
     mainRenderPassDescription.vertexShader.spvDirectory = "res/shaders/spv/";
 
     mainRenderPassDescription.fragmentShader.shaderStage = ShaderStage::FRAGMENT_SHADER;
-    mainRenderPassDescription.fragmentShader.shaderSourceName = "simpleScene.frag";
+    mainRenderPassDescription.fragmentShader.shaderSourceName = "mainPass.frag";
     mainRenderPassDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
     mainRenderPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
@@ -89,15 +89,19 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 
     std::vector<VkDescriptorSetLayoutBinding> transformBindings;
     std::vector<VkDescriptorSetLayoutBinding> materialBindings;
-
+    std::vector<VkDescriptorSetLayoutBinding> depthBindings;
 
     transformBindings.push_back(
         createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::VERTEX_SHADER)));
 
-    materialBindings.push_back(
-        createLayoutBinding(MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                            getStageFlag(ShaderStage::VERTEX_SHADER)));
+    materialBindings.push_back(createLayoutBinding(
+        MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    depthBindings.push_back(
+        createLayoutBinding(DepthBindings::eShadowDepthBuffer, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     createDescriptorSetLayout(appContext.baseContext,
                               renderContext.renderPasses.mainPass.transformDescriptorSetLayout,
@@ -107,6 +111,10 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               renderContext.renderPasses.mainPass.materialDescriptorSetLayout,
                               materialBindings);
 
+    createDescriptorSetLayout(appContext.baseContext,
+                              renderContext.renderPasses.mainPass.depthDescriptorSetLayout,
+                              depthBindings);
+
     createMainRenderPass(appContext, renderContext);
 
 
@@ -115,6 +123,7 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 
     mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.transformDescriptorSetLayout);
     mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.materialDescriptorSetLayout);
+    mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.depthDescriptorSetLayout);
 
     createGraphicsPipeline(
         appContext, renderContext.renderPasses.mainPass.renderPassContext,
@@ -124,6 +133,8 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 
     renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription =
         renderPassDescription;
+
+    createDepthSampler(appContext, renderContext.renderPasses.mainPass);
 }
 
 void createDescriptorSetLayout(const VulkanBaseContext& context,
@@ -251,32 +262,41 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
     renderPassInfo.subpassCount    = 1;
     renderPassInfo.pSubpasses      = &subpass;
 
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     if(renderContext.usesImgui) {
         // @IMGUI
-        dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;  // |
-                                                                         // VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;  // |
+                                                                              // VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
         // @IMGUI
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
-                                   | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+                                        | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     } else {
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcAccessMask = 0;
+        dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[0].srcAccessMask = 0;
 
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // |
-                                                                          // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // |
+                                                                               // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     }
 
+    dependencies[1].srcSubpass   = 0;
+    dependencies[1].dstSubpass   = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dstAccessMask   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies   = &dependency;
+    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+    renderPassInfo.pDependencies   = dependencies.data();
 
     if(vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr,
                           &renderContext.renderPasses.mainPass.renderPassContext.renderPass)
@@ -303,10 +323,11 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     // Shadow Depth Buffer Attachment
     VkAttachmentDescription depthAttachment{};
     createBlankAttachment(appContext, depthAttachment, VK_SAMPLE_COUNT_1_BIT,
-                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL);
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     depthAttachment.format  = findDepthFormat(appContext.baseContext);
-    depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
     VkAttachmentReference depthAttachmentRef{};
@@ -326,19 +347,39 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     renderPassInfo.subpassCount    = 1;
     renderPassInfo.pSubpasses      = &subpass;
 
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass    = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass    = 0;
+    dependencies[0].srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[0].dstStageMask  = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass   = 0;
+    dependencies[1].dstSubpass   = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask   = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    /*
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
 
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.srcAccessMask = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  //
+    | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; dependency.srcAccessMask = 0;
 
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // |
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  //
+    | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; dependency.dstAccessMask =
+    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // |
+    */
 
-
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies   = &dependency;
+    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+    renderPassInfo.pDependencies   = dependencies.data();
 
     if(vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo,
                           nullptr, &shadowPass.renderPassContext.renderPass)
@@ -368,13 +409,18 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
 
     createImage(appContext.baseContext, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, 1,
                 VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 shadowPass.depthImage.image, shadowPass.depthImage.memory);
 
     shadowPass.depthImage.imageView =
         createImageView(appContext.baseContext, shadowPass.depthImage.image,
                         depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
+    transitionImageLayout(appContext.baseContext, appContext.commandContext,
+                          shadowPass.depthImage.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                          VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
     initializeShadowDepthBuffer(appContext, shadowPass, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
 }
@@ -519,18 +565,6 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = layouts.size();
     pipelineLayoutInfo.pSetLayouts    = layouts.data();
-
-    VkPushConstantRange pushConstantRange;
-    // this push constant range starts at the beginning
-    pushConstantRange.offset = 0;
-    // this push constant range takes up the size of a
-    // MeshPushConstants struct
-    pushConstantRange.size = sizeof(glm::mat4);
-    // this push constant range is accessible only in the vertex shader
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
 
 
     pipelineLayoutInfo.pushConstantRangeCount =
@@ -766,6 +800,8 @@ void createBlankAttachment(const ApplicationVulkanContext& context,
 }
 
 void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& renderContext) {
+    // TODO try to find a better way to do descriptorPools
+
     std::vector<VkDescriptorPoolSize> poolSizes;
 
     VkDescriptorPoolSize shadowTransformPoolSize;
@@ -784,12 +820,16 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
     mainMaterialPoolSize.descriptorCount = 1;
     poolSizes.push_back(mainMaterialPoolSize);
 
+    VkDescriptorPoolSize mainDepthPoolSize;
+    mainDepthPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    mainDepthPoolSize.descriptorCount = 1;
+    poolSizes.push_back(mainDepthPoolSize);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes    = poolSizes.data();
-    poolInfo.maxSets       = 3;
+    poolInfo.maxSets       = 4;
 
     if(vkCreateDescriptorPool(baseContext.device, &poolInfo, nullptr,
                               &renderContext.descriptorPool)
@@ -865,20 +905,43 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 
 void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
-                             const std::vector<Material> &materials) {
+                             const std::vector<Material>&    materials) {
 
     createBufferResources(appContext, sizeof(SceneTransform),
                           renderContext.renderPasses.mainPass.transformBuffer);
 
     createMaterialsBuffer(appContext, renderContext, materials);
+}
 
-    // TODO:
-    /*
-     * 1. Find correct time to call createMainPassResources in main (after creating materials)
-     * 2. Remove resource creation (and deletion) in Scene
-     * 3. Find instances where scene resources were used and change them
-     *
-     */
+void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass) {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    samplerInfo.anisotropyEnable = VK_FALSE;
+
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp     = VK_COMPARE_OP_ALWAYS;
+
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod     = 0.0f;
+    samplerInfo.maxLod     = 0.0f;
+
+    if(vkCreateSampler(appContext.baseContext.device, &samplerInfo, nullptr,
+                       &mainPass.depthSampler)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to create texture sampler!");
+    }
 }
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
@@ -887,10 +950,10 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     MainPass& mainPass = renderContext.renderPasses.mainPass;
 
     VkDescriptorSetAllocateInfo transformAllocInfo{};
-    transformAllocInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    transformAllocInfo.descriptorPool = renderContext.descriptorPool;
+    transformAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    transformAllocInfo.descriptorPool     = renderContext.descriptorPool;
     transformAllocInfo.descriptorSetCount = 1;
-    transformAllocInfo.pSetLayouts        = &mainPass.transformDescriptorSetLayout;
+    transformAllocInfo.pSetLayouts = &mainPass.transformDescriptorSetLayout;
 
     if(vkAllocateDescriptorSets(appContext.baseContext.device, &transformAllocInfo,
                                 &mainPass.transformDescriptorSet)
@@ -906,12 +969,12 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     transformBufferInfo.range  = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet transformDescriptorWrite;
-    transformDescriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    transformDescriptorWrite.pNext           = nullptr;
-    transformDescriptorWrite.dstSet          = mainPass.transformDescriptorSet;
+    transformDescriptorWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    transformDescriptorWrite.pNext  = nullptr;
+    transformDescriptorWrite.dstSet = mainPass.transformDescriptorSet;
     transformDescriptorWrite.dstBinding      = SceneBindings::eCamera;
     transformDescriptorWrite.dstArrayElement = 0;
-    transformDescriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    transformDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     transformDescriptorWrite.descriptorCount = 1;
     transformDescriptorWrite.pBufferInfo     = &transformBufferInfo;
 
@@ -919,10 +982,10 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 
     VkDescriptorSetAllocateInfo materialAllocInfo{};
-    materialAllocInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    materialAllocInfo.descriptorPool = renderContext.descriptorPool;
+    materialAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    materialAllocInfo.descriptorPool     = renderContext.descriptorPool;
     materialAllocInfo.descriptorSetCount = 1;
-    materialAllocInfo.pSetLayouts        = &mainPass.materialDescriptorSetLayout;
+    materialAllocInfo.pSetLayouts = &mainPass.materialDescriptorSetLayout;
 
     if(vkAllocateDescriptorSets(appContext.baseContext.device, &materialAllocInfo,
                                 &mainPass.materialDescriptorSet)
@@ -936,10 +999,10 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     materialBufferInfo.range  = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet materialDescriptorWrite;
-    materialDescriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    materialDescriptorWrite.pNext           = nullptr;
-    materialDescriptorWrite.dstSet          = mainPass.materialDescriptorSet;
-    materialDescriptorWrite.dstBinding      = MaterialsBindings::eMaterials;
+    materialDescriptorWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    materialDescriptorWrite.pNext      = nullptr;
+    materialDescriptorWrite.dstSet     = mainPass.materialDescriptorSet;
+    materialDescriptorWrite.dstBinding = MaterialsBindings::eMaterials;
     materialDescriptorWrite.dstArrayElement = 0;
     materialDescriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     materialDescriptorWrite.descriptorCount = 1;
@@ -950,9 +1013,46 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
+
+
+    VkDescriptorSetAllocateInfo depthAllocInfo{};
+    depthAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    depthAllocInfo.descriptorPool     = renderContext.descriptorPool;
+    depthAllocInfo.descriptorSetCount = 1;
+    depthAllocInfo.pSetLayouts        = &mainPass.depthDescriptorSetLayout;
+
+    auto res = vkAllocateDescriptorSets(appContext.baseContext.device, &depthAllocInfo,
+                                        &mainPass.depthDescriptorSet);
+
+    if(res != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+
+    VkDescriptorImageInfo imageInfo;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = renderContext.renderPasses.shadowPass.depthImage.imageView;
+    imageInfo.sampler = renderContext.renderPasses.mainPass.depthSampler;
+
+    VkWriteDescriptorSet depthDescriptorWrite;
+    depthDescriptorWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    depthDescriptorWrite.pNext      = nullptr;
+    depthDescriptorWrite.dstSet     = mainPass.depthDescriptorSet;
+    depthDescriptorWrite.dstBinding = DepthBindings::eShadowDepthBuffer;
+    depthDescriptorWrite.dstArrayElement = 0;
+    depthDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    depthDescriptorWrite.descriptorCount = 1;
+    depthDescriptorWrite.pImageInfo      = &imageInfo;
+
+    descriptorWrites.emplace_back(depthDescriptorWrite);
+
+    vkUpdateDescriptorSets(appContext.baseContext.device,
+                           static_cast<uint32_t>(descriptorWrites.size()),
+                           descriptorWrites.data(), 0, nullptr);
 }
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
+    vkDestroySampler(baseContext.device, mainPass.depthSampler, nullptr);
+
     vkDestroyBuffer(baseContext.device, mainPass.transformBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.transformBuffer.bufferMemory, nullptr);
 
@@ -966,11 +1066,14 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  mainPass.materialDescriptorSetLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 mainPass.depthDescriptorSetLayout, nullptr);
 }
 
 void createBufferResources(const ApplicationVulkanContext& appContext,
                            VkDeviceSize                    bufferSize,
-                           BufferResources                 &bufferResources) {
+                           BufferResources&                bufferResources) {
     createBuffer(appContext.baseContext, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  bufferResources.buffer, bufferResources.bufferMemory);
@@ -978,13 +1081,12 @@ void createBufferResources(const ApplicationVulkanContext& appContext,
     vkMapMemory(appContext.baseContext.device, bufferResources.bufferMemory, 0,
                 bufferSize, 0, &bufferResources.bufferMemoryMapping);
 }
-
 /*
  * Uploads all the registered materials to the GPU. Needs to be called before
  * the scene is rendered, but after all needed materials are added to the scene.
  */
 void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
-                           RenderContext &renderContext,
+                           RenderContext&                  renderContext,
                            const std::vector<Material>&    materials) {
     VkDeviceSize bufferSize = sizeof(Material) * materials.size();
 
@@ -1007,12 +1109,12 @@ void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
     createBuffer(appContext.baseContext, bufferSize,
                  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                      | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, materialsBuffer.buffer, materialsBuffer.bufferMemory);
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, materialsBuffer.buffer,
+                 materialsBuffer.bufferMemory);
 
-    copyBuffer(appContext.baseContext, appContext.commandContext, stagingBuffer, materialsBuffer.buffer, bufferSize);
+    copyBuffer(appContext.baseContext, appContext.commandContext, stagingBuffer,
+               materialsBuffer.buffer, bufferSize);
 
     vkDestroyBuffer(appContext.baseContext.device, stagingBuffer, nullptr);
     vkFreeMemory(appContext.baseContext.device, stagingBufferMemory, nullptr);
-
-
 }

@@ -139,5 +139,13 @@ VkFormat findDepthFormat(const VulkanBaseContext &context);
 VkFormat findSupportedFormat(const VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features);
 
+void transitionImageLayout(const VulkanBaseContext& context,
+                           const CommandContext&    commandContext,
+                           VkImage                  image,
+                           VkImageLayout            oldLayout,
+                           VkImageLayout            newLayout,
+                           VkImageAspectFlags       aspectFlags,
+                           uint32_t                 mipLevels);
+
 VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

@@ -83,7 +83,7 @@ void Scene::registerSceneImgui() {
     ImGui::SliderFloat("Object Angle X", &currentAngleX, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Object Angle Y", &currentAngleY, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Camera Angle Y", &cameraAngleY, 0, glm::two_pi<float>());
-    ImGui::SliderFloat("Camera Distance", &cameraDist, 0, 900);
+    ImGui::SliderFloat("Camera Distance", &cameraDist, 0, 100);
     ImGui::End();
 }
 
@@ -176,7 +176,7 @@ void Scene::doCameraUpdate() {
     for (auto id: SceneView<PlayerComponent, Transformation>(*this)) {
         auto *transformation = getComponent<Transformation>(id);
 
-        m_Camera.setPosition(glm::vec3(transformation->translation.x, transformation->translation.y + 10, cameraDist));
+        m_Camera.setPosition(glm::vec3(transformation->translation.x, transformation->translation.y, cameraDist));
         m_Camera.setLookAt(glm::vec3(transformation->translation.x, transformation->translation.y, 0));
     }
 }

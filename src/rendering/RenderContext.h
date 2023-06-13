@@ -65,7 +65,12 @@ typedef struct {
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet materialDescriptorSet;
 
+    VkDescriptorSetLayout depthDescriptorSetLayout;
+    VkDescriptorSet depthDescriptorSet;
+
     BufferResources materialBuffer;
+
+    VkSampler depthSampler;
 
     RenderPassContext renderPassContext;
 } MainPass;
