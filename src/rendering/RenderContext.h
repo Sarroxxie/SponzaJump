@@ -14,12 +14,12 @@ typedef struct
 } SceneTransform;
 
 
-
-typedef struct  {
+typedef struct
+{
     VkRenderPass renderPass;
 
     VkPipelineLayout pipelineLayouts[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-    VkPipeline graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
+    VkPipeline       graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
 
     bool activePipelineIndex = 0;
 
@@ -27,28 +27,40 @@ typedef struct  {
 
     // redundant information used to recreate graphic pipelines
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    // TODO
+    /*
+     * 1. fix all compile errors
+     * 2. create main pass descriptorSetLayouts using stored layouts after textures are created
+     * 3. Create main pass descriptorSets
+     * 4. Find better way to create DescriptorSetLayouts (and maybe descriptorSets ?)
+     *      -> maybe recreate DescriptorSetLayouts once all is known
+     *      -> maybe use constant oversize of buffers etc.
+     */
 } RenderPassContext;
 
-typedef struct {
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
-    void* bufferMemoryMapping = VK_NULL_HANDLE;
+typedef struct
+{
+    VkBuffer       buffer              = VK_NULL_HANDLE;
+    VkDeviceMemory bufferMemory        = VK_NULL_HANDLE;
+    void*          bufferMemoryMapping = VK_NULL_HANDLE;
 } BufferResources;
 
-typedef struct {
-    VkImage image = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkImageView imageView = VK_NULL_HANDLE;
+typedef struct
+{
+    VkImage        image     = VK_NULL_HANDLE;
+    VkDeviceMemory memory    = VK_NULL_HANDLE;
+    VkImageView    imageView = VK_NULL_HANDLE;
 } ImageResources;
 
-typedef struct {
+typedef struct
+{
     ImageResources depthImage;
-    VkFramebuffer depthFrameBuffer;
+    VkFramebuffer  depthFrameBuffer;
 
     BufferResources transformBuffer;
 
     VkDescriptorSetLayout transformDescriptorSetLayout;
-    VkDescriptorSet transformDescriptorSet;
+    VkDescriptorSet       transformDescriptorSet;
 
     uint32_t shadowMapWidth;
     uint32_t shadowMapHeight;
@@ -56,17 +68,18 @@ typedef struct {
     RenderPassContext renderPassContext;
 } ShadowPass;
 
-typedef struct {
+typedef struct
+{
     VkDescriptorSetLayout transformDescriptorSetLayout;
-    VkDescriptorSet transformDescriptorSet;
+    VkDescriptorSet       transformDescriptorSet;
 
     BufferResources transformBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
-    VkDescriptorSet materialDescriptorSet;
+    VkDescriptorSet       materialDescriptorSet;
 
     VkDescriptorSetLayout depthDescriptorSetLayout;
-    VkDescriptorSet depthDescriptorSet;
+    VkDescriptorSet       depthDescriptorSet;
 
     BufferResources materialBuffer;
 
@@ -82,26 +95,33 @@ typedef struct
     ShadowPass shadowPass;
 } RenderPasses;
 
-typedef struct {
+typedef struct
+{
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 } ImguiContext;
 
-typedef struct {
+typedef struct
+{
     float fov;
     float nearPlane;
     float farPlane;
 } RenderSettings;
 
-static inline glm::mat4 getPerspectiveMatrix(RenderSettings renderSettings, size_t width, size_t height) {
-    return glm::perspective<float>(renderSettings.fov, static_cast<float>(width) / static_cast<float>(height), renderSettings.nearPlane, renderSettings.farPlane);
+static inline glm::mat4 getPerspectiveMatrix(RenderSettings renderSettings,
+                                             size_t         width,
+                                             size_t         height) {
+    return glm::perspective<float>(renderSettings.fov,
+                                   static_cast<float>(width) / static_cast<float>(height),
+                                   renderSettings.nearPlane, renderSettings.farPlane);
 }
 
-typedef struct {
+typedef struct s_renderContext
+{
     RenderPasses renderPasses;
 
     VkDescriptorPool descriptorPool;
 
-    bool usesImgui;
+    bool         usesImgui;
     ImguiContext imguiContext;
 
     RenderSettings renderSettings;
@@ -110,4 +130,4 @@ typedef struct {
 } RenderContext;
 
 
-#endif //GRAPHICSPRAKTIKUM_RENDERCONTEXT_H
+#endif  // GRAPHICSPRAKTIKUM_RENDERCONTEXT_H

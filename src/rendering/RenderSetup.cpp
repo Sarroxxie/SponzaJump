@@ -7,7 +7,7 @@
 #include "vulkan/VulkanSetup.h"
 
 RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
-                                        RenderContext& renderContext) {
+                                                          RenderContext& renderContext) {
     auto& settings     = renderContext.renderSettings;
     settings.fov       = glm::radians(45.0f);
     settings.nearPlane = 0.1;
@@ -29,8 +29,8 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     shadowPassDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
     shadowPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
-    shadowPassDescription.pushConstantRanges.push_back(
-        createPushConstantRange(0, sizeof(glm::mat4), ShaderStage::VERTEX_SHADER));
+    shadowPassDescription.pushConstantRanges.push_back(createPushConstantRange(
+        0, sizeof(glm::mat4), getStageFlag(ShaderStage::VERTEX_SHADER)));
 
     renderSetupDescription.shadowPassDescription = shadowPassDescription;
 
@@ -42,8 +42,9 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     mainRenderPassDescription.vertexShader.sourceDirectory = "res/shaders/source/";
     mainRenderPassDescription.vertexShader.spvDirectory = "res/shaders/spv/";
 
-    renderSetupDescription.pushConstantRanges.push_back(createPushConstantRange(
-        0, sizeof(PushConstant), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
+    renderSetupDescription.mainRenderPassDescription.pushConstantRanges.push_back(
+        createPushConstantRange(0, sizeof(PushConstant),
+                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
 
     mainRenderPassDescription.fragmentShader.shaderStage = ShaderStage::FRAGMENT_SHADER;
     mainRenderPassDescription.fragmentShader.shaderSourceName = "mainPass.frag";
@@ -51,7 +52,19 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     mainRenderPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
     mainRenderPassDescription.pushConstantRanges.push_back(
-        createPushConstantRange(0, sizeof(glm::mat4), ShaderStage::VERTEX_SHADER));
+        createPushConstantRange(0, sizeof(PushConstant),
+                                getStageFlag(ShaderStage::VERTEX_SHADER)
+                                    | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    /*
+    VkPushConstantRange pushConstantRange;
+    // this push constant range starts at the beginning
+    pushConstantRange.offset = 0;
+    // this push constant range takes up the size of a PushConstant struct
+    pushConstantRange.size = sizeof(PushConstant);
+    // this push constant range is accessible in the vertex and fragment shader
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    */
 
     renderSetupDescription.mainRenderPassDescription = mainRenderPassDescription;
 
@@ -91,33 +104,7 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
                               const RenderPassDescription& renderPassDescription) {
 
-    std::vector<VkDescriptorSetLayoutBinding> transformBindings;
-    std::vector<VkDescriptorSetLayoutBinding> materialBindings;
-    std::vector<VkDescriptorSetLayoutBinding> depthBindings;
-
-    transformBindings.push_back(
-        createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                            getStageFlag(ShaderStage::VERTEX_SHADER)));
-
-    materialBindings.push_back(createLayoutBinding(
-        MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
-
-    depthBindings.push_back(
-        createLayoutBinding(DepthBindings::eShadowDepthBuffer, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
-
-    createDescriptorSetLayout(appContext.baseContext,
-                              renderContext.renderPasses.mainPass.transformDescriptorSetLayout,
-                              transformBindings);
-
-    createDescriptorSetLayout(appContext.baseContext,
-                              renderContext.renderPasses.mainPass.materialDescriptorSetLayout,
-                              materialBindings);
-
-    createDescriptorSetLayout(appContext.baseContext,
-                              renderContext.renderPasses.mainPass.depthDescriptorSetLayout,
-                              depthBindings);
+    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass);
 
     createMainRenderPass(appContext, renderContext);
 
@@ -270,8 +257,8 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
 
     std::array<VkSubpassDependency, 2> dependencies;
 
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcSubpass      = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass      = 0;
     dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     if(renderContext.usesImgui) {
@@ -293,12 +280,12 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
                                                                                // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     }
 
-    dependencies[1].srcSubpass   = 0;
-    dependencies[1].dstSubpass   = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[1].srcSubpass    = 0;
+    dependencies[1].dstSubpass    = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].dstStageMask  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     dependencies[1].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[1].dstAccessMask   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
@@ -456,7 +443,7 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
                             VkPipelineLayout&               pipelineLayout,
                             VkPipeline&                     graphicsPipeline,
                             const RenderPassDescription& renderPassDescription,
-                            const std::vector<VkDescriptorSetLayout>& layouts) {
+                            std::vector<VkDescriptorSetLayout>& layouts) {
 
     VkShaderModule vertShaderModule =
         createShaderModule(appContext.baseContext, renderPassDescription.vertexShader);
@@ -571,17 +558,6 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = layouts.size();
     pipelineLayoutInfo.pSetLayouts    = layouts.data();
-
-    VkPushConstantRange pushConstantRange;
-    //this push constant range starts at the beginning
-    pushConstantRange.offset = 0;
-    //this push constant range takes up the size of a PushConstant struct
-    pushConstantRange.size = sizeof(PushConstant);
-    //this push constant range is accessible in the vertex and fragment shader
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     pipelineLayoutInfo.pushConstantRangeCount =
         renderPassDescription.pushConstantRanges.size();
@@ -961,6 +937,53 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
     }
 }
 
+void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
+                                        MainPass& mainPass,
+                                        uint32_t  textureCount) {
+    std::vector<VkDescriptorSetLayoutBinding> transformBindings;
+    std::vector<VkDescriptorSetLayoutBinding> materialBindings;
+    std::vector<VkDescriptorSetLayoutBinding> depthBindings;
+
+    transformBindings.push_back(
+        createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                            getStageFlag(ShaderStage::VERTEX_SHADER)));
+
+    materialBindings.push_back(createLayoutBinding(
+        MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+
+    materialBindings.push_back(
+        createLayoutBinding(MaterialsBindings::eTextures, textureCount,
+                            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    depthBindings.push_back(
+        createLayoutBinding(DepthBindings::eShadowDepthBuffer, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    createDescriptorSetLayout(appContext.baseContext,
+                              mainPass.transformDescriptorSetLayout, transformBindings);
+
+    createDescriptorSetLayout(appContext.baseContext,
+                              mainPass.materialDescriptorSetLayout, materialBindings);
+
+    createDescriptorSetLayout(appContext.baseContext,
+                              mainPass.depthDescriptorSetLayout, depthBindings);
+}
+
+void cleanMainPassDescriptorLayouts(const VulkanBaseContext & baseContext,
+                                    const MainPass&                       mainPass) {
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 mainPass.transformDescriptorSetLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 mainPass.materialDescriptorSetLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 mainPass.depthDescriptorSetLayout, nullptr);
+}
+
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext& renderContext) {
 
@@ -1066,7 +1089,6 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
 }
-
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
     vkDestroySampler(baseContext.device, mainPass.depthSampler, nullptr);
 
@@ -1078,16 +1100,8 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     cleanupRenderPassContext(baseContext, mainPass.renderPassContext);
 
-    vkDestroyDescriptorSetLayout(baseContext.device,
-                                 mainPass.transformDescriptorSetLayout, nullptr);
-
-    vkDestroyDescriptorSetLayout(baseContext.device,
-                                 mainPass.materialDescriptorSetLayout, nullptr);
-
-    vkDestroyDescriptorSetLayout(baseContext.device,
-                                 mainPass.depthDescriptorSetLayout, nullptr);
+    cleanMainPassDescriptorLayouts(baseContext, mainPass);
 }
-
 void createBufferResources(const ApplicationVulkanContext& appContext,
                            VkDeviceSize                    bufferSize,
                            BufferResources&                bufferResources) {

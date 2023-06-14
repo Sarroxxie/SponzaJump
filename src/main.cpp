@@ -33,12 +33,14 @@ int main() {
     createSamplePhysicsScene(appContext, scene, contactListener);
 
     // TODO: create graphics pipeline here (all texture data is only available from here on)
-    createGraphicsPipeline(appContext, renderContext.renderPassContext,
-                           renderContext.renderPassContext.pipelineLayouts[0],
-                           renderContext.renderPassContext.graphicsPipelines[0],
-                           renderSetupDescription);
+    createGraphicsPipeline(appContext, renderContext.renderPasses.mainPass.renderPassContext,
+                           renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
+                           renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
+                           renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+                           renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
 
     createMainPassResources(appContext, renderContext, scene.getMaterials());
+
     createMainPassDescriptorSets(appContext, renderContext);
 
     VulkanRenderer renderer(appContext, renderContext);

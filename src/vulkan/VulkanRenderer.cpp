@@ -417,8 +417,8 @@ vkCmdPushConstants(m_Context.commandContext.commandBuffer,
 
             vkCmdPushConstants(
                 m_Context.commandContext.commandBuffer,
-                m_RenderContext.renderPassContext
-                    .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+                m_RenderContext.renderPasses.mainPass.renderPassContext
+                    .pipelineLayouts[m_RenderContext.renderPasses.mainPass.renderPassContext.activePipelineIndex],
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                 0,  // offset
                 sizeof(PushConstant),
@@ -463,8 +463,8 @@ vkCmdPushConstants(m_Context.commandContext.commandBuffer,
 
             vkCmdPushConstants(
                 m_Context.commandContext.commandBuffer,
-                m_RenderContext.renderPassContext
-                    .pipelineLayouts[m_RenderContext.renderPassContext.activePipelineIndex],
+                m_RenderContext.renderPasses.mainPass.renderPassContext
+                    .pipelineLayouts[m_RenderContext.renderPasses.mainPass.renderPassContext.activePipelineIndex],
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                 0,  // offset
                 sizeof(PushConstant), &pushConstant);

@@ -40,7 +40,8 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 
 
 // TODO need this from merge ?
-// void initializeRenderPassContext(const ApplicationVulkanContext &appContext, RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
+// void initializeRenderPassContext(const ApplicationVulkanContext &appContext,
+// RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
 
 
 // ----- Main Pass
@@ -56,15 +57,22 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
                              const std::vector<Material>&    materials);
 
 void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
-                           RenderContext &renderContext,
+                           RenderContext&                  renderContext,
                            const std::vector<Material>&    materials);
+
+void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
+                                        MainPass& mainPass,
+                                        uint32_t textureCount = 1);
+
+void cleanMainPassDescriptorLayouts(const VulkanBaseContext & appContext,
+                                    const MainPass& mainPass);
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext& renderContext);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
-void createDepthSampler(const ApplicationVulkanContext &appContext, MainPass &mainPass);
+void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass);
 
 // -----
 
@@ -75,7 +83,7 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
                             VkPipelineLayout&               pipelineLayout,
                             VkPipeline&                     graphicsPipeline,
                             const RenderPassDescription& renderSetupDescription,
-                            const std::vector<VkDescriptorSetLayout>& layouts);
+                            std::vector<VkDescriptorSetLayout>& layouts);
 
 void createBlankAttachment(const ApplicationVulkanContext& context,
                            VkAttachmentDescription&        attachment,
@@ -98,7 +106,7 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
 
 void createBufferResources(const ApplicationVulkanContext& appContext,
                            VkDeviceSize                    bufferSize,
-                           BufferResources                 &bufferResources);
+                           BufferResources&                bufferResources);
 // ---
 
 
