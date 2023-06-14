@@ -1,6 +1,5 @@
 #pragma once
 #include <tiny_gltf.h>
-#include "scene/Model.h"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
@@ -84,7 +83,11 @@ class ModelLoader
                          std::vector<tinygltf::Buffer>     buffers,
                          VulkanBaseContext                 context,
                          CommandContext                    commandContext);
-    int createTexture(std::string uri, int texturesOffset, VulkanBaseContext context, CommandContext commandContext);
+    int       createTexture(std::string       uri,
+                            int               texturesOffset,
+                            VkFormat          format,
+                            VulkanBaseContext context,
+                            CommandContext    commandContext);
     int findGeometryData(tinygltf::Primitive& primitive);
 
     std::vector<MeshLookup> meshLookups;

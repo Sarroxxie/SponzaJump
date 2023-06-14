@@ -17,8 +17,7 @@ layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
 layout(location = 0) out vec3 outPosition;
 layout(location = 1) out vec3 outNormal;
-layout(location = 2) out vec3 outTangent;
-layout(location = 3) out vec3 outBiTangent;
+layout(location = 2) out vec4 outTangents;
 layout(location = 4) out vec2 outTexCoords;
 
 void main() {
@@ -29,9 +28,8 @@ void main() {
 
     // prepare data for normal mapping
     mat3 normalTransformation = transpose(inverse(mat3(pushConstant.transformation)));
-    outNormal = normalTransformation * normalize(inNormal);
-    outTangent = normalTransformation * normalize(inTangents.xyz);
-    outBiTangent = normalTransformation * normalize(cross(inNormal, inTangents.xyz) * inTangents.w);
+    outNormal = normalize(normalTransformation * inNormal);
+    outTangents = vec4(normalize(normalTransformation * inTangents.xyz), inTangents.w);
 
     outTexCoords = inTexCoords;
 }

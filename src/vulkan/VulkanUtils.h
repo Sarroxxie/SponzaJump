@@ -10,6 +10,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 #include <array>
+#include <scene/Model.h>
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
@@ -126,14 +127,11 @@ VkImageView createImageView(const VulkanBaseContext &context, VkImage image, VkF
 void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
-void createTextureImage(VulkanBaseContext&     context,
-                        CommandContext&        commandContext,
-                        std::string            path,
-                        VkImage&               image,
-                        VkDeviceMemory&        imageMemory,
-                        VkImageView&           imageView,
-                        VkSampler&             textureSampler,
-                        VkDescriptorImageInfo& descriptorInfo);
+void createTextureImage(VulkanBaseContext& context,
+                        CommandContext&    commandContext,
+                        std::string        path,
+                        VkFormat           format,
+                        Texture&           texture);
 
 void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler);
 

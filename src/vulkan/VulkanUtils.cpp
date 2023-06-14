@@ -326,14 +326,11 @@ void createBuffer(const VulkanBaseContext& context,
 }
 
 // TODO: instead of using "beginSingleTimeCommands", record everything into one command buffer
-void createTextureImage(VulkanBaseContext&     context,
-                        CommandContext&        commandContext,
-                        std::string            path,
-                        VkImage&               image,
-                        VkDeviceMemory&        imageMemory,
-                        VkImageView&           imageView,
-                        VkSampler&             textureSampler,
-                        VkDescriptorImageInfo& descriptorInfo) {
+void createTextureImage(VulkanBaseContext& context,
+                        CommandContext&    commandContext,
+                        std::string        path,
+                        VkFormat           format,
+                        Texture&           texture) {
     int texWidth, texHeight, texChannels;
     // load image to CPU
     stbi_uc* pixels =
@@ -362,19 +359,18 @@ void createTextureImage(VulkanBaseContext&     context,
     // free image from CPU
     stbi_image_free(pixels);
 
-    // TODO: format needs to be taken into account (VK_FORMAT_R8G8B8A8_UNORM for
-    //       non-color) allocate memory and create image
-    createImage(context, texWidth, texHeight, 1, VK_SAMPLE_COUNT_1_BIT,
-                VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    // allocate memory and create image
+    createImage(context, texWidth, texHeight, 1, VK_SAMPLE_COUNT_1_BIT, format,
+                VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, imageMemory);
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture.image, texture.imageMemory);
 
     // copy staging buffer to image
-    transitionImageLayout(context, commandContext, image, VK_FORMAT_R8G8B8A8_SRGB,
+    transitionImageLayout(context, commandContext, texture.image, format,
                           VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(context, commandContext, stagingBuffer, image,
+    copyBufferToImage(context, commandContext, stagingBuffer, texture.image,
                       static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    transitionImageLayout(context, commandContext, image, VK_FORMAT_R8G8B8A8_SRGB,
+    transitionImageLayout(context, commandContext, texture.image, format,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -383,16 +379,17 @@ void createTextureImage(VulkanBaseContext&     context,
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 
     // create image view
-    imageView = createImageView(context, image, VK_FORMAT_R8G8B8A8_SRGB,
+    texture.imageView =
+        createImageView(context, texture.image, format,
                                 VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
     // create texture sampler
-    createTextureSampler(context, textureSampler);
+    createTextureSampler(context, texture.sampler);
 
     // create descriptor info
-    descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    descriptorInfo.imageView   = imageView;
-    descriptorInfo.sampler     = textureSampler;
+    texture.descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    texture.descriptorInfo.imageView = texture.imageView;
+    texture.descriptorInfo.sampler   = texture.sampler;
 }
 
 void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler) {

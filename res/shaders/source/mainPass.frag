@@ -6,8 +6,7 @@
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec3 inTangent;
-layout(location = 3) in vec3 inBiTangent;
+layout(location = 2) in vec4 inTangents;
 layout(location = 4) in vec2 inTexCoords;
 
 layout(location = 0) out vec4 outColor;
@@ -29,17 +28,18 @@ void main() {
 
     // apply normal mapping
     vec3 N = normalize(inNormal);
-    vec3 T = normalize(inTangent);
-    vec3 B = normalize(inBiTangent);
-    mat3 TBN = mat3(T, B, N);
-    vec3 normal = TBN * normalize(texture(samplers[material.normalTextureID], inTexCoords).xyz * 2.0 - vec3(1.0));
+	vec3 T = normalize(inTangents.xyz);
+    vec3 B = cross(N, T) * inTangents.w;
+	mat3 TBN = mat3(T, B, N);
+	vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
+    normal = normalize(TBN * normal);
 
     vec4 albedo = texture(samplers[material.albedoTextureID], inTexCoords);
     // various debug outputs for the color
     outColor = albedo;
-    // outColor = vec4(normal, 1);
+    //outColor = vec4(normal, 1) * 0.5 + 0.5;
 
     vec2 normFragCoord = vec2(gl_FragCoord.x / 1920, gl_FragCoord.y / 1080);
     float val = texture(depthSampler, normFragCoord).x / 10;
-    // outColor = vec4(val, val, val, 1);
+    //outColor = vec4(val, val, val, 1);
 }
