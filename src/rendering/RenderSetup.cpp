@@ -104,7 +104,8 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
                               const RenderPassDescription& renderPassDescription) {
 
-    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass);
+    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
+                                       std::vector<Texture>());
 
     createMainRenderPass(appContext, renderContext);
 
@@ -813,6 +814,13 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
     mainMaterialPoolSize.descriptorCount = 1;
     poolSizes.push_back(mainMaterialPoolSize);
 
+    VkDescriptorPoolSize mainTexturePoolSize;
+    mainTexturePoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    mainTexturePoolSize.descriptorCount =
+        100;  // hardcoded max texture limit because I don't want to also
+              // recreate this after texture creation
+    poolSizes.push_back(mainTexturePoolSize);
+
     VkDescriptorPoolSize mainDepthPoolSize;
     mainDepthPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     mainDepthPoolSize.descriptorCount = 1;
@@ -922,7 +930,7 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareEnable = VK_TRUE;
     samplerInfo.compareOp     = VK_COMPARE_OP_ALWAYS;
 
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -938,8 +946,8 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
 }
 
 void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
-                                        MainPass& mainPass,
-                                        uint32_t  textureCount) {
+                                        MainPass&                   mainPass,
+                                        const std::vector<Texture>& textures) {
     std::vector<VkDescriptorSetLayoutBinding> transformBindings;
     std::vector<VkDescriptorSetLayoutBinding> materialBindings;
     std::vector<VkDescriptorSetLayoutBinding> depthBindings;
@@ -948,13 +956,13 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::VERTEX_SHADER)));
 
+
     materialBindings.push_back(createLayoutBinding(
         MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
         getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
-
     materialBindings.push_back(
-        createLayoutBinding(MaterialsBindings::eTextures, textureCount,
+        createLayoutBinding(MaterialsBindings::eTextures, textures.size(),
                             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
@@ -970,10 +978,17 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
 
     createDescriptorSetLayout(appContext.baseContext,
                               mainPass.depthDescriptorSetLayout, depthBindings);
+
+    auto& mainPassLayouts = mainPass.renderPassContext.descriptorSetLayouts;
+    mainPassLayouts.clear();
+
+    mainPassLayouts.push_back(mainPass.transformDescriptorSetLayout);
+    mainPassLayouts.push_back(mainPass.materialDescriptorSetLayout);
+    mainPassLayouts.push_back(mainPass.depthDescriptorSetLayout);
 }
 
-void cleanMainPassDescriptorLayouts(const VulkanBaseContext & baseContext,
-                                    const MainPass&                       mainPass) {
+void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
+                                    const MainPass&          mainPass) {
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  mainPass.transformDescriptorSetLayout, nullptr);
 
@@ -985,7 +1000,8 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext & baseContext,
 }
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
-                                  RenderContext& renderContext) {
+                                  RenderContext&                  renderContext,
+                                  const std::vector<Texture>&     textures) {
 
     MainPass& mainPass = renderContext.renderPasses.mainPass;
 
@@ -1027,9 +1043,11 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     materialAllocInfo.descriptorSetCount = 1;
     materialAllocInfo.pSetLayouts = &mainPass.materialDescriptorSetLayout;
 
-    if(vkAllocateDescriptorSets(appContext.baseContext.device, &materialAllocInfo,
-                                &mainPass.materialDescriptorSet)
-       != VK_SUCCESS) {
+    VkResult materialAllocateRes =
+        vkAllocateDescriptorSets(appContext.baseContext.device, &materialAllocInfo,
+                                 &mainPass.materialDescriptorSet);
+
+    if(materialAllocateRes != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
@@ -1050,10 +1068,30 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(materialDescriptorWrite);
 
+    std::vector<VkDescriptorImageInfo> textureSamplers;
+    for(auto& texture : textures) {
+        textureSamplers.emplace_back(texture.descriptorInfo);
+    }
+
+    VkWriteDescriptorSet texturesWrite{};
+    texturesWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    texturesWrite.dstSet          = mainPass.materialDescriptorSet;
+    texturesWrite.dstBinding      = MaterialsBindings::eTextures;
+    texturesWrite.dstArrayElement = 0;
+    texturesWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+    // TODO where to textureSamplers come from ?
+    texturesWrite.descriptorCount = textureSamplers.size();
+    texturesWrite.pImageInfo      = textureSamplers.data();
+
+    descriptorWrites.emplace_back(texturesWrite);
+
+
+    /*
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
-
+    */
 
     VkDescriptorSetAllocateInfo depthAllocInfo{};
     depthAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1061,10 +1099,11 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     depthAllocInfo.descriptorSetCount = 1;
     depthAllocInfo.pSetLayouts        = &mainPass.depthDescriptorSetLayout;
 
-    auto res = vkAllocateDescriptorSets(appContext.baseContext.device, &depthAllocInfo,
-                                        &mainPass.depthDescriptorSet);
+    auto depthAllocateRes =
+        vkAllocateDescriptorSets(appContext.baseContext.device, &depthAllocInfo,
+                                 &mainPass.depthDescriptorSet);
 
-    if(res != VK_SUCCESS) {
+    if(depthAllocateRes != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 

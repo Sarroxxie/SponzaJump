@@ -37,7 +37,7 @@ void main() {
     vec4 albedo = texture(samplers[material.albedoTextureID], inTexCoords);
     // various debug outputs for the color
     outColor = albedo;
-    outColor = vec4(normal, 1);
+    // outColor = vec4(normal, 1);
 
     vec2 normFragCoord = vec2(gl_FragCoord.x / 1920, gl_FragCoord.y / 1080);
     float val = texture(depthSampler, normFragCoord).x / 10;

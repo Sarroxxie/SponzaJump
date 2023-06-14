@@ -61,14 +61,15 @@ void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
                            const std::vector<Material>&    materials);
 
 void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
-                                        MainPass& mainPass,
-                                        uint32_t textureCount = 1);
+                                        MainPass&                   mainPass,
+                                        const std::vector<Texture>& textures);
 
-void cleanMainPassDescriptorLayouts(const VulkanBaseContext & appContext,
-                                    const MainPass& mainPass);
+void cleanMainPassDescriptorLayouts(const VulkanBaseContext&    appContext,
+                                    const MainPass&             mainPass);
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
-                                  RenderContext& renderContext);
+                                  RenderContext& renderContext,
+                                  const std::vector<Texture>& textures);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 

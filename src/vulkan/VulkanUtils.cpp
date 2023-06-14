@@ -39,7 +39,7 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
 
     vkGetPhysicalDeviceFeatures2(device, &deviceFeatures2);
     bool bindlessSupported = indexingFeatures.descriptorBindingPartiallyBound
-                              && indexingFeatures.runtimeDescriptorArray;
+                             && indexingFeatures.runtimeDescriptorArray;
     if(!bindlessSupported)
         return false;
 
@@ -370,13 +370,12 @@ void createTextureImage(VulkanBaseContext&     context,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, imageMemory);
 
     // copy staging buffer to image
-    transitionImageLayout(context, commandContext, image,
-                          VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transitionImageLayout(context, commandContext, image, VK_FORMAT_R8G8B8A8_SRGB,
+                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(context, commandContext, stagingBuffer, image,
                       static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    transitionImageLayout(context, commandContext, image,
-                          VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    transitionImageLayout(context, commandContext, image, VK_FORMAT_R8G8B8A8_SRGB,
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     // cleanup buffers
@@ -398,7 +397,7 @@ void createTextureImage(VulkanBaseContext&     context,
 
 void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler) {
     VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter               = VK_FILTER_LINEAR;
     samplerInfo.minFilter               = VK_FILTER_LINEAR;
     samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -419,7 +418,6 @@ void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler)
         throw std::runtime_error("failed to create texture sampler!");
     }
 }
-
 
 
 void copyBuffer(const VulkanBaseContext& context,
@@ -516,9 +514,11 @@ uint32_t findMemoryType(const VulkanBaseContext& context,
 }
 
 VkFormat findDepthFormat(const VulkanBaseContext& context) {
-    return findSupportedFormat(
-        context, {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-        VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    return findSupportedFormat(context,
+                               {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+                                VK_FORMAT_D24_UNORM_S8_UINT},
+                               VK_IMAGE_TILING_OPTIMAL,
+                               VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 VkFormat findSupportedFormat(const VulkanBaseContext&     context,

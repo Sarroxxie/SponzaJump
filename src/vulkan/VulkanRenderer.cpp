@@ -369,7 +369,6 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 1, 1,
         &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
 
-
     vkCmdBindDescriptorSets(
         m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
         mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 2, 1,

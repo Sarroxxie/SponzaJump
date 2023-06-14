@@ -11,7 +11,9 @@
 #define DEFAULT_APPLICATION_HEIGHT 600
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
 
-#define CURRENT_MILLIS (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()))
+#define CURRENT_MILLIS                                                         \
+    (std::chrono::duration_cast<std::chrono::milliseconds>(                    \
+        std::chrono::system_clock::now().time_since_epoch()))
 
 #include "scene/SceneSetup.h"
 #include "input/CallbackData.h"
@@ -26,22 +28,38 @@ int main() {
     initializeGraphicsApplication(appContext);
 
     RenderContext renderContext;
-    auto renderSetupDescription = initializeSimpleSceneRenderContext(appContext, renderContext);
+    auto          renderSetupDescription =
+        initializeSimpleSceneRenderContext(appContext, renderContext);
 
-    Scene scene(appContext.baseContext, renderContext);
+    Scene               scene(appContext.baseContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
 
+    vkDestroyPipeline(appContext.baseContext.device,
+                      renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
+                      nullptr);
+
+    vkDestroyPipelineLayout(
+        appContext.baseContext.device,
+        renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0], nullptr);
+
+    cleanMainPassDescriptorLayouts(appContext.baseContext,
+                                   renderContext.renderPasses.mainPass);
+
+    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
+                                       scene.getTextures());
+
     // TODO: create graphics pipeline here (all texture data is only available from here on)
-    createGraphicsPipeline(appContext, renderContext.renderPasses.mainPass.renderPassContext,
-                           renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
-                           renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
-                           renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
-                           renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
+    createGraphicsPipeline(
+        appContext, renderContext.renderPasses.mainPass.renderPassContext,
+        renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
+        renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
+        renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+        renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
 
     createMainPassResources(appContext, renderContext, scene.getMaterials());
 
-    createMainPassDescriptorSets(appContext, renderContext);
+    createMainPassDescriptorSets(appContext, renderContext, scene.getTextures());
 
     VulkanRenderer renderer(appContext, renderContext);
 
@@ -49,28 +67,28 @@ int main() {
     scene.setInputController(&inputController);
 
     CallbackData callbackData;
-    callbackData.renderer = &renderer;
+    callbackData.renderer        = &renderer;
     callbackData.inputController = &inputController;
 
-    scene.getWorld().SetContactListener((b2ContactListener *) &contactListener);
+    scene.getWorld().SetContactListener((b2ContactListener*)&contactListener);
 
     // passes reference to the renderer to the key callback function
-    glfwSetWindowUserPointer(window.getWindowHandle(), (void *) &callbackData);
+    glfwSetWindowUserPointer(window.getWindowHandle(), (void*)&callbackData);
 
-    if (renderContext.usesImgui) {
+    if(renderContext.usesImgui) {
         ImGui_ImplGlfw_InitForVulkan(window.getWindowHandle(), true);
     }
 
-    std::chrono::milliseconds lastUpdate = CURRENT_MILLIS;
-    std::chrono::milliseconds delta = std::chrono::milliseconds(0);
+    std::chrono::milliseconds lastUpdate       = CURRENT_MILLIS;
+    std::chrono::milliseconds delta            = std::chrono::milliseconds(0);
     std::chrono::milliseconds accumulatedDelta = std::chrono::milliseconds(0);
 
     std::chrono::milliseconds targetPhysicsRate = std::chrono::milliseconds(20);
 
-    while (!glfwWindowShouldClose(window.getWindowHandle())) {
+    while(!glfwWindowShouldClose(window.getWindowHandle())) {
         glfwPollEvents();
 
-        if (renderContext.usesImgui) {
+        if(renderContext.usesImgui) {
             // @IMGUI
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
@@ -78,25 +96,26 @@ int main() {
             ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
             ImGui::Begin("Statistics", 0,
                          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
-                         | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMouseInputs
-                         | ImGuiWindowFlags_NoTitleBar);
+                             | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMouseInputs
+                             | ImGuiWindowFlags_NoTitleBar);
             ImGui::Text("%.3f ms", 1000.0f / ImGui::GetIO().Framerate);
             ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
             ImGui::SetWindowSize(ImVec2(0, 0), ImGuiCond_Once);
             ImGui::End();
         }
         renderer.render(scene);
-        delta = (CURRENT_MILLIS - lastUpdate);
+        delta      = (CURRENT_MILLIS - lastUpdate);
         lastUpdate = CURRENT_MILLIS;
 
         accumulatedDelta += delta;
-        if (accumulatedDelta >= targetPhysicsRate) {
+        if(accumulatedDelta >= targetPhysicsRate) {
             scene.doPhysicsUpdate(targetPhysicsRate.count());
 
             // accumulatedDelta -= targetPhysicsRate;
             int amountStepsInAcc = accumulatedDelta / targetPhysicsRate;
-            if (amountStepsInAcc > 1) {
-                std::cout << "Skipping " << amountStepsInAcc - 1 << " physics steps" << std::endl;
+            if(amountStepsInAcc > 1) {
+                std::cout << "Skipping " << amountStepsInAcc - 1
+                          << " physics steps" << std::endl;
             }
             accumulatedDelta = accumulatedDelta % targetPhysicsRate;
         }
