@@ -78,108 +78,17 @@ b2World &Scene::getWorld() {
     return m_World;
 }
 
-void Scene::registerSceneImgui() {
+void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::Begin("Scene");
     ImGui::SliderFloat("Object Angle X", &currentAngleX, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Object Angle Y", &currentAngleY, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Camera Angle Y", &cameraAngleY, 0, glm::two_pi<float>());
     ImGui::SliderFloat("Camera Distance", &cameraDist, 0, 100);
+
+    ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
+
     ImGui::End();
 }
-
-// TODO take relevant descriptorsSetLayout info into RenderSetup
-
-/*
-void Scene::createMaterialsDescriptorSetLayout(RenderPassContext& renderPassContext) {
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-
-    // materials buffer
-    VkDescriptorSetLayoutBinding materialsBinding;
-    materialsBinding.binding         = MaterialsBindings::eMaterials;
-    materialsBinding.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    materialsBinding.descriptorCount = 1;
-    materialsBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    bindings.push_back(materialsBinding);
-
-    // texture samplers
-    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    samplerLayoutBinding.binding = MaterialsBindings::eTextures;
-    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.descriptorCount = static_cast<uint32_t>(this->textures.size());
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    bindings.push_back(samplerLayoutBinding);
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings    = bindings.data();
-
-    if(vkCreateDescriptorSetLayout(m_baseContext.device, &layoutInfo, nullptr,
-                                   &renderPassContext.materialsDescriptorSetLayout)
-       != VK_SUCCESS) {
-        throw std::runtime_error("failed to create materials descriptor set layout!");
-    }
-}
-
-void Scene::createMaterialsBufferDescriptorSet(RenderContext& renderContext) {
-    createMaterialsDescriptorSetLayout(renderContext.renderPassContext);
-
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &renderContext.renderPassContext.materialsDescriptorSetLayout;
-
-    if(vkAllocateDescriptorSets(m_baseContext.device, &allocInfo, &materialsDescriptorSet)
-       != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
-    std::vector<VkWriteDescriptorSet> descriptorWrites;
-
-    VkDescriptorBufferInfo materialsBufferInfo{};
-    materialsBufferInfo.buffer = materialsBuffer;
-    materialsBufferInfo.offset = 0;
-    materialsBufferInfo.range = VK_WHOLE_SIZE;
-
-    VkWriteDescriptorSet materialsDescriptorWrite;
-    materialsDescriptorWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    materialsDescriptorWrite.pNext  = nullptr;
-    materialsDescriptorWrite.dstSet = materialsDescriptorSet;
-    materialsDescriptorWrite.dstBinding      = MaterialsBindings::eMaterials;
-    materialsDescriptorWrite.dstArrayElement = 0;
-    materialsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    materialsDescriptorWrite.descriptorCount = 1;
-    materialsDescriptorWrite.pBufferInfo     = &materialsBufferInfo;
-
-    descriptorWrites.push_back(materialsDescriptorWrite);
-
-    // All texture samplers
-    std::vector<VkDescriptorImageInfo> textureSamplers;
-    for(auto& texture : textures) {
-        textureSamplers.emplace_back(texture.descriptorInfo);
-    }
-
-    VkWriteDescriptorSet texturesWrite{};
-    texturesWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    texturesWrite.dstSet          = materialsDescriptorSet;
-    texturesWrite.dstBinding      = MaterialsBindings::eTextures;
-    texturesWrite.dstArrayElement = 0;
-    texturesWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-    // TODO where to textureSamplers come from ?
-    texturesWrite.descriptorCount = textureSamplers.size();
-    texturesWrite.pImageInfo      = textureSamplers.data();
-
-    descriptorWrites.push_back(texturesWrite);
-
-    vkUpdateDescriptorSets(m_baseContext.device, static_cast<uint32_t>(descriptorWrites.size()),
-                           descriptorWrites.data(), 0, nullptr);
-}
-*/
 
 EntityId Scene::addEntity() {
     if (freeEntities.empty()) {

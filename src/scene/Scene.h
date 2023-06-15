@@ -101,11 +101,7 @@ public:
     void handleUserInput();
 
     void cleanup();
-    void registerSceneImgui();
-
-    // TODO how to include this
-    void createMaterialsDescriptorSetLayout(RenderPassContext& renderPassContext);
-
+    void registerSceneImgui(RenderContext& renderContext);
 
     float currentAngleY = 0;
     float currentAngleX = 0;

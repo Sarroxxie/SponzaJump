@@ -49,7 +49,12 @@ int main() {
     createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
                                        scene.getTextures());
 
-    // TODO: create graphics pipeline here (all texture data is only available from here on)
+    /*
+    cleanVisualizationPipeline(appContext.baseContext, renderContext.renderPasses.mainPass);
+    createVisualizationPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
+    */
+
+     // TODO: create graphics pipeline here (all texture data is only available from here on)
     createGraphicsPipeline(
         appContext, renderContext.renderPasses.mainPass.renderPassContext,
         renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],

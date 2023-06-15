@@ -81,6 +81,12 @@ typedef struct
     VkDescriptorSetLayout depthDescriptorSetLayout;
     VkDescriptorSet       depthDescriptorSet;
 
+
+    VkDescriptorSetLayout visDepthDescriptorSetLayout;
+    VkDescriptorSet       visDepthDescriptorSet;
+    VkPipelineLayout visualizePipelineLayout;
+    VkPipeline visualizePipeline;
+
     BufferResources materialBuffer;
 
     VkSampler depthSampler;
@@ -94,6 +100,11 @@ typedef struct
 
     ShadowPass shadowPass;
 } RenderPasses;
+
+typedef struct
+{
+    bool visualizeShadowBuffer = false;
+} ImguiData;
 
 typedef struct
 {
@@ -123,6 +134,7 @@ typedef struct s_renderContext
 
     bool         usesImgui;
     ImguiContext imguiContext;
+    ImguiData    imguiData;
 
     RenderSettings renderSettings;
 

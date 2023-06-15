@@ -52,7 +52,7 @@ void VulkanRenderer::render(Scene& scene) {
     vkResetCommandBuffer(m_Context.commandContext.commandBuffer, 0);
 
     if(m_RenderContext.usesImgui) {
-        scene.registerSceneImgui();
+        scene.registerSceneImgui(m_RenderContext);
         ImGui::Begin("Renderer");
         if(ImGui::Button("Recompile Shaders")) {
             recompileToSecondaryPipeline();
@@ -330,8 +330,6 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
                          &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      mainRenderPass.graphicsPipelines[mainRenderPass.activePipelineIndex]);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -349,129 +347,150 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     scissor.extent = m_Context.swapchainContext.swapChainExtent;
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
-    // Without Index Buffer
-    // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
+    if (m_RenderContext.imguiData.visualizeShadowBuffer) {
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          m_RenderContext.renderPasses.mainPass.visualizePipeline);
 
-    // bind DescriptorSet 0 (Camera Transformations)
-    vkCmdBindDescriptorSets(
-        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 0, 1,
-        &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0,
+            1, &m_RenderContext.renderPasses.mainPass.visDepthDescriptorSet, 0, nullptr);
 
-    // TODO: from my understanding, this descriptor set only has to be bound
-    //       once, but I got errors when doing so
-    //        -> should make it possible for performance reasons
-    //        -> use separate command buffer that is only updated when the graphics pipeline is changed
+        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
-    // bind DescriptorSet 1 (Materials)
-    vkCmdBindDescriptorSets(
-        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 1, 1,
-        &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
-
-    vkCmdBindDescriptorSets(
-        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 2, 1,
-        &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
+    } else {
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          mainRenderPass.graphicsPipelines[mainRenderPass.activePipelineIndex]);
 
 
-    // create PushConstant object and initialize with default values
-    PushConstant pushConstant;
-    pushConstant.transformation = glm::mat4(1);
-    pushConstant.materialIndex  = 0;
+        // Without Index Buffer
+        // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
 
-    // render entities
-    for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
-        auto* modelComponent     = scene.getComponent<ModelInstance>(id);
-        auto* transformComponent = scene.getComponent<Transformation>(id);
+        // bind DescriptorSet 0 (Camera Transformations)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 0,
+            1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
 
-        // set transformation matrix of the model in the PushConstant
-        pushConstant.transformation  = transformComponent->getMatrix();
+        // TODO: from my understanding, this descriptor set only has to be bound
+        //       once, but I got errors when doing so
+        //        -> should make it possible for performance reasons
+        //        -> use separate command buffer that is only updated when the graphics pipeline is changed
 
-        for(auto& meshPartIndex : scene.getModels()[modelComponent->modelID].meshPartIndices) {
-            MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
-            Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
-            VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
-            VkDeviceSize offsets[]       = {0};
+        // bind DescriptorSet 1 (Materials)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 1,
+            1, &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
 
-            // set material index in the PushConstant
-            pushConstant.materialIndex = meshPart.materialIndex;
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 2,
+            1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
 
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
 
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        // create PushConstant object and initialize with default values
+        PushConstant pushConstant;
+        pushConstant.transformation = glm::mat4(1);
+        pushConstant.materialIndex  = 0;
 
-            /*
-             glm::mat4 transform = transformComponent->getMatrix();
 
-vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-      mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex],
-      VK_SHADER_STAGE_VERTEX_BIT,
-      0,  // offset
-      sizeof(glm::mat4), &transform);
+        // TODO imgui and pipeline for quad to display texture
+        // render entities
+        for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
+            auto* modelComponent     = scene.getComponent<ModelInstance>(id);
+            auto* transformComponent = scene.getComponent<Transformation>(id);
 
-            */
+            // set transformation matrix of the model in the PushConstant
+            pushConstant.transformation = transformComponent->getMatrix();
 
-            vkCmdPushConstants(
-                m_Context.commandContext.commandBuffer,
-                m_RenderContext.renderPasses.mainPass.renderPassContext
-                    .pipelineLayouts[m_RenderContext.renderPasses.mainPass.renderPassContext.activePipelineIndex],
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                0,  // offset
-                sizeof(PushConstant),
-                &pushConstant);
+            for(auto& meshPartIndex : scene.getModels()[modelComponent->modelID].meshPartIndices) {
+                MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
+                Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+                VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
+                VkDeviceSize offsets[]       = {0};
 
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                             mesh.indicesCount, 1, 0, 0, 0);
+                // set material index in the PushConstant
+                pushConstant.materialIndex = meshPart.materialIndex;
+
+                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                       0, 1, vertexBuffers, offsets);
+
+                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+                /*
+                 glm::mat4 transform = transformComponent->getMatrix();
+
+    vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+          mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex],
+          VK_SHADER_STAGE_VERTEX_BIT,
+          0,  // offset
+          sizeof(glm::mat4), &transform);
+
+                */
+
+                vkCmdPushConstants(
+                    m_Context.commandContext.commandBuffer,
+                    m_RenderContext.renderPasses.mainPass.renderPassContext
+                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
+                                             .renderPassContext.activePipelineIndex],
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    0,  // offset
+                    sizeof(PushConstant), &pushConstant);
+
+                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                 mesh.indicesCount, 1, 0, 0, 0);
+            }
+        }
+
+        // render non-entity models
+        for(auto& instance : scene.getInstances()) {
+            Model model = scene.getModels()[instance.modelID];
+
+            // set transformation matrix of the model
+            pushConstant.transformation = instance.transformation;
+
+            for(auto& meshPartIndex : model.meshPartIndices) {
+                MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
+                Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+                VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
+                VkDeviceSize offsets[]       = {0};
+
+                // set material index in the PushConstant
+                pushConstant.materialIndex = meshPart.materialIndex;
+
+                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                       0, 1, vertexBuffers, offsets);
+
+                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+                /*
+                 vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+          mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex],
+          VK_SHADER_STAGE_VERTEX_BIT,
+          0,  // offset
+          sizeof(glm::mat4), &transformation);
+
+
+                 */
+
+                vkCmdPushConstants(
+                    m_Context.commandContext.commandBuffer,
+                    m_RenderContext.renderPasses.mainPass.renderPassContext
+                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
+                                             .renderPassContext.activePipelineIndex],
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    0,  // offset
+                    sizeof(PushConstant), &pushConstant);
+
+                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                 mesh.indicesCount, 1, 0, 0, 0);
+            }
         }
     }
 
-    // render non-entity models
-    for(auto& instance : scene.getInstances()) {
-        Model     model          = scene.getModels()[instance.modelID];
-
-         // set transformation matrix of the model
-        pushConstant.transformation = instance.transformation;
-
-        for(auto& meshPartIndex : model.meshPartIndices) {
-            MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
-            Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
-            VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
-            VkDeviceSize offsets[]       = {0};
-
-            // set material index in the PushConstant
-            pushConstant.materialIndex = meshPart.materialIndex;
-
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
-
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-            /*
-             vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-      mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex],
-      VK_SHADER_STAGE_VERTEX_BIT,
-      0,  // offset
-      sizeof(glm::mat4), &transformation);
-
-
-             */
-
-            vkCmdPushConstants(
-                m_Context.commandContext.commandBuffer,
-                m_RenderContext.renderPasses.mainPass.renderPassContext
-                    .pipelineLayouts[m_RenderContext.renderPasses.mainPass.renderPassContext.activePipelineIndex],
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                0,  // offset
-                sizeof(PushConstant), &pushConstant);
-
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                             mesh.indicesCount, 1, 0, 0, 0);
-        }
-    }
     if(m_RenderContext.usesImgui) {
         // @IMGUI
         ImGui::Render();

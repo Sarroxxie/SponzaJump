@@ -47,8 +47,59 @@ struct Vertex {
         return bindingDescription;
     }
 
+    static VkVertexInputAttributeDescription getPositionAttributeDescription() {
+        VkVertexInputAttributeDescription attributeDescription;
+
+        attributeDescription.binding = 0;
+        attributeDescription.location = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescription.offset = static_cast<uint32_t>(offsetof(Vertex, pos));
+
+        return attributeDescription;
+    }
+
+    static VkVertexInputAttributeDescription getNormalAttributeDescription() {
+        VkVertexInputAttributeDescription attributeDescription;
+
+        attributeDescription.binding = 0;
+        attributeDescription.location = 1;
+        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescription.offset = static_cast<uint32_t>(offsetof(Vertex, nrm));
+
+        return attributeDescription;
+    }
+
+    static VkVertexInputAttributeDescription getTangentAttributeDescription() {
+        VkVertexInputAttributeDescription attributeDescription;
+
+        attributeDescription.binding = 0;
+        attributeDescription.location = 2;
+        attributeDescription.format   = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attributeDescription.offset = static_cast<uint32_t>(offsetof(Vertex, tangents));
+
+        return attributeDescription;
+    }
+
+    static VkVertexInputAttributeDescription getTexCoordAttributeDescription() {
+        VkVertexInputAttributeDescription attributeDescription;
+
+        attributeDescription.binding = 0;
+        attributeDescription.location = 3;
+        attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescription.offset = static_cast<uint32_t>(offsetof(Vertex, texCoord));
+
+        return attributeDescription;
+    }
+
     static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
         std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
+
+        attributeDescriptions[0] = getPositionAttributeDescription();
+        attributeDescriptions[1] = getNormalAttributeDescription();
+        attributeDescriptions[2] = getTangentAttributeDescription();
+        attributeDescriptions[3] = getTexCoordAttributeDescription();
+
+        /*
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -70,6 +121,7 @@ struct Vertex {
         attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[3].offset = static_cast<uint32_t>(offsetof(Vertex, texCoord));
 
+         */
         return attributeDescriptions;
     }
 

@@ -64,16 +64,22 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
                                         MainPass&                   mainPass,
                                         const std::vector<Texture>& textures);
 
-void cleanMainPassDescriptorLayouts(const VulkanBaseContext&    appContext,
-                                    const MainPass&             mainPass);
+void cleanMainPassDescriptorLayouts(const VulkanBaseContext& appContext,
+                                    const MainPass&          mainPass);
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
-                                  RenderContext& renderContext,
-                                  const std::vector<Texture>& textures);
+                                  RenderContext&                  renderContext,
+                                  const std::vector<Texture>&     textures);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
 void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass);
+
+void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
+                                 const RenderContext&            renderContext,
+                                 MainPass&                       mainPass);
+
+void cleanVisualizationPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
 // -----
 
