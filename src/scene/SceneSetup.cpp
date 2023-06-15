@@ -8,15 +8,16 @@ void
 createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, GameContactListener &contactListener) {
     {
         ModelLoader loader;
-        loader.loadModel("res/assets/models/debug_model/debug_model.gltf",
+        loader.loadModel("res/assets/models/debug_model/debug_model2.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
         scene.addObject(loader);
         // move a bit to the foreground so object can be seen
-        scene.getInstances().back().transformation *=
-            glm::translate(glm::mat4(1), glm::vec3(0, 0, 4));
     }
 
+    scene.getCameraRef().setPosition(glm::vec3(0, 9, 10));
+    scene.getCameraRef().setLookAt(glm::vec3(3, 0, 0));
+    /*
     {
         ModelLoader loader;
         loader.loadModel("res/assets/models/debug_cube/debug_cube.gltf",

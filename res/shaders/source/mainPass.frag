@@ -34,10 +34,19 @@ void main() {
 	vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
     normal = normalize(TBN * normal);
 
+    // fetch PBR textures
     vec4 albedo = texture(samplers[material.albedoTextureID], inTexCoords);
+    vec3 aoRoughnessMetallic = texture(samplers[material.aoRoughnessMetallicTextureID], inTexCoords).rgb;
+    float ao = aoRoughnessMetallic.r;
+    float roughness = aoRoughnessMetallic.g;
+    float metallic = aoRoughnessMetallic.b;
+
     // various debug outputs for the color
-    outColor = albedo;
+    outColor = vec4(albedo.xyz, 1);
     //outColor = vec4(normal, 1) * 0.5 + 0.5;
+    //outColor = vec4(ao, ao, ao, 1);
+    //outColor = vec4(roughness, roughness, roughness, 1);
+    //outColor = vec4(metallic, metallic, metallic, 1);
 
     vec2 normFragCoord = vec2(gl_FragCoord.x / 1920, gl_FragCoord.y / 1080);
     float val = texture(depthSampler, normFragCoord).x / 10;
