@@ -42,7 +42,7 @@ private:
     VulkanBaseContext m_baseContext;
 
 public:
-    Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera());
+    Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 45)));
 
     // ECS ---
     EntityId addEntity();
@@ -92,7 +92,7 @@ public:
     std::vector<ModelInstance> &getInstances();
 
     Camera &getCameraRef();
-    void doCameraUpdate();
+    void doCameraUpdate(const RenderContext& renderContext);
 
     b2World &getWorld();
     void doPhysicsUpdate(uint64_t deltaMillis);

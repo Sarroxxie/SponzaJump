@@ -6,6 +6,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "Shader.h"
 #include "RenderSetupDescription.h"
+#include "scene/Camera.h"
 
 typedef struct
 {
@@ -62,6 +63,8 @@ typedef struct
     VkDescriptorSetLayout transformDescriptorSetLayout;
     VkDescriptorSet       transformDescriptorSet;
 
+    Camera lightCamera;
+
     uint32_t shadowMapWidth;
     uint32_t shadowMapHeight;
 
@@ -103,6 +106,8 @@ typedef struct
 
 typedef struct
 {
+    bool lockCamera = true;
+
     bool visualizeShadowBuffer = false;
 } ImguiData;
 

@@ -1,6 +1,3 @@
-//
-//
-
 #include "Camera.h"
 #include "glm/ext/matrix_transform.hpp"
 
@@ -24,4 +21,20 @@ void Camera::setPosition(glm::vec3 newPosition) {
 
 void Camera::setLookAt(glm::vec3 newCenter) {
     m_ViewDir = glm::normalize(newCenter - m_WorldPos);
+}
+
+glm::vec3& Camera::getWorldPosRef() {
+    return m_WorldPos;
+}
+
+glm::vec3& Camera::getViewDirRef() {
+    return m_ViewDir;
+}
+
+glm::vec3 Camera::getWorldPos() {
+    return m_WorldPos;
+}
+
+glm::vec3 Camera::getViewDir() {
+    return m_ViewDir;
 }

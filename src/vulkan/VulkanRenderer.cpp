@@ -63,7 +63,7 @@ void VulkanRenderer::render(Scene& scene) {
         ImGui::End();
     }
 
-    scene.doCameraUpdate();
+    scene.doCameraUpdate(m_RenderContext);
 
     updateUniformBuffer(scene);
 
@@ -227,11 +227,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     // clip space than vulkan, need to flip it
     sceneTransform.perspectiveTransform[1][1] *= -1;
 
-    Camera camera;
-    camera.setPosition(glm::vec3(0, 0, 1));
-    camera.setLookAt(glm::vec3(0, 0, 0));
-
-    sceneTransform.cameraTransform = camera.getCameraMatrix();
+    sceneTransform.cameraTransform = shadowPass.lightCamera.getCameraMatrix();
 
     // PushConstants would be more efficient for often changing small data buffers
 

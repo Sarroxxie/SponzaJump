@@ -20,6 +20,12 @@ public:
     void setPosition(glm::vec3 newPosition);
     void setLookAt(glm::vec3 newCenter);
 
+    glm::vec3 getWorldPos();
+    glm::vec3 getViewDir();
+
+    glm::vec3& getWorldPosRef();
+    glm::vec3& getViewDirRef();
+
     glm::mat4 getCameraMatrix();
 
 };

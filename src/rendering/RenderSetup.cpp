@@ -825,14 +825,14 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
 
     VkDescriptorPoolSize mainDepthPoolSize;
     mainDepthPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    mainDepthPoolSize.descriptorCount = 1;
+    mainDepthPoolSize.descriptorCount = 2;
     poolSizes.push_back(mainDepthPoolSize);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes    = poolSizes.data();
-    poolInfo.maxSets       = 4;
+    poolInfo.maxSets       = 5;
 
     if(vkCreateDescriptorPool(baseContext.device, &poolInfo, nullptr,
                               &renderContext.descriptorPool)
