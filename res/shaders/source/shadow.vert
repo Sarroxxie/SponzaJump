@@ -18,9 +18,9 @@ layout( push_constant ) uniform ObjectTransform {
 } objectTransform;
 
 void main() {
-    vec4 fragPos = sceneTransform.view * objectTransform.obj * vec4(inPosition, 1);
+    vec4 pos = sceneTransform.proj * sceneTransform.view * objectTransform.obj * vec4(inPosition, 1);
 
-    gl_Position = sceneTransform.proj * fragPos;
+    gl_Position = vec4(pos.xyz / pos.w, 1);
 }
 
 

@@ -4,5 +4,5 @@
 #include "../../../src/rendering/host_device.h"
 
 void main() {
-    gl_FragDepth = 0.5;
+
 }
