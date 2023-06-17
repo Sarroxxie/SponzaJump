@@ -568,7 +568,7 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
 
 void VulkanRenderer::swapToSecondaryPipeline() {
     swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.mainPass.renderPassContext);
-    swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
+    //swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;
