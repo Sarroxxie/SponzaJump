@@ -11,6 +11,8 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     float val = texture(depthSampler, fragTexCoords).x;
+    vec4 texVal = texture(depthSampler, fragTexCoords);
+    val = 1 - val;
     outColor = vec4(val, val, val, 1);
     // outColor = vec4(fragTexCoords, 0, 1);
 }
