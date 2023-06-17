@@ -14,7 +14,7 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
         scene.addObject(loader);
         // move a bit to the foreground so object can be seen
         scene.getInstances().back().transformation *=
-            glm::translate(glm::mat4(1), glm::vec3(0, 0, 4));
+            glm::translate(glm::mat4(1), glm::vec3(0, 0, 32));
     }
 
     {

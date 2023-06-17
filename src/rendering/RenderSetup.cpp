@@ -10,8 +10,8 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
                                                           RenderContext& renderContext) {
     auto& settings     = renderContext.renderSettings;
     settings.fov       = glm::radians(45.0f);
-    settings.nearPlane = 0.1;
-    settings.farPlane  = 1000;
+    settings.nearPlane = 1;
+    settings.farPlane  = 50;
 
     RenderSetupDescription renderSetupDescription;
     renderSetupDescription.enableImgui = true;

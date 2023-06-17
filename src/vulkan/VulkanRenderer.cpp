@@ -556,13 +556,14 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
 void VulkanRenderer::recompileToSecondaryPipeline() {
     buildSecondaryGraphicsPipeline(m_Context,
                                    m_RenderContext.renderPasses.mainPass.renderPassContext);
-    buildSecondaryGraphicsPipeline(m_Context,
-                                   m_RenderContext.renderPasses.shadowPass.renderPassContext);
+    /*buildSecondaryGraphicsPipeline(
+        m_Context,
+                                   m_RenderContext.renderPasses.shadowPass.renderPassContext);*/
 }
 
 void VulkanRenderer::swapToSecondaryPipeline() {
     swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.mainPass.renderPassContext);
-    swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
+    //swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;
