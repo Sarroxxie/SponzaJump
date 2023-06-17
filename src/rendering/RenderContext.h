@@ -84,9 +84,6 @@ typedef struct
     VkDescriptorSetLayout depthDescriptorSetLayout;
     VkDescriptorSet       depthDescriptorSet;
 
-
-    VkDescriptorSetLayout visDepthDescriptorSetLayout;
-    VkDescriptorSet       visDepthDescriptorSet;
     VkPipelineLayout visualizePipelineLayout;
     VkPipeline visualizePipeline;
 
