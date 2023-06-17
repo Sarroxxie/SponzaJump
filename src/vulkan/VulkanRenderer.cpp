@@ -124,6 +124,7 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
     // TODO update shadow transform buffer
     recordShadowPass(scene, imageIndex);
 
+    // TODO VkImageMemoryBarrier ?
     VkMemoryBarrier memoryBarrier;
     memoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
     memoryBarrier.pNext         = VK_NULL_HANDLE;
@@ -137,10 +138,11 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
 
     recordMainRenderPass(scene, imageIndex);
 
+    /*
     VkImageMemoryBarrier barrier{};
     barrier.sType     = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -155,15 +157,18 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
 
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    // barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    sourceStage      = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    sourceStage      = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 
 
     vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer, sourceStage, destinationStage, 0, 0,
                          nullptr, 0, nullptr, 1, &barrier);
+
+     */
 
     if(vkEndCommandBuffer(m_Context.commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");

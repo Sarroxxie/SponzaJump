@@ -17,6 +17,11 @@ layout( push_constant ) uniform ObjectTransform {
     mat4 obj;
 } objectTransform;
 
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
 void main() {
     vec4 pos = sceneTransform.proj * sceneTransform.view * objectTransform.obj * vec4(inPosition, 1);
 

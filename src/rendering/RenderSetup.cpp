@@ -129,8 +129,8 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 
     createDepthSampler(appContext, renderContext.renderPasses.mainPass);
 
-    createVisualizationPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
-
+    createVisualizationPipeline(appContext, renderContext,
+                                renderContext.renderPasses.mainPass);
 }
 
 void createDescriptorSetLayout(const VulkanBaseContext& context,
@@ -319,10 +319,13 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     // Shadow Depth Buffer Attachment
     VkAttachmentDescription depthAttachment{};
     createBlankAttachment(appContext, depthAttachment, VK_SAMPLE_COUNT_1_BIT,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                          VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+    VkFormat customDepthFormat = findDepthFormat(appContext.baseContext);
 
     depthAttachment.format  = findDepthFormat(appContext.baseContext);
+    depthAttachment.format  = customDepthFormat;
     depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
@@ -378,7 +381,7 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     createGraphicsPipeline(appContext, shadowPass.renderPassContext,
                            shadowPass.renderPassContext.pipelineLayouts[0],
                            shadowPass.renderPassContext.graphicsPipelines[0], renderPassDescription,
-                           shadowPass.renderPassContext.descriptorSetLayouts);
+                           shadowPass.renderPassContext.descriptorSetLayouts, false);
 
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
@@ -388,7 +391,8 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
 
-    VkFormat depthFormat = findDepthFormat(appContext.baseContext);
+    // VkFormat depthFormat = findDepthFormat(appContext.baseContext);
+    VkFormat depthFormat = customDepthFormat;
 
     createImage(appContext.baseContext, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, 1,
                 VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL,
@@ -399,11 +403,6 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     shadowPass.depthImage.imageView =
         createImageView(appContext.baseContext, shadowPass.depthImage.image,
                         depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-
-    transitionImageLayout(appContext.baseContext, appContext.commandContext,
-                          shadowPass.depthImage.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                          VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
     initializeShadowDepthBuffer(appContext, shadowPass, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
 }
@@ -433,7 +432,8 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
                             VkPipelineLayout&               pipelineLayout,
                             VkPipeline&                     graphicsPipeline,
                             const RenderPassDescription& renderPassDescription,
-                            std::vector<VkDescriptorSetLayout>& layouts) {
+                            std::vector<VkDescriptorSetLayout>& layouts,
+                            bool useFragmentShader) {
 
     VkShaderModule vertShaderModule =
         createShaderModule(appContext.baseContext, renderPassDescription.vertexShader);
@@ -457,6 +457,7 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     fragShaderStageInfo.pName  = "main";
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+    VkPipelineShaderStageCreateInfo shaderStagesNoFrag[] = {vertShaderStageInfo};
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -561,9 +562,14 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     }
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages    = shaderStages;
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    if(useFragmentShader) {
+        pipelineInfo.stageCount = 2;
+        pipelineInfo.pStages    = shaderStages;
+    } else {
+        pipelineInfo.stageCount = 1;
+        pipelineInfo.pStages    = shaderStagesNoFrag;
+    }
 
     pipelineInfo.pVertexInputState   = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -632,7 +638,8 @@ void createFrameBuffers(ApplicationVulkanContext& appContext, RenderContext& ren
 
 // Builds a graphics pipeline and stores it in the secondary slot
 void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext& appContext,
-                                    RenderPassContext& renderPass) {
+                                    RenderPassContext&              renderPass,
+                                    bool useFragShader) {
     compileShader(renderPass.renderPassDescription.vertexShader,
                   appContext.baseContext.maxSupportedMinorVersion);
     compileShader(renderPass.renderPassDescription.fragmentShader,
@@ -649,7 +656,8 @@ void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext& appContext,
     createGraphicsPipeline(appContext, renderPass,
                            renderPass.pipelineLayouts[!renderPass.activePipelineIndex],
                            renderPass.graphicsPipelines[!renderPass.activePipelineIndex],
-                           renderPass.renderPassDescription, renderPass.descriptorSetLayouts);
+                           renderPass.renderPassDescription,
+                           renderPass.descriptorSetLayouts, useFragShader);
 }
 
 // Swaps to the secondary graphics pipeline if it is valid
@@ -909,13 +917,13 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
     samplerInfo.anisotropyEnable = VK_FALSE;
 
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
@@ -1098,7 +1106,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     }
 
     VkDescriptorImageInfo imageInfo;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     imageInfo.imageView = renderContext.renderPasses.shadowPass.depthImage.imageView;
     imageInfo.sampler = renderContext.renderPasses.mainPass.depthSampler;
 
@@ -1183,7 +1191,7 @@ void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
 
 
 void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
-                                 const RenderContext & renderContext,
+                                 const RenderContext&            renderContext,
                                  MainPass&                       mainPass) {
 
     Shader vertexShader;
@@ -1270,7 +1278,7 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.blendEnable         = VK_TRUE;
+    colorBlendAttachment.blendEnable = VK_TRUE;
     colorBlendAttachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
         | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -1324,7 +1332,7 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
     std::vector<VkWriteDescriptorSet> descriptorWrites;
 
     VkDescriptorImageInfo imageInfo;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     imageInfo.imageView = renderContext.renderPasses.shadowPass.depthImage.imageView;
     imageInfo.sampler = renderContext.renderPasses.mainPass.depthSampler;
 
@@ -1397,5 +1405,4 @@ void cleanVisualizationPipeline(const VulkanBaseContext& baseContext, const Main
 
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  mainPass.visDepthDescriptorSetLayout, nullptr);
-
 }

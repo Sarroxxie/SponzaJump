@@ -102,7 +102,7 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::SliderFloat3(
         "Light Camera Pos",
         glm::value_ptr(renderContext.renderPasses.shadowPass.lightCamera.getWorldPosRef()),
-        0, 100);
+        -5, 5);
     ImGui::SliderFloat3(
         "Light Camera Dir",
         glm::value_ptr(renderContext.renderPasses.shadowPass.lightCamera.getViewDirRef()),

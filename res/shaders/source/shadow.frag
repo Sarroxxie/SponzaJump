@@ -4,5 +4,4 @@
 #include "../../../src/rendering/host_device.h"
 
 void main() {
-
 }

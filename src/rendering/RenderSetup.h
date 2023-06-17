@@ -44,6 +44,22 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 // RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
 
 
+//TODO
+
+/*
+
+#define VK_CHECK_RESULT(f)																				\
+{																										\
+  VkResult res = (f);																					\
+  if (res != VK_SUCCESS)																				\
+  {																									\
+    std::cout << "Fatal : VkResult is \"" << vks::tools::errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << "\n"; \
+    assert(res == VK_SUCCESS);																		\
+  }																									\
+}
+#endif
+ */
+
 // ----- Main Pass
 void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
@@ -90,7 +106,8 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
                             VkPipelineLayout&               pipelineLayout,
                             VkPipeline&                     graphicsPipeline,
                             const RenderPassDescription& renderSetupDescription,
-                            std::vector<VkDescriptorSetLayout>& layouts);
+                            std::vector<VkDescriptorSetLayout>& layouts,
+                            bool useFragmentShader = true);
 
 void createBlankAttachment(const ApplicationVulkanContext& context,
                            VkAttachmentDescription&        attachment,
@@ -130,7 +147,9 @@ void createFrameBuffers(ApplicationVulkanContext& appContext, RenderContext& ren
 
 // ----- pipeline rebuild
 void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext& appContext,
-                                    RenderPassContext&              renderPass);
+                                    RenderPassContext&              renderPass,
+                                    bool useFragShader = true);
+
 bool swapGraphicsPipeline(const ApplicationVulkanContext& appContext,
                           RenderPassContext&              renderPass);
 // ---

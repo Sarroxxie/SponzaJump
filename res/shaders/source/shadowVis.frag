@@ -10,7 +10,7 @@ layout(set = 0, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    float val = texture(depthSampler, fragTexCoords).x / 10;
+    float val = texture(depthSampler, fragTexCoords).x;
     outColor = vec4(vec3(val), 1);
-    //outColor = vec4(fragTexCoords, 0, 1);
+    // outColor = vec4(fragTexCoords, 0, 1);
 }
