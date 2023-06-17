@@ -15,11 +15,11 @@ void Scene::cleanup() {
         pair.second.clean();
     }
 
-    for(auto& mesh : meshes) {
+    for(auto& mesh : sceneData.meshes) {
         mesh.cleanup(m_baseContext);
     }
 
-    for(auto& texture : textures) {
+    for(auto& texture : sceneData.textures) {
         texture.cleanup(m_baseContext);
     }
 }
@@ -28,26 +28,31 @@ void Scene::cleanup() {
  * Adds a loaded object to the scene.
  */
 void Scene::addObject(ModelLoader loader) {
-    meshes.insert(meshes.end(), loader.meshes.begin(), loader.meshes.end());
-    meshParts.insert(meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
-    textures.insert(textures.end(), loader.textures.begin(), loader.textures.end());
-    materials.insert(materials.end(), loader.materials.begin(), loader.materials.end());
-    models.insert(models.end(), loader.models.begin(), loader.models.end());
-    instances.insert(instances.end(), loader.instances.begin(), loader.instances.end());
+    sceneData.meshes.insert(sceneData.meshes.end(), loader.meshes.begin(), loader.meshes.end());
+    sceneData.meshParts.insert(sceneData.meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
+    sceneData.textures.insert(sceneData.textures.end(), loader.textures.begin(), loader.textures.end());
+    sceneData.materials.insert(sceneData.materials.end(), loader.materials.begin(), loader.materials.end());
+    sceneData.models.insert(sceneData.models.end(), loader.models.begin(), loader.models.end());
+    sceneData.instances.insert(sceneData.instances.end(), loader.instances.begin(), loader.instances.end());
 }
 
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {
     ModelLoadingOffsets offsets;
-    offsets.meshesOffset    = meshes.size();
-    offsets.meshPartsOffset = meshParts.size();
-    offsets.texturesOffset  = textures.size();
-    offsets.materialsOffset = materials.size();
-    offsets.modelsOffset    = models.size();
-    offsets.instancesOffset = instances.size();
+    offsets.meshesOffset    = sceneData.meshes.size();
+    offsets.meshPartsOffset = sceneData.meshParts.size();
+    offsets.texturesOffset  = sceneData.textures.size();
+    offsets.materialsOffset = sceneData.materials.size();
+    offsets.modelsOffset    = sceneData.models.size();
+    offsets.instancesOffset = sceneData.instances.size();
     return offsets;
 }
 
 
+SceneData& Scene::getSceneData() {
+    return sceneData;
+}
+
+/*
 std::vector<Mesh>& Scene::getMeshes() {
     return meshes;
 }
@@ -71,6 +76,7 @@ std::vector<Model>& Scene::getModels() {
 std::vector<ModelInstance>& Scene::getInstances() {
     return instances;
 }
+ */
 
 Camera& Scene::getCameraRef() {
     return m_Camera;
@@ -198,7 +204,6 @@ void Scene::handleUserInput() {
 void Scene::setInputController(InputController* inputController) {
     m_InputController = inputController;
 }
-
 void Scene::doCameraUpdate(const RenderContext& renderContext) {
     for(auto id : SceneView<PlayerComponent, Transformation>(*this)) {
         auto* transformation = getComponent<Transformation>(id);

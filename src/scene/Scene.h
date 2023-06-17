@@ -15,6 +15,7 @@
 #include "input/InputController.h"
 #include "Model.h"
 #include "ModelLoader.h"
+#include "SceneData.h"
 
 template <typename... ComponentTypes>
 struct SceneView;
@@ -26,12 +27,16 @@ private:
 
     std::map<ComponentTypeId, ComponentPool> componentPools;
 
+    SceneData sceneData;
+
+    /*
     std::vector<Mesh>          meshes;
     std::vector<MeshPart>      meshParts;
     std::vector<Texture>       textures;
     std::vector<Material>      materials;
     std::vector<Model>         models;
     std::vector<ModelInstance> instances;
+    */
 
     Camera m_Camera;
 
@@ -84,12 +89,16 @@ public:
 
     ModelLoadingOffsets getModelLoadingOffsets();
 
+    SceneData& getSceneData();
+
+    /*
     std::vector<Mesh> &getMeshes();
     std::vector<MeshPart> &getMeshParts();
     std::vector<Texture> &getTextures();
     std::vector<Material> &getMaterials();
     std::vector<Model> &getModels();
     std::vector<ModelInstance> &getInstances();
+     */
 
     Camera &getCameraRef();
     void doCameraUpdate(const RenderContext& renderContext);

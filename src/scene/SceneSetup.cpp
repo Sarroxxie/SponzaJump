@@ -13,7 +13,7 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
                          context.commandContext);
         scene.addObject(loader);
         // move a bit to the foreground so object can be seen
-        scene.getInstances().back().transformation *=
+        scene.getSceneData().instances.back().transformation *=
             glm::translate(glm::mat4(1), glm::vec3(0, 0, 4));
     }
 
@@ -26,8 +26,8 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
     }
 
     // remove the cube from the instances, because it will not be rendered directly, but added per Entity
-    scene.getInstances().pop_back();
-    int   cubeModelID = scene.getModels().size() - 1;
+    scene.getSceneData().instances.pop_back();
+    int   cubeModelID = scene.getSceneData().models.size() - 1;
 
     glm::vec3 groundHalfDims = glm::vec3(30, 1, 1);
     addPhysicsEntity(scene,

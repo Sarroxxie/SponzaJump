@@ -25,7 +25,7 @@ out gl_PerVertex
 void main() {
     vec4 pos = sceneTransform.proj * sceneTransform.view * objectTransform.obj * vec4(inPosition, 1);
 
-    gl_Position = vec4(pos.xyz / pos.w, 1);
+    gl_Position = pos;
 }
 
 

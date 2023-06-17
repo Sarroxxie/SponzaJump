@@ -47,7 +47,7 @@ int main() {
                                    renderContext.renderPasses.mainPass);
 
     createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
-                                       scene.getTextures());
+                                       scene.getSceneData().textures);
 
     /*
     cleanVisualizationPipeline(appContext.baseContext, renderContext.renderPasses.mainPass);
@@ -62,9 +62,9 @@ int main() {
         renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
 
-    createMainPassResources(appContext, renderContext, scene.getMaterials());
+    createMainPassResources(appContext, renderContext, scene.getSceneData().materials);
 
-    createMainPassDescriptorSets(appContext, renderContext, scene.getTextures());
+    createMainPassDescriptorSets(appContext, renderContext, scene.getSceneData().textures);
 
     VulkanRenderer renderer(appContext, renderContext);
 

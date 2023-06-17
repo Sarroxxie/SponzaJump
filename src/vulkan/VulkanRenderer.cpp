@@ -233,6 +233,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     sceneTransform.perspectiveTransform[1][1] *= -1;
 
     sceneTransform.cameraTransform = shadowPass.lightCamera.getCameraMatrix();
+    sceneTransform.cameraTransform = scene.getCameraRef().getCameraMatrix();
 
     // PushConstants would be more efficient for often changing small data buffers
 
@@ -252,9 +253,9 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
         auto* modelComponent     = scene.getComponent<ModelInstance>(id);
         auto* transformComponent = scene.getComponent<Transformation>(id);
 
-        for(auto& meshPartIndex : scene.getModels()[modelComponent->modelID].meshPartIndices) {
-            MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
-            Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+        for(auto& meshPartIndex : scene.getSceneData().models[modelComponent->modelID].meshPartIndices) {
+            MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
+            Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
             VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
             VkDeviceSize offsets[]       = {0};
 
@@ -279,12 +280,12 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     }
 
     // render non-entity models
-    for(auto& instance : scene.getInstances()) {
-        Model     model          = scene.getModels()[instance.modelID];
+    for(auto& instance : scene.getSceneData().instances) {
+        Model     model          = scene.getSceneData().models[instance.modelID];
         glm::mat4 transformation = instance.transformation;
         for(auto& meshPartIndex : model.meshPartIndices) {
-            MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
-            Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+            MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
+            Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
             VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
             VkDeviceSize offsets[]       = {0};
 
@@ -405,9 +406,9 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             // set transformation matrix of the model in the PushConstant
             pushConstant.transformation = transformComponent->getMatrix();
 
-            for(auto& meshPartIndex : scene.getModels()[modelComponent->modelID].meshPartIndices) {
-                MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
-                Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+            for(auto& meshPartIndex : scene.getSceneData().models[modelComponent->modelID].meshPartIndices) {
+                MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
                 VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
                 VkDeviceSize offsets[]       = {0};
 
@@ -446,15 +447,15 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         }
 
         // render non-entity models
-        for(auto& instance : scene.getInstances()) {
-            Model model = scene.getModels()[instance.modelID];
+        for(auto& instance : scene.getSceneData().instances) {
+            Model model = scene.getSceneData().models[instance.modelID];
 
             // set transformation matrix of the model
             pushConstant.transformation = instance.transformation;
 
             for(auto& meshPartIndex : model.meshPartIndices) {
-                MeshPart     meshPart = scene.getMeshParts()[meshPartIndex];
-                Mesh         mesh     = scene.getMeshes()[meshPart.meshIndex];
+                MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
                 VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
                 VkDeviceSize offsets[]       = {0};
 
