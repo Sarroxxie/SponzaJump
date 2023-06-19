@@ -248,39 +248,6 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
             .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
         0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet, 0, nullptr);
 
-    /*
-    // render entities
-    for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
-        auto* modelComponent     = scene.getComponent<ModelInstance>(id);
-        auto* transformComponent = scene.getComponent<Transformation>(id);
-
-        for(auto& meshPartIndex :
-    scene.getSceneData().models[modelComponent->modelID].meshPartIndices) { MeshPart
-    meshPart = scene.getSceneData().meshParts[meshPartIndex]; Mesh         mesh
-    = scene.getSceneData().meshes[meshPart.meshIndex]; VkBuffer vertexBuffers[]
-    = {mesh.vertexBuffer}; VkDeviceSize offsets[]       = {0};
-
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
-
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-            glm::mat4 transform = transformComponent->getMatrix();
-
-            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                               shadowPass.renderPassContext
-                                   .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                               VK_SHADER_STAGE_VERTEX_BIT,
-                               0,  // offset
-                               sizeof(glm::mat4), &transform);
-
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                             mesh.indicesCount, 1, 0, 0, 0);
-        }
-    }
-     */
-
     for(EntityId id : SceneView<Model, Transformation>(scene)) {
         auto* modelComponent     = scene.getComponent<Model>(id);
         auto* transformComponent = scene.getComponent<Transformation>(id);
@@ -310,36 +277,6 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                              mesh.indicesCount, 1, 0, 0, 0);
         }
     }
-
-    /*
-    // render non-entity models
-    for(auto& instance : scene.getSceneData().instances) {
-        Model     model          =
-    scene.getSceneData().models[instance.modelID]; glm::mat4 transformation =
-    instance.transformation; for(auto& meshPartIndex : model.meshPartIndices) {
-            MeshPart     meshPart =
-    scene.getSceneData().meshParts[meshPartIndex]; Mesh         mesh     =
-    scene.getSceneData().meshes[meshPart.meshIndex]; VkBuffer vertexBuffers[] =
-    {mesh.vertexBuffer}; VkDeviceSize offsets[]       = {0};
-
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
-
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                               shadowPass.renderPassContext
-                                   .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                               VK_SHADER_STAGE_VERTEX_BIT,
-                               0,  // offset
-                               sizeof(glm::mat4), &transformation);
-
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                             mesh.indicesCount, 1, 0, 0, 0);
-        }
-    }
-     */
 
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
@@ -430,60 +367,6 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         pushConstant.transformation = glm::mat4(1);
         pushConstant.materialIndex  = 0;
 
-
-        /*
-        // TODO imgui and pipeline for quad to display texture
-        // render entities
-        for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
-            auto* modelComponent     = scene.getComponent<ModelInstance>(id);
-            auto* transformComponent = scene.getComponent<Transformation>(id);
-
-            // set transformation matrix of the model in the PushConstant
-            pushConstant.transformation = transformComponent->getMatrix();
-
-            for(auto& meshPartIndex :
-                scene.getSceneData().models[modelComponent->modelID].meshPartIndices) {
-                MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
-                Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
-                VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
-                VkDeviceSize offsets[]   = {0};
-
-                // set material index in the PushConstant
-                pushConstant.materialIndex = meshPart.materialIndex;
-
-                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
-                                       0, 1, vertexBuffers, offsets);
-
-                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-                /*
-                 glm::mat4 transform = transformComponent->getMatrix();
-
-    vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-          mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex],
-          VK_SHADER_STAGE_VERTEX_BIT,
-          0,  // offset
-          sizeof(glm::mat4), &transform);
-
-                * /
-
-                vkCmdPushConstants(
-                    m_Context.commandContext.commandBuffer,
-                    m_RenderContext.renderPasses.mainPass.renderPassContext
-                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
-                                             .renderPassContext.activePipelineIndex],
-                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                    0,  // offset
-                    sizeof(PushConstant), &pushConstant);
-
-                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                                 mesh.indicesCount, 1, 0, 0, 0);
-            }
-        }
-
-        */
-
         for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
             auto* modelComponent     = scene.getComponent<ModelComponent>(id);
             auto* transformComponent = scene.getComponent<Transformation>(id);
@@ -517,69 +400,10 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                     0,  // offset
                     sizeof(PushConstant), &pushConstant);
 
-                /*
-                vkCmdPushConstants(
-                    m_Context.commandContext.commandBuffer,
-                    m_RenderContext.renderPasses.mainPass.renderPassContext
-                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
-                                             .renderPassContext.activePipelineIndex],
-                    VK_SHADER_STAGE_VERTEX_BIT,
-                    0,  // offset
-                    sizeof(glm::mat4), &transform);
-                */
-
                 vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                                  mesh.indicesCount, 1, 0, 0, 0);
             }
         }
-
-        /*
-        // render non-entity models
-        for(auto& instance : scene.getSceneData().instances) {
-            Model model = scene.getSceneData().models[instance.modelID];
-
-            // set transformation matrix of the model
-            pushConstant.transformation = instance.transformation;
-
-            for(auto& meshPartIndex : model.meshPartIndices) {
-                MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
-                Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
-                VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
-                VkDeviceSize offsets[]       = {0};
-
-                // set material index in the PushConstant
-                pushConstant.materialIndex = meshPart.materialIndex;
-
-                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
-                                       0, 1, vertexBuffers, offsets);
-
-                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-                /*
-                 vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-          mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex],
-          VK_SHADER_STAGE_VERTEX_BIT,
-          0,  // offset
-          sizeof(glm::mat4), &transformation);
-
-
-                 * /
-
-                vkCmdPushConstants(
-                    m_Context.commandContext.commandBuffer,
-                    m_RenderContext.renderPasses.mainPass.renderPassContext
-                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
-                                             .renderPassContext.activePipelineIndex],
-                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                    0,  // offset
-                    sizeof(PushConstant), &pushConstant);
-
-                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                                 mesh.indicesCount, 1, 0, 0, 0);
-            }
-        }
-        */
     }
 
     if(m_RenderContext.usesImgui) {
