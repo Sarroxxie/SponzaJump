@@ -11,6 +11,8 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                               Scene&                          scene,
                               GameContactListener&            contactListener);
 
+void addToScene(Scene &scene, ModelLoader &loader, GameContactListener &contactListener);
+
 EntityId addPhysicsEntity(Scene &scene,
                           const VulkanBaseContext &context,
                           const CommandContext &commandContext,

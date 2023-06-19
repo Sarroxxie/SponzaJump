@@ -94,8 +94,17 @@ class ModelInstance
 {
   public:
     // TODO: rewrite parts of the transformation struct (to use quaternions and store the mat4)
-    glm::mat4 transformation = glm::mat4(1.0f);
+    // glm::mat4 transformation = glm::mat4(1.0f);
+
+    std::string name;
     int       modelID;
+
+    glm::vec3 translation;
+    glm::vec3 rotation;
+    glm::vec3 scaling;
+
+    glm::vec3 min;
+    glm::vec3 max;
 
   public:
     ModelInstance(int modelID)

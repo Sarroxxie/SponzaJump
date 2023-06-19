@@ -278,8 +278,62 @@ bool ModelLoader::loadModel(const std::string&  filename,
     // 3. create ModelInstances (from list of Nodes)
     for(auto& node : gltfModel.nodes) {
         ModelInstance instance(node.mesh + offsets.modelsOffset);
-        glm::mat4     transform = getTransform(node);
-        instance.transformation = transform;
+
+        instance.name = node.name;
+
+        if (node.translation.size() == 3) {
+            instance.translation.x = node.translation[0];
+            instance.translation.y = node.translation[1];
+            instance.translation.z = node.translation[2];
+        }
+
+        if (node.scale.size() == 3) {
+            instance.scaling.x = node.scale[0];
+            instance.scaling.y = node.scale[1];
+            instance.scaling.z = node.scale[2];
+        }
+
+        if (node.rotation.size() == 4) {
+            glm::quat q;
+
+            q.x = node.rotation[0];
+            q.y = node.rotation[1];
+            q.z = node.rotation[2];
+            q.w = node.rotation[3];
+
+            instance.rotation = eulerAngles(q);
+        }
+
+        int meshIndex = node.mesh;
+
+        std::string posPrimitiveName = "POSITION";
+        std::vector<tinygltf::Primitive> primitives = gltfModel.meshes[meshIndex].primitives;
+
+        instance.min = glm::vec3(0);
+        instance.max = glm::vec3(1);
+
+        if (!primitives.empty()) {
+            if(primitives[0].attributes.count(posPrimitiveName)) {
+                int accessorIndex = primitives[0].attributes.at(posPrimitiveName);
+
+                tinygltf::Accessor acc = gltfModel.accessors[accessorIndex];
+
+                if (acc.minValues.size() == 3) {
+                    instance.min.x = acc.minValues[0];
+                    instance.min.y = acc.minValues[1];
+                    instance.min.z = acc.minValues[2];
+                }
+
+                if (acc.maxValues.size() == 3) {
+                    instance.max.x = acc.maxValues[0];
+                    instance.max.y = acc.maxValues[1];
+                    instance.max.z = acc.maxValues[2];
+                }
+            }
+        }
+
+
+
         instances.push_back(instance);
     }
     return true;

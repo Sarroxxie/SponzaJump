@@ -10,8 +10,8 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
                                                           RenderContext& renderContext) {
     auto& settings     = renderContext.renderSettings;
     settings.fov       = glm::radians(45.0f);
-    settings.nearPlane = 0.1;
-    settings.farPlane  = 1000;
+    settings.nearPlane = 1;
+    settings.farPlane  = 100;
 
     RenderSetupDescription renderSetupDescription;
     renderSetupDescription.enableImgui = true;
@@ -212,7 +212,7 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
     depthAttachment.format = findDepthFormat(appContext.baseContext);
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp =
-        VK_ATTACHMENT_STORE_OP_DONT_CARE;  // TODO this will probably need to change for shadow mapping ?
+        VK_ATTACHMENT_STORE_OP_STORE;  // TODO this will probably need to change for shadow mapping ?
 
     VkAttachmentReference depthAttachmentRef{};
     depthAttachmentRef.attachment = 1;
@@ -385,8 +385,8 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
 
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
-    const uint32_t SHADOW_MAP_WIDTH  = 500;
-    const uint32_t SHADOW_MAP_HEIGHT = 500;
+    const uint32_t SHADOW_MAP_WIDTH  = 1920;
+    const uint32_t SHADOW_MAP_HEIGHT = 1080;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
@@ -1083,7 +1083,6 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     texturesWrite.pImageInfo      = textureSamplers.data();
 
     descriptorWrites.emplace_back(texturesWrite);
-
 
     /*
     vkUpdateDescriptorSets(appContext.baseContext.device,

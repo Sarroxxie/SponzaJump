@@ -29,15 +29,6 @@ private:
 
     SceneData sceneData;
 
-    /*
-    std::vector<Mesh>          meshes;
-    std::vector<MeshPart>      meshParts;
-    std::vector<Texture>       textures;
-    std::vector<Material>      materials;
-    std::vector<Model>         models;
-    std::vector<ModelInstance> instances;
-    */
-
     Camera m_Camera;
 
     b2World m_World;
@@ -91,15 +82,6 @@ public:
 
     SceneData& getSceneData();
 
-    /*
-    std::vector<Mesh> &getMeshes();
-    std::vector<MeshPart> &getMeshParts();
-    std::vector<Texture> &getTextures();
-    std::vector<Material> &getMaterials();
-    std::vector<Model> &getModels();
-    std::vector<ModelInstance> &getInstances();
-     */
-
     Camera &getCameraRef();
     void doCameraUpdate(const RenderContext& renderContext);
 
@@ -112,11 +94,6 @@ public:
     void cleanup();
     void registerSceneImgui(RenderContext& renderContext);
 
-    float currentAngleY = 0;
-    float currentAngleX = 0;
-
-    float cameraAngleY = 0;
-    float cameraDist = 45;
     };
 
 template <typename... ComponentTypes>

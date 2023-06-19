@@ -147,9 +147,9 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-    barrier.image                           = m_RenderContext.renderPasses.shadowPass.depthImage.image;
-    barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
-    barrier.subresourceRange.baseMipLevel   = 0;
+    barrier.image                           =
+    m_RenderContext.renderPasses.shadowPass.depthImage.image; barrier.subresourceRange.aspectMask
+    = VK_IMAGE_ASPECT_DEPTH_BIT; barrier.subresourceRange.baseMipLevel   = 0;
     barrier.subresourceRange.levelCount     = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount     = 1;
@@ -165,8 +165,8 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
     destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 
 
-    vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer, sourceStage, destinationStage, 0, 0,
-                         nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer, sourceStage,
+    destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
      */
 
@@ -248,16 +248,48 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
             .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
         0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet, 0, nullptr);
 
+    /*
     // render entities
     for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
         auto* modelComponent     = scene.getComponent<ModelInstance>(id);
         auto* transformComponent = scene.getComponent<Transformation>(id);
 
-        for(auto& meshPartIndex : scene.getSceneData().models[modelComponent->modelID].meshPartIndices) {
-            MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
-            Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
-            VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
-            VkDeviceSize offsets[]       = {0};
+        for(auto& meshPartIndex :
+    scene.getSceneData().models[modelComponent->modelID].meshPartIndices) { MeshPart
+    meshPart = scene.getSceneData().meshParts[meshPartIndex]; Mesh         mesh
+    = scene.getSceneData().meshes[meshPart.meshIndex]; VkBuffer vertexBuffers[]
+    = {mesh.vertexBuffer}; VkDeviceSize offsets[]       = {0};
+
+            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+                                   vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            glm::mat4 transform = transformComponent->getMatrix();
+
+            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                               shadowPass.renderPassContext
+                                   .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
+                               VK_SHADER_STAGE_VERTEX_BIT,
+                               0,  // offset
+                               sizeof(glm::mat4), &transform);
+
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                             mesh.indicesCount, 1, 0, 0, 0);
+        }
+    }
+     */
+
+    for(EntityId id : SceneView<Model, Transformation>(scene)) {
+        auto* modelComponent     = scene.getComponent<Model>(id);
+        auto* transformComponent = scene.getComponent<Transformation>(id);
+
+        for(auto& meshPartIndex : modelComponent->meshPartIndices) {
+            MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
+            Mesh     mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
+            VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+            VkDeviceSize offsets[]   = {0};
 
             vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
                                    vertexBuffers, offsets);
@@ -279,15 +311,16 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
         }
     }
 
+    /*
     // render non-entity models
     for(auto& instance : scene.getSceneData().instances) {
-        Model     model          = scene.getSceneData().models[instance.modelID];
-        glm::mat4 transformation = instance.transformation;
-        for(auto& meshPartIndex : model.meshPartIndices) {
-            MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
-            Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
-            VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
-            VkDeviceSize offsets[]       = {0};
+        Model     model          =
+    scene.getSceneData().models[instance.modelID]; glm::mat4 transformation =
+    instance.transformation; for(auto& meshPartIndex : model.meshPartIndices) {
+            MeshPart     meshPart =
+    scene.getSceneData().meshParts[meshPartIndex]; Mesh         mesh     =
+    scene.getSceneData().meshes[meshPart.meshIndex]; VkBuffer vertexBuffers[] =
+    {mesh.vertexBuffer}; VkDeviceSize offsets[]       = {0};
 
             vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
                                    vertexBuffers, offsets);
@@ -306,6 +339,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                              mesh.indicesCount, 1, 0, 0, 0);
         }
     }
+     */
 
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
@@ -349,14 +383,14 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     scissor.extent = m_Context.swapchainContext.swapChainExtent;
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
-    if (m_RenderContext.imguiData.visualizeShadowBuffer) {
+    if(m_RenderContext.imguiData.visualizeShadowBuffer) {
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.visualizePipeline);
 
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0,
-            1, &m_RenderContext.renderPasses.mainPass.visDepthDescriptorSet, 0, nullptr);
+            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0, 1,
+            &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
@@ -397,6 +431,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         pushConstant.materialIndex  = 0;
 
 
+        /*
         // TODO imgui and pipeline for quad to display texture
         // render entities
         for(EntityId id : SceneView<ModelInstance, Transformation>(scene)) {
@@ -406,11 +441,12 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             // set transformation matrix of the model in the PushConstant
             pushConstant.transformation = transformComponent->getMatrix();
 
-            for(auto& meshPartIndex : scene.getSceneData().models[modelComponent->modelID].meshPartIndices) {
-                MeshPart     meshPart = scene.getSceneData().meshParts[meshPartIndex];
-                Mesh         mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
-                VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
-                VkDeviceSize offsets[]       = {0};
+            for(auto& meshPartIndex :
+                scene.getSceneData().models[modelComponent->modelID].meshPartIndices) {
+                MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
+                VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+                VkDeviceSize offsets[]   = {0};
 
                 // set material index in the PushConstant
                 pushConstant.materialIndex = meshPart.materialIndex;
@@ -430,7 +466,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
           0,  // offset
           sizeof(glm::mat4), &transform);
 
-                */
+                * /
 
                 vkCmdPushConstants(
                     m_Context.commandContext.commandBuffer,
@@ -446,6 +482,41 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             }
         }
 
+        */
+
+        for(EntityId id : SceneView<Model, Transformation>(scene)) {
+            auto* modelComponent     = scene.getComponent<Model>(id);
+            auto* transformComponent = scene.getComponent<Transformation>(id);
+
+            for(auto& meshPartIndex : modelComponent->meshPartIndices) {
+                MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
+                VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+                VkDeviceSize offsets[]   = {0};
+
+                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                       0, 1, vertexBuffers, offsets);
+
+                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+                glm::mat4 transform = transformComponent->getMatrix();
+
+                vkCmdPushConstants(
+                    m_Context.commandContext.commandBuffer,
+                    m_RenderContext.renderPasses.mainPass.renderPassContext
+                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
+                                             .renderPassContext.activePipelineIndex],
+                    VK_SHADER_STAGE_VERTEX_BIT,
+                    0,  // offset
+                    sizeof(glm::mat4), &transform);
+
+                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                 mesh.indicesCount, 1, 0, 0, 0);
+            }
+        }
+
+        /*
         // render non-entity models
         for(auto& instance : scene.getSceneData().instances) {
             Model model = scene.getSceneData().models[instance.modelID];
@@ -476,7 +547,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
           sizeof(glm::mat4), &transformation);
 
 
-                 */
+                 * /
 
                 vkCmdPushConstants(
                     m_Context.commandContext.commandBuffer,
@@ -491,6 +562,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                                  mesh.indicesCount, 1, 0, 0, 0);
             }
         }
+        */
     }
 
     if(m_RenderContext.usesImgui) {

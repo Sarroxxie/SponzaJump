@@ -32,8 +32,8 @@ void Scene::addObject(ModelLoader loader) {
     sceneData.meshParts.insert(sceneData.meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
     sceneData.textures.insert(sceneData.textures.end(), loader.textures.begin(), loader.textures.end());
     sceneData.materials.insert(sceneData.materials.end(), loader.materials.begin(), loader.materials.end());
-    sceneData.models.insert(sceneData.models.end(), loader.models.begin(), loader.models.end());
-    sceneData.instances.insert(sceneData.instances.end(), loader.instances.begin(), loader.instances.end());
+    // sceneData.models.insert(sceneData.models.end(), loader.models.begin(), loader.models.end());
+    // sceneData.instances.insert(sceneData.instances.end(), loader.instances.begin(), loader.instances.end());
 }
 
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {
@@ -42,8 +42,8 @@ ModelLoadingOffsets Scene::getModelLoadingOffsets() {
     offsets.meshPartsOffset = sceneData.meshParts.size();
     offsets.texturesOffset  = sceneData.textures.size();
     offsets.materialsOffset = sceneData.materials.size();
-    offsets.modelsOffset    = sceneData.models.size();
-    offsets.instancesOffset = sceneData.instances.size();
+    // offsets.modelsOffset    = sceneData.models.size();
+    // offsets.instancesOffset = sceneData.instances.size();
     return offsets;
 }
 
@@ -51,32 +51,6 @@ ModelLoadingOffsets Scene::getModelLoadingOffsets() {
 SceneData& Scene::getSceneData() {
     return sceneData;
 }
-
-/*
-std::vector<Mesh>& Scene::getMeshes() {
-    return meshes;
-}
-
-std::vector<MeshPart>& Scene::getMeshParts() {
-    return meshParts;
-}
-
-std::vector<Texture>& Scene::getTextures() {
-    return textures;
-}
-
-std::vector<Material>& Scene::getMaterials() {
-    return materials;
-}
-
-std::vector<Model>& Scene::getModels() {
-    return models;
-}
-
-std::vector<ModelInstance>& Scene::getInstances() {
-    return instances;
-}
- */
 
 Camera& Scene::getCameraRef() {
     return m_Camera;
@@ -88,12 +62,6 @@ b2World& Scene::getWorld() {
 
 void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::Begin("Scene");
-    ImGui::SliderFloat("Object Angle X", &currentAngleX, 0, glm::two_pi<float>());
-    ImGui::SliderFloat("Object Angle Y", &currentAngleY, 0, glm::two_pi<float>());
-    ImGui::SliderFloat("Camera Angle Y", &cameraAngleY, 0, glm::two_pi<float>());
-    ImGui::SliderFloat("Camera Distance", &cameraDist, 0, 100);
-
-    ImGui::Spacing();
 
     ImGui::SliderFloat3("Camera Pos",
                         glm::value_ptr(m_Camera.getWorldPosRef()), 0, 100);

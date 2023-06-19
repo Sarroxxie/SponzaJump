@@ -1,6 +1,5 @@
 #include <algorithm>
 #include "SceneSetup.h"
-#include "vulkan/VulkanUtils.h"
 #include "physics/PhysicsComponent.h"
 #include "game/PlayerComponent.h"
 
@@ -8,13 +7,16 @@ void
 createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, GameContactListener &contactListener) {
     {
         ModelLoader loader;
-        loader.loadModel("res/assets/models/debug_model/debug_model.gltf",
+        loader.loadModel("res/assets/models/debug_model4/debug_model4.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
         scene.addObject(loader);
         // move a bit to the foreground so object can be seen
+
+        /*
         scene.getSceneData().instances.back().transformation *=
             glm::translate(glm::mat4(1), glm::vec3(0, 0, 4));
+            */
     }
 
     {
@@ -25,9 +27,44 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
         scene.addObject(loader);
     }
 
+    /* TODO:
+     * 1. load gltf objects as part of the ECS
+     * 2. Model Component will be Model (I think ?)
+     * 3. Don't forget Transformation Component
+     * 4. Find heuristic for when to add physics component, what size
+     *      -> Make sure implementation can be changed to name based deciding ?
+     * 5. remove instances
+     * 6. Per Name Tasks:
+     *      - Player Component
+     *      - Collision Boxes ?
+     *      -
+     */
+
+    /*
+     * Get Transformation from Node
+     * Get Min/Max from Accessors[Node->Mesh->Primitve->Attributes]
+     */
+
+
+
     // remove the cube from the instances, because it will not be rendered directly, but added per Entity
+    /*
     scene.getSceneData().instances.pop_back();
+     */
+
+
+    /* TODO:
+     * 1. rewrite this function
+     * 2. hook up new function to gltf files
+     * 3. test with exisiting gltf files
+     * 4. create simple sample level and test loading
+     *
+     */
+
+    /*
     int   cubeModelID = scene.getSceneData().models.size() - 1;
+
+
 
     glm::vec3 groundHalfDims = glm::vec3(30, 1, 1);
     addPhysicsEntity(scene,
@@ -166,6 +203,92 @@ createSamplePhysicsScene(const ApplicationVulkanContext &context, Scene &scene, 
 }
 
 
+void addToScene(Scene& scene, ModelLoader& loader, GameContactListener &contactListener) {
+    SceneData& sceneData = scene.getSceneData();
+
+    sceneData.meshes.insert(sceneData.meshes.end(), loader.meshes.begin(), loader.meshes.end());
+    sceneData.meshParts.insert(sceneData.meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
+    sceneData.textures.insert(sceneData.textures.end(), loader.textures.begin(), loader.textures.end());
+    sceneData.materials.insert(sceneData.materials.end(), loader.materials.begin(), loader.materials.end());
+
+    // sceneData.models.insert(sceneData.models.end(), loader.models.begin(), loader.models.end());
+    // sceneData.instances.insert(sceneData.instances.end(), loader.instances.begin(), loader.instances.end());
+
+
+    for (ModelInstance& instance: loader.instances) {
+        EntityId entityId = scene.addEntity();
+
+        auto* modelComponent = scene.assign<Model>(entityId);
+        modelComponent->meshPartIndices = loader.models[instance.modelID].meshPartIndices;
+
+        auto* transformationComponent = scene.assign<Transformation>(entityId);
+        transformationComponent->translation = instance.translation;
+        transformationComponent->rotation = instance.rotation;
+        transformationComponent->scaling = instance.scaling;
+
+
+        const std::string PhysicsNamePrefix = "Static";
+        if (instance.name.rfind(PhysicsNamePrefix, 0)) {
+            auto* physicsComponent = scene.assign<PhysicsComponent>(entityId);
+
+            b2BodyDef bodyDef;
+            bodyDef.fixedRotation = true;
+            bodyDef.position.Set(instance.translation.x, instance.translation.y);
+            bodyDef.angle = instance.rotation.z;
+
+            physicsComponent->body = scene.getWorld().CreateBody(&bodyDef);
+            physicsComponent->dynamic = true;
+
+            glm::vec3 halfSizes = (instance.max - instance.min) / glm::vec3(2.0f);
+
+            b2PolygonShape dynamicBox;
+            dynamicBox.SetAsBox(halfSizes.x, halfSizes.y);
+
+            b2FixtureDef fixtureDef;
+            fixtureDef.shape = &dynamicBox;
+            fixtureDef.density = 1.0f;
+            fixtureDef.friction = 0.0f;
+
+            physicsComponent->body->CreateFixture(&fixtureDef);
+        }
+
+
+        const std::string playerNamePrefix = "Player";
+        if (instance.name.rfind(playerNamePrefix, 0)) {
+            auto* physicsComponent = scene.assign<PhysicsComponent>(entityId);
+
+            b2BodyDef bodyDef;
+            bodyDef.type = b2BodyType::b2_dynamicBody;
+            bodyDef.fixedRotation = true;
+            bodyDef.position.Set(instance.translation.x, instance.translation.y);
+            bodyDef.angle = instance.rotation.z;
+
+            physicsComponent->body = scene.getWorld().CreateBody(&bodyDef);
+            physicsComponent->dynamic = true;
+
+            glm::vec3 halfSizes = (instance.max - instance.min) / glm::vec3(2.0f);
+
+            b2PolygonShape dynamicBox;
+            dynamicBox.SetAsBox(halfSizes.x, halfSizes.y);
+
+            b2FixtureDef fixtureDef;
+            fixtureDef.shape = &dynamicBox;
+            fixtureDef.density = 1.0f;
+            fixtureDef.friction = 0.0f;
+
+            physicsComponent->body->CreateFixture(&fixtureDef);
+            physicsComponent->dynamic = true;
+
+            auto *playerComponent = scene.assign<PlayerComponent>(entityId);
+            contactListener.setPlayerComponent(playerComponent);
+        }
+    }
+
+
+
+
+}
+
 EntityId addPhysicsEntity(Scene &scene,
                           const VulkanBaseContext &context,
                           const CommandContext &commandContext,
@@ -211,7 +334,6 @@ EntityId addPhysicsEntity(Scene &scene,
 
     return dynamicEntity;
 }
-
 EntityId addPlayerEntity(Scene &scene, const VulkanBaseContext &context, const CommandContext &commandContext,
                          int modelID, Transformation transformation, glm::vec3 halfSize,
                          GameContactListener &contactListener,
