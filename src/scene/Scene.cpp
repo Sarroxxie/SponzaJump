@@ -66,7 +66,7 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::SliderFloat3("Camera Pos",
                         glm::value_ptr(m_Camera.getWorldPosRef()), 0, 100);
     ImGui::SliderFloat3("Camera Dir",
-                        glm::value_ptr(m_Camera.getViewDirRef()), -1, 1);
+                        glm::value_ptr(m_Camera.getViewDirRef()), -glm::pi<float>(), glm::pi<float>());
 
     ImGui::Checkbox("Lock Camera to Player", &renderContext.imguiData.lockCamera);
 

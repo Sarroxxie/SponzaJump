@@ -285,12 +285,16 @@ bool ModelLoader::loadModel(const std::string&  filename,
             instance.translation.x = node.translation[0];
             instance.translation.y = node.translation[1];
             instance.translation.z = node.translation[2];
+        } else {
+            instance.translation = glm::vec3(0);
         }
 
         if (node.scale.size() == 3) {
             instance.scaling.x = node.scale[0];
             instance.scaling.y = node.scale[1];
             instance.scaling.z = node.scale[2];
+        } else {
+            instance.scaling = glm::vec3(1);
         }
 
         if (node.rotation.size() == 4) {
@@ -302,6 +306,8 @@ bool ModelLoader::loadModel(const std::string&  filename,
             q.w = node.rotation[3];
 
             instance.rotation = eulerAngles(q);
+        } else {
+            instance.rotation = glm::vec3(0);
         }
 
         int meshIndex = node.mesh;
@@ -309,7 +315,7 @@ bool ModelLoader::loadModel(const std::string&  filename,
         std::string posPrimitiveName = "POSITION";
         std::vector<tinygltf::Primitive> primitives = gltfModel.meshes[meshIndex].primitives;
 
-        instance.min = glm::vec3(0);
+        instance.min = glm::vec3(-1);
         instance.max = glm::vec3(1);
 
         if (!primitives.empty()) {

@@ -488,11 +488,15 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             auto* modelComponent     = scene.getComponent<Model>(id);
             auto* transformComponent = scene.getComponent<Transformation>(id);
 
+            pushConstant.transformation = transformComponent->getMatrix();
+
             for(auto& meshPartIndex : modelComponent->meshPartIndices) {
                 MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
                 Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
                 VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
                 VkDeviceSize offsets[]   = {0};
+
+                pushConstant.materialIndex = meshPart.materialIndex;
 
                 vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
                                        0, 1, vertexBuffers, offsets);
@@ -507,9 +511,20 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                     m_RenderContext.renderPasses.mainPass.renderPassContext
                         .pipelineLayouts[m_RenderContext.renderPasses.mainPass
                                              .renderPassContext.activePipelineIndex],
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    0,  // offset
+                    sizeof(PushConstant), &pushConstant);
+
+                /*
+                vkCmdPushConstants(
+                    m_Context.commandContext.commandBuffer,
+                    m_RenderContext.renderPasses.mainPass.renderPassContext
+                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
+                                             .renderPassContext.activePipelineIndex],
                     VK_SHADER_STAGE_VERTEX_BIT,
                     0,  // offset
                     sizeof(glm::mat4), &transform);
+                */
 
                 vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                                  mesh.indicesCount, 1, 0, 0, 0);

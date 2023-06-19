@@ -99,6 +99,7 @@ struct ComponentPool {
 
         auto freeComponent = freeComponents.begin();
         ComponentId id = *freeComponent;
+
         freeComponents.erase(freeComponent);
         return id;
     }
