@@ -484,13 +484,15 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
         */
 
-        for(EntityId id : SceneView<Model, Transformation>(scene)) {
-            auto* modelComponent     = scene.getComponent<Model>(id);
+        for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
+            auto* modelComponent     = scene.getComponent<ModelComponent>(id);
             auto* transformComponent = scene.getComponent<Transformation>(id);
+
+            Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
             pushConstant.transformation = transformComponent->getMatrix();
 
-            for(auto& meshPartIndex : modelComponent->meshPartIndices) {
+            for(auto& meshPartIndex : model.meshPartIndices) {
                 MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
                 Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
                 VkBuffer vertexBuffers[] = {mesh.vertexBuffer};

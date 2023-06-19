@@ -87,7 +87,11 @@ struct MeshPart
 
 struct Model
 {
-    std::vector<int> meshPartIndices = std::vector<int>();
+    std::vector<int> meshPartIndices;
+};
+
+struct ModelComponent {
+    int modelIndex;
 };
 
 class ModelInstance

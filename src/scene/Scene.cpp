@@ -24,26 +24,13 @@ void Scene::cleanup() {
     }
 }
 
-/*
- * Adds a loaded object to the scene.
- */
-void Scene::addObject(ModelLoader loader) {
-    sceneData.meshes.insert(sceneData.meshes.end(), loader.meshes.begin(), loader.meshes.end());
-    sceneData.meshParts.insert(sceneData.meshParts.end(), loader.meshParts.begin(), loader.meshParts.end());
-    sceneData.textures.insert(sceneData.textures.end(), loader.textures.begin(), loader.textures.end());
-    sceneData.materials.insert(sceneData.materials.end(), loader.materials.begin(), loader.materials.end());
-    // sceneData.models.insert(sceneData.models.end(), loader.models.begin(), loader.models.end());
-    // sceneData.instances.insert(sceneData.instances.end(), loader.instances.begin(), loader.instances.end());
-}
-
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {
     ModelLoadingOffsets offsets;
     offsets.meshesOffset    = sceneData.meshes.size();
     offsets.meshPartsOffset = sceneData.meshParts.size();
     offsets.texturesOffset  = sceneData.textures.size();
     offsets.materialsOffset = sceneData.materials.size();
-    // offsets.modelsOffset    = sceneData.models.size();
-    // offsets.instancesOffset = sceneData.instances.size();
+    offsets.modelsOffset    = sceneData.models.size();
     return offsets;
 }
 

@@ -76,8 +76,6 @@ public:
     }
     // -------
 
-    void addObject(ModelLoader loader);
-
     ModelLoadingOffsets getModelLoadingOffsets();
 
     SceneData& getSceneData();
