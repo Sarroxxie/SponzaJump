@@ -385,8 +385,8 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
 
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
-    const uint32_t SHADOW_MAP_WIDTH  = 500;
-    const uint32_t SHADOW_MAP_HEIGHT = 500;
+    const uint32_t SHADOW_MAP_WIDTH  = 1920;
+    const uint32_t SHADOW_MAP_HEIGHT = 1080;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
@@ -914,8 +914,8 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
 void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass) {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.magFilter = VK_FILTER_NEAREST;
+    samplerInfo.minFilter = VK_FILTER_NEAREST;
 
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -927,10 +927,10 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp     = VK_COMPARE_OP_ALWAYS;
 
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod     = 0.0f;
     samplerInfo.maxLod     = 0.0f;
