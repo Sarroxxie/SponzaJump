@@ -50,14 +50,15 @@ void addToScene(Scene& scene, ModelLoader& loader, GameContactListener& contactL
 
         const std::string playerNamePrefix = "Player";
         if(instance.name.rfind(playerNamePrefix, 0) == 0) {
-            addPhysicsComponent(scene, entityId, instance, true);
+            auto* fixture = addPhysicsComponent(scene, entityId, instance, true);
 
             auto* playerComponent = scene.assign<PlayerComponent>(entityId);
             contactListener.setPlayerComponent(playerComponent);
+            contactListener.setPlayerFixture(fixture);
         }
     }
 }
-void addPhysicsComponent(Scene& scene, EntityId entityId, ModelInstance& instance, bool isDynamic) {
+b2Fixture* addPhysicsComponent(Scene& scene, EntityId entityId, ModelInstance& instance, bool isDynamic) {
     auto* physicsComponent = scene.assign<PhysicsComponent>(entityId);
 
     b2BodyDef bodyDef;
@@ -81,6 +82,8 @@ void addPhysicsComponent(Scene& scene, EntityId entityId, ModelInstance& instanc
     fixtureDef.density  = 1.0f;
     fixtureDef.friction = 0.0f;
 
-    physicsComponent->body->CreateFixture(&fixtureDef);
+    b2Fixture* fixture = physicsComponent->body->CreateFixture(&fixtureDef);
     physicsComponent->dynamic = isDynamic;
+
+    return fixture;
 }

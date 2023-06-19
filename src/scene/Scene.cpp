@@ -146,11 +146,15 @@ void Scene::handleUserInput() {
                 playerComponent->canDoubleJump = false;
             }
         }
-        // TODO this check is not only true if the player is actually grounded
 
         b2Vec2 newVel;
         newVel.x = movingRight ? speed : movingLeft ? -speed : 0;
-        newVel.y = jumps ? 20 : linVel.y;
+
+        newVel.y = linVel.y;
+        if (jumps) {
+            newVel.y = 20;
+            playerComponent->grounded = false;
+        }
 
         physicsComponent->body->SetLinearVelocity(newVel);
     }
