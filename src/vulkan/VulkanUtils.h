@@ -131,9 +131,10 @@ void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
                         std::string        path,
                         VkFormat           format,
-                        Texture&           texture);
+                        Texture&           texture,
+                        bool               mipmaps);
 
-void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler);
+void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler, uint32_t mipLevels);
 
 void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
@@ -154,6 +155,14 @@ VkFormat findDepthFormat(const VulkanBaseContext &context);
 
 VkFormat findSupportedFormat(const VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features);
+
+void generateMipmaps(const VulkanBaseContext& context,
+                     const CommandContext&    commandContext,
+                     VkImage                  image,
+                     VkFormat                 imageFormat,
+                     int32_t                  texWidth,
+                     int32_t                  texHeight,
+                     uint32_t                 mipLevels);
 
 void transitionImageLayout(const VulkanBaseContext& context,
                            const CommandContext&    commandContext,
