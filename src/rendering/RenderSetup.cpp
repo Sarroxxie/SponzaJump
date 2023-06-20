@@ -8,10 +8,19 @@
 
 RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
                                                           RenderContext& renderContext) {
-    auto& settings     = renderContext.renderSettings;
-    settings.fov       = glm::radians(45.0f);
-    settings.nearPlane = 1;
-    settings.farPlane  = 50;
+    auto& settings                         = renderContext.renderSettings;
+    settings.perspectiveSettings.fov       = glm::radians(45.0f);
+    settings.perspectiveSettings.nearPlane = 1;
+    settings.perspectiveSettings.farPlane  = 100;
+
+    ShadowMappingSettings shadowMappingSettings;
+    shadowMappingSettings.lightCamera =
+        Camera(glm::vec3(10, 10, 0), glm::normalize(glm::vec3(-1, -1, 0)));
+    shadowMappingSettings.projection.widthHeightDim  = 50;
+    shadowMappingSettings.projection.zNear  = 1;
+    shadowMappingSettings.projection.zFar   = 20;
+
+    settings.shadowMappingSettings = shadowMappingSettings;
 
     RenderSetupDescription renderSetupDescription;
     renderSetupDescription.enableImgui = true;
@@ -80,8 +89,7 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
     // --- Shadow Pass
 
-    initializeShadowPass(appContext, renderContext.renderPasses.shadowPass,
-                         renderSetupDescription.shadowPassDescription);
+    initializeShadowPass(appContext, renderContext, renderSetupDescription.shadowPassDescription);
 
     createShadowPassResources(appContext, renderContext);
     createShadowPassDescriptorSets(appContext, renderContext);
@@ -302,8 +310,10 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
 }
 
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
-                          ShadowPass&                     shadowPass,
+                          RenderContext&                  renderContext,
                           const RenderPassDescription& renderPassDescription) {
+
+    ShadowPass& shadowPass = renderContext.renderPasses.shadowPass;
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
@@ -386,7 +396,7 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
     const uint32_t SHADOW_MAP_WIDTH  = 1920;
-    const uint32_t SHADOW_MAP_HEIGHT = 1080;
+    const uint32_t SHADOW_MAP_HEIGHT = 1920;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;

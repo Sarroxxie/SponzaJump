@@ -63,8 +63,6 @@ typedef struct
     VkDescriptorSetLayout transformDescriptorSetLayout;
     VkDescriptorSet       transformDescriptorSet;
 
-    Camera lightCamera;
-
     uint32_t shadowMapWidth;
     uint32_t shadowMapHeight;
 
@@ -85,7 +83,7 @@ typedef struct
     VkDescriptorSet       depthDescriptorSet;
 
     VkPipelineLayout visualizePipelineLayout;
-    VkPipeline visualizePipeline;
+    VkPipeline       visualizePipeline;
 
     BufferResources materialBuffer;
 
@@ -115,17 +113,48 @@ typedef struct
 
 typedef struct
 {
+    float widthHeightDim;
+    /*
+    float width;
+    float height;
+     */
+    float zNear;
+    float zFar;
+} OrthoSettings;
+
+typedef struct
+{
     float fov;
     float nearPlane;
     float farPlane;
+} PerspectiveSettings;
+
+typedef struct
+{
+    Camera        lightCamera;
+    OrthoSettings projection;
+} ShadowMappingSettings;
+
+typedef struct
+{
+    ShadowMappingSettings shadowMappingSettings;
+
+    PerspectiveSettings perspectiveSettings;
 } RenderSettings;
 
-static inline glm::mat4 getPerspectiveMatrix(RenderSettings renderSettings,
-                                             size_t         width,
-                                             size_t         height) {
-    return glm::perspective<float>(renderSettings.fov,
+static inline glm::mat4 getPerspectiveMatrix(PerspectiveSettings perspectiveSettings,
+                                             size_t width,
+                                             size_t height) {
+    return glm::perspective<float>(perspectiveSettings.fov,
                                    static_cast<float>(width) / static_cast<float>(height),
-                                   renderSettings.nearPlane, renderSettings.farPlane);
+                                   perspectiveSettings.nearPlane,
+                                   perspectiveSettings.farPlane);
+}
+
+static inline glm::mat4 getOrthogonalProjectionMatrix(OrthoSettings orthoSettings) {
+    return glm::ortho(-orthoSettings.widthHeightDim / 2, orthoSettings.widthHeightDim / 2,
+                      -orthoSettings.widthHeightDim / 2, orthoSettings.widthHeightDim / 2,
+                      orthoSettings.zNear, orthoSettings.zFar);
 }
 
 typedef struct s_renderContext

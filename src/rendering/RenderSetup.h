@@ -20,7 +20,7 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
 // ----- Shadow Pass
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
-                          ShadowPass&                     shadowPass,
+                          RenderContext &renderContext,
                           const RenderPassDescription& renderPassDescription);
 
 void initializeShadowDepthBuffer(const ApplicationVulkanContext& appContext,

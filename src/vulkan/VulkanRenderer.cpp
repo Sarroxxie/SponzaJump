@@ -121,10 +121,8 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    // TODO update shadow transform buffer
     recordShadowPass(scene, imageIndex);
 
-    // TODO VkImageMemoryBarrier ?
     VkMemoryBarrier memoryBarrier;
     memoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
     memoryBarrier.pNext         = VK_NULL_HANDLE;
@@ -137,38 +135,6 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
                          &memoryBarrier, 0, VK_NULL_HANDLE, 0, VK_NULL_HANDLE);
 
     recordMainRenderPass(scene, imageIndex);
-
-    /*
-    VkImageMemoryBarrier barrier{};
-    barrier.sType     = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    barrier.image                           =
-    m_RenderContext.renderPasses.shadowPass.depthImage.image; barrier.subresourceRange.aspectMask
-    = VK_IMAGE_ASPECT_DEPTH_BIT; barrier.subresourceRange.baseMipLevel   = 0;
-    barrier.subresourceRange.levelCount     = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount     = 1;
-
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-
-    // barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    sourceStage      = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-
-
-    vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer, sourceStage,
-    destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-     */
 
     if(vkEndCommandBuffer(m_Context.commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
@@ -183,7 +149,6 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     renderPassInfo.renderPass  = shadowPass.renderPassContext.renderPass;
     renderPassInfo.framebuffer = shadowPass.depthFrameBuffer;
 
-    // TODO store this in shadow pass struct ?
     VkExtent2D shadowExtent;
     shadowExtent.width  = shadowPass.shadowMapWidth;
     shadowExtent.height = shadowPass.shadowMapHeight;
@@ -224,18 +189,14 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
     SceneTransform sceneTransform;
 
-    sceneTransform.perspectiveTransform =
-        getPerspectiveMatrix(m_RenderContext.renderSettings,
-                             shadowPass.shadowMapWidth, shadowPass.shadowMapHeight);
+    sceneTransform.perspectiveTransform = getOrthogonalProjectionMatrix(
+        m_RenderContext.renderSettings.shadowMappingSettings.projection);
 
     // one tutorial says openGL has different convention for Y coordinates in
     // clip space than vulkan, need to flip it
     sceneTransform.perspectiveTransform[1][1] *= -1;
 
-    sceneTransform.cameraTransform = shadowPass.lightCamera.getCameraMatrix();
-    sceneTransform.cameraTransform = scene.getCameraRef().getCameraMatrix();
-
-    // PushConstants would be more efficient for often changing small data buffers
+    sceneTransform.cameraTransform = m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getCameraMatrix();
 
     memcpy(m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping,
            &sceneTransform, sizeof(SceneTransform));
@@ -248,11 +209,19 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
             .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
         0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet, 0, nullptr);
 
-    for(EntityId id : SceneView<Model, Transformation>(scene)) {
-        auto* modelComponent     = scene.getComponent<Model>(id);
+    PushConstant pushConstant;
+    pushConstant.transformation = glm::mat4(1);
+    pushConstant.materialIndex  = 0;
+
+    for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
+        auto* modelComponent     = scene.getComponent<ModelComponent>(id);
         auto* transformComponent = scene.getComponent<Transformation>(id);
 
-        for(auto& meshPartIndex : modelComponent->meshPartIndices) {
+        Model& model = scene.getSceneData().models[modelComponent->modelIndex];
+
+        pushConstant.transformation = transformComponent->getMatrix();
+
+        for(auto& meshPartIndex : model.meshPartIndices) {
             MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
             Mesh     mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
             VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
@@ -448,7 +417,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     SceneTransform sceneTransform;
 
     sceneTransform.perspectiveTransform =
-        getPerspectiveMatrix(m_RenderContext.renderSettings,
+        getPerspectiveMatrix(m_RenderContext.renderSettings.perspectiveSettings,
                              m_Context.swapchainContext.swapChainExtent.width,
                              m_Context.swapchainContext.swapChainExtent.height);
 

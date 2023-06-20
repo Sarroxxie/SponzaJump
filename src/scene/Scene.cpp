@@ -50,10 +50,10 @@ b2World& Scene::getWorld() {
 void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::Begin("Scene");
 
-    ImGui::SliderFloat3("Camera Pos",
-                        glm::value_ptr(m_Camera.getWorldPosRef()), 0, 100);
-    ImGui::SliderFloat3("Camera Dir",
-                        glm::value_ptr(m_Camera.getViewDirRef()), -glm::pi<float>(), glm::pi<float>());
+    ImGui::SliderFloat3("Camera Pos", glm::value_ptr(m_Camera.getWorldPosRef()), 0, 100);
+
+    ImGui::SliderFloat3("Camera Dir", glm::value_ptr(m_Camera.getViewDirRef()),
+                        -glm::pi<float>(), glm::pi<float>());
 
     ImGui::Checkbox("Lock Camera to Player", &renderContext.imguiData.lockCamera);
 
@@ -62,14 +62,32 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
     ImGui::SliderFloat3(
         "Light Camera Pos",
-        glm::value_ptr(renderContext.renderPasses.shadowPass.lightCamera.getWorldPosRef()),
-        -5, 5);
+        glm::value_ptr(
+            renderContext.renderSettings.shadowMappingSettings.lightCamera.getWorldPosRef()),
+        -100, 100);
+
     ImGui::SliderFloat3(
         "Light Camera Dir",
-        glm::value_ptr(renderContext.renderPasses.shadowPass.lightCamera.getViewDirRef()),
-        -1, 1);
+        glm::value_ptr(
+            renderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDirRef()),
+        -glm::pi<float>(), glm::pi<float>());
 
     ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
+
+    ImGui::Spacing();
+
+    ImGui::SliderFloat(
+        "Ortho Dim",
+        &renderContext.renderSettings.shadowMappingSettings.projection.widthHeightDim,
+        0, 200);
+    ImGui::SliderFloat(
+        "Ortho zNear",
+        &renderContext.renderSettings.shadowMappingSettings.projection.zNear, 0,
+        renderContext.renderSettings.shadowMappingSettings.projection.zFar);
+    ImGui::SliderFloat(
+        "Ortho zFar",
+        &renderContext.renderSettings.shadowMappingSettings.projection.zFar,
+        renderContext.renderSettings.shadowMappingSettings.projection.zNear, 400);
 
     ImGui::End();
 }
@@ -151,8 +169,8 @@ void Scene::handleUserInput() {
         newVel.x = movingRight ? speed : movingLeft ? -speed : 0;
 
         newVel.y = linVel.y;
-        if (jumps) {
-            newVel.y = 20;
+        if(jumps) {
+            newVel.y                  = 20;
             playerComponent->grounded = false;
         }
 
@@ -171,7 +189,8 @@ void Scene::doCameraUpdate(const RenderContext& renderContext) {
             auto prevPos = m_Camera.getWorldPos();
 
             m_Camera.setPosition(glm::vec3(transformation->translation.x,
-                                           transformation->translation.y, prevPos.z));
+                                           transformation->translation.y,
+                                           prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
                                          transformation->translation.y, 0));
         }
