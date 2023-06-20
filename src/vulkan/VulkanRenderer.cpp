@@ -326,8 +326,8 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0, 1,
-            &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
+            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0,
+            1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
@@ -470,11 +470,17 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
                                    m_RenderContext.renderPasses.mainPass.renderPassContext);
     buildSecondaryGraphicsPipeline(m_Context,
                                    m_RenderContext.renderPasses.shadowPass.renderPassContext);
+
+
+    vkDeviceWaitIdle(m_Context.baseContext.device);
+    cleanVisualizationPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    createVisualizationPipeline(m_Context, m_RenderContext, m_RenderContext.renderPasses.mainPass);
+
 }
 
 void VulkanRenderer::swapToSecondaryPipeline() {
     swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.mainPass.renderPassContext);
-    swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
+    //swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;

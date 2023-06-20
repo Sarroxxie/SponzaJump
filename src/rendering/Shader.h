@@ -24,7 +24,7 @@ typedef struct shader_s
     }
 } Shader;
 
-VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader &shader);
+VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader &shader, bool alwaysRecompile = false);
 
 void compileShader(const Shader &shader, uint32_t minorVersionTarget);
 

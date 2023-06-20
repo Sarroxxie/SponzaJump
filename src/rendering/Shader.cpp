@@ -11,12 +11,12 @@ VkShaderStageFlags getStageFlag(ShaderStage stage) {
     return 0;
 }
 
-VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader &shader) {
+VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader &shader, bool alwaysRecompile) {
     std::vector<char> shaderCode;
 
     std::string fullCompiledName = shader.spvDirectory + shader.getCompiledName();
 
-    if (!std::filesystem::exists(fullCompiledName)) {
+    if (!std::filesystem::exists(fullCompiledName) || alwaysRecompile) {
         compileShader(shader, context.maxSupportedMinorVersion);
     }
 

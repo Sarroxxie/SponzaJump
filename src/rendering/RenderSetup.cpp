@@ -11,7 +11,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     auto& settings     = renderContext.renderSettings;
     settings.fov       = glm::radians(45.0f);
     settings.nearPlane = 1;
-    settings.farPlane  = 100;
+    settings.farPlane  = 50;
 
     RenderSetupDescription renderSetupDescription;
     renderSetupDescription.enableImgui = true;
@@ -914,8 +914,8 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
 void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass) {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.magFilter = VK_FILTER_NEAREST;
+    samplerInfo.minFilter = VK_FILTER_NEAREST;
 
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -927,10 +927,10 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp     = VK_COMPARE_OP_ALWAYS;
 
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod     = 0.0f;
     samplerInfo.maxLod     = 0.0f;
@@ -1206,9 +1206,9 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
     fragmentShader.spvDirectory     = "res/shaders/spv/";
 
     VkShaderModule vertShaderModule =
-        createShaderModule(appContext.baseContext, vertexShader);
+        createShaderModule(appContext.baseContext, vertexShader, true);
     VkShaderModule fragShaderModule =
-        createShaderModule(appContext.baseContext, fragmentShader);
+        createShaderModule(appContext.baseContext, fragmentShader, true);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1308,54 +1308,10 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    std::vector<VkDescriptorSetLayoutBinding> visDepthBindings;
-    visDepthBindings.push_back(
-        createLayoutBinding(DepthBindings::eShadowDepthBuffer, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
-
-    createDescriptorSetLayout(appContext.baseContext,
-                              mainPass.visDepthDescriptorSetLayout, visDepthBindings);
-
-    VkDescriptorSetAllocateInfo transformAllocInfo{};
-    transformAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    transformAllocInfo.descriptorPool     = renderContext.descriptorPool;
-    transformAllocInfo.descriptorSetCount = 1;
-    transformAllocInfo.pSetLayouts = &mainPass.visDepthDescriptorSetLayout;
-
-    if(vkAllocateDescriptorSets(appContext.baseContext.device, &transformAllocInfo,
-                                &mainPass.visDepthDescriptorSet)
-       != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
-    std::vector<VkWriteDescriptorSet> descriptorWrites;
-
-    VkDescriptorImageInfo imageInfo;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = renderContext.renderPasses.shadowPass.depthImage.imageView;
-    imageInfo.sampler = renderContext.renderPasses.mainPass.depthSampler;
-
-    VkWriteDescriptorSet depthDescriptorWrite;
-    depthDescriptorWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    depthDescriptorWrite.pNext      = nullptr;
-    depthDescriptorWrite.dstSet     = mainPass.visDepthDescriptorSet;
-    depthDescriptorWrite.dstBinding = DepthBindings::eShadowDepthBuffer;
-    depthDescriptorWrite.dstArrayElement = 0;
-    depthDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    depthDescriptorWrite.descriptorCount = 1;
-    depthDescriptorWrite.pImageInfo      = &imageInfo;
-
-    descriptorWrites.push_back(depthDescriptorWrite);
-
-    vkUpdateDescriptorSets(appContext.baseContext.device,
-                           static_cast<uint32_t>(descriptorWrites.size()),
-                           descriptorWrites.data(), 0, nullptr);
-
-
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts    = &mainPass.visDepthDescriptorSetLayout;
+    pipelineLayoutInfo.pSetLayouts    = &mainPass.depthDescriptorSetLayout;
 
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges    = VK_NULL_HANDLE;
@@ -1401,7 +1357,4 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
 void cleanVisualizationPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
     vkDestroyPipeline(baseContext.device, mainPass.visualizePipeline, nullptr);
     vkDestroyPipelineLayout(baseContext.device, mainPass.visualizePipelineLayout, nullptr);
-
-    vkDestroyDescriptorSetLayout(baseContext.device,
-                                 mainPass.visDepthDescriptorSetLayout, nullptr);
 }
