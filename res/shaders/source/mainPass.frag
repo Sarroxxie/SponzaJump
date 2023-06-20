@@ -22,13 +22,18 @@ layout(set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
-
 // TODO: these light sources only serve as debug and will be replaced when deferred rendering is implemented
+const vec3 CAMERA_POS = vec3(0.0, 9.0, 10.0);
 const int LIGHT_COUNT = 2;
 const vec3 LIGHT_POS[LIGHT_COUNT] = {vec3(2.5, 3.5, 1.5), 
-                                    vec3(4.0, 4.0, -2.0)};
-const vec3 LIGHT_COL[LIGHT_COUNT] = {vec3(0.5, 0.7, 0.6),
-                                    vec3(0.5, 0.5, 0.7)};
+                                    vec3(3.2, 3.0, -1.0)};
+const vec3 LIGHT_COL[LIGHT_COUNT] = {vec3(0.9, 10.6, 2.9),
+                                    vec3(0.0, 4.5, 12.7)};
+
+const vec3 DIRECTIONAL_LIGHT_DIR = vec3(-0.2, 1.0, 0.3);
+// color of sunlight according to https://www.color-name.com/sunlight.color
+const vec3 DIRECTIONAL_LIGHT_COL = vec3(0.95686, 0.91373, 0.60784);
+
 const float PI = 3.14159265359;
 
 // shader heavily based on https://learnopengl.com/PBR/Lighting
@@ -71,6 +76,41 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
+// ----------------------------------------------------------------------------
+vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 radiance, vec3 albedo, float metallic, float roughness) {
+    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
+    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
+    vec3 F0 = vec3(0.04); 
+    F0 = mix(F0, albedo, metallic);
+    vec3 H = normalize(V + L);
+    
+    // Cook-Torrance BRDF
+    float NDF = DistributionGGX(N, H, roughness);
+    float G   = GeometrySmith(N, V, L, roughness);
+    vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    
+    vec3 numerator    = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
+    vec3 specular = numerator / denominator;
+    
+    // kS is equal to Fresnel
+    vec3 kS = F;
+    // for energy conservation, the diffuse and specular light can't
+    // be above 1.0 (unless the surface emits light); to preserve this
+    // relationship the diffuse component (kD) should equal 1.0 - kS.
+    vec3 kD = vec3(1.0) - kS;
+    // multiply kD by the inverse metalness such that only non-metals 
+    // have diffuse lighting, or a linear blend if partly metal (pure metals
+    // have no diffuse light).
+    kD *= 1.0 - metallic;
+    
+    // scale light by NdotL
+    float NdotL = max(dot(N, L), 0.0);
+    
+    // outgoing radiance
+    // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+    return (kD * albedo / PI + specular) * radiance * NdotL;
+}
 
 void main() {
     // fetch material
@@ -96,68 +136,42 @@ void main() {
 
     vec3 Lo = vec3(0.0);
 
-    vec3 V = normalize(vec3(0.0, 9.0, 10.0) - inPosition);
+    vec3 V = normalize(CAMERA_POS - inPosition);
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
 
-    // iterate over light sources
-    for (int i = 0; i < LIGHT_COUNT; i++) {
-        vec3 lightPosition = LIGHT_POS[i];
-        vec3 lightColor = LIGHT_COL[i];
+    // directional light source
+    {
+        vec3 L = normalize(DIRECTIONAL_LIGHT_DIR);
+        Lo += BRDF(L, V, normal, DIRECTIONAL_LIGHT_COL, albedo, metallic, roughness);
+    }
 
+    // iterate over omnidirectional light sources
+    for (int i = 0; i < LIGHT_COUNT; i++) {
         vec3 L = normalize(LIGHT_POS[i] - inPosition);
-        vec3 H = normalize(V + L);
+        
         float distance = length(LIGHT_POS[i] - inPosition);
         float attenuation = 1.0 / (distance * distance);
         vec3 radiance = LIGHT_COL[i] * attenuation;
 
-        // Cook-Torrance BRDF
-        float NDF = DistributionGGX(normal, H, roughness);   
-        float G   = GeometrySmith(normal, V, L, roughness);      
-        vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
-           
-        vec3 numerator    = NDF * G * F; 
-        float denominator = 4.0 * max(dot(normal, V), 0.0) * max(dot(normal, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-        vec3 specular = numerator / denominator;
-
-        // kS is equal to Fresnel
-        vec3 kS = F;
-        // for energy conservation, the diffuse and specular light can't
-        // be above 1.0 (unless the surface emits light); to preserve this
-        // relationship the diffuse component (kD) should equal 1.0 - kS.
-        vec3 kD = vec3(1.0) - kS;
-        // multiply kD by the inverse metalness such that only non-metals 
-        // have diffuse lighting, or a linear blend if partly metal (pure metals
-        // have no diffuse light).
-        kD *= 1.0 - metallic;	  
-
-        // scale light by NdotL
-        float NdotL = max(dot(N, L), 0.0);        
-
-        // add to outgoing radiance Lo
-        // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+        Lo += BRDF(L, V, normal, radiance, albedo, metallic, roughness);
     }
 
-    // ambient lighting (note that the next IBL tutorial will replace 
-    // this ambient lighting with environment lighting).
+    // ambient lighting
     vec3 ambient = vec3(0.0002) * albedo * ao;
     
     vec3 color = ambient + Lo;
-
+    
     // HDR tonemapping
     color = color / (color + vec3(1.0));
     // gamma correct
     color = pow(color, vec3(1.0/2.2)); 
-
+    
     outColor = vec4(color, 1);
 
-    // TODO: reenable this
-    // (re)apply gamma correction
-    //vec3 color = pow(albedo, vec3(0.4545));
 
     // various debug outputs for the color
     //outColor = vec4(color, 1);
