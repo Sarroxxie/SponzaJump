@@ -201,6 +201,8 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     memcpy(m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping,
            &sceneTransform, sizeof(SceneTransform));
 
+    memcpy(m_RenderContext.renderPasses.mainPass.lightTransformBuffer.bufferMemoryMapping,
+           &sceneTransform, sizeof(SceneTransform));
 
     // bind DescriptorSet 0 (Camera Transformations)
     vkCmdBindDescriptorSets(

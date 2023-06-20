@@ -9,6 +9,8 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec4 inTangents;
 layout(location = 4) in vec2 inTexCoords;
 
+layout(location = 5) in vec4 inShadowCoords;
+
 layout(location = 0) out vec4 outColor;
 
 in vec4 gl_FragCoord ;
@@ -22,11 +24,31 @@ layout(set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
+// this function is inspired by Sasha Willems shadow mapping example in https://github.com/SaschaWillems/Vulkan
+float getShadow(vec4 shadowCoords) {
+    float shadow = 1.0;
+
+    if ( shadowCoords.z > -1.0 && shadowCoords.z < 1.0 ) {
+        float dist = texture( depthSampler, shadowCoords.st ).r;
+		if ( shadowCoords.w > 0.0 && dist < shadowCoords.z )
+		{
+			shadow = 0.1;
+		}
+    }
+
+    return shadow;
+}
+
 void main() {
+    vec4 shadowCoordsHom = inShadowCoords / inShadowCoords.w;
+    vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xy + vec2(1)) / 2, shadowCoordsHom.ba);
+
+    float shadow = getShadow(normalizedShadowCoords);
+
     // fetch material
     MaterialDescription material = materials.m[pushConstant.materialIndex];
 
-    // apply normal mapping
+    // apply normal mappingd
     vec3 N = normalize(inNormal);
 	vec3 T = normalize(inTangents.xyz);
     vec3 B = cross(N, T) * inTangents.w;
@@ -36,10 +58,6 @@ void main() {
 
     vec4 albedo = texture(samplers[material.albedoTextureID], inTexCoords);
     // various debug outputs for the color
-    outColor = albedo;
+    outColor = vec4(albedo.xyz * shadow, albedo.a);
     //outColor = vec4(normal, 1) * 0.5 + 0.5;
-
-    vec2 normFragCoord = vec2(gl_FragCoord.x / 1920, gl_FragCoord.y / 1080);
-    float val = texture(depthSampler, normFragCoord).x / 10;
-    //outColor = vec4(val, val, val, 1);
 }

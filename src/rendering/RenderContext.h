@@ -75,6 +75,7 @@ typedef struct
     VkDescriptorSet       transformDescriptorSet;
 
     BufferResources transformBuffer;
+    BufferResources lightTransformBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;

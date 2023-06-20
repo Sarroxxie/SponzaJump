@@ -13,6 +13,6 @@ void main() {
     float val = texture(depthSampler, fragTexCoords).x;
     vec4 texVal = texture(depthSampler, fragTexCoords);
     val = 1 - val;
+    val = pow(val, 2);
     outColor = vec4(val, val, val, 1);
-    // outColor = vec4(fragTexCoords, 0, 1);
 }

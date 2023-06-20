@@ -11,14 +11,14 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     auto& settings                         = renderContext.renderSettings;
     settings.perspectiveSettings.fov       = glm::radians(45.0f);
     settings.perspectiveSettings.nearPlane = 1;
-    settings.perspectiveSettings.farPlane  = 100;
+    settings.perspectiveSettings.farPlane  = 500;
 
     ShadowMappingSettings shadowMappingSettings;
     shadowMappingSettings.lightCamera =
-        Camera(glm::vec3(10, 10, 0), glm::normalize(glm::vec3(-1, -1, 0)));
-    shadowMappingSettings.projection.widthHeightDim  = 50;
-    shadowMappingSettings.projection.zNear  = 1;
-    shadowMappingSettings.projection.zFar   = 20;
+        Camera(glm::vec3(50, 50, 20), glm::normalize(glm::vec3(-50, -50, -20)));
+    shadowMappingSettings.projection.widthHeightDim = 50;
+    shadowMappingSettings.projection.zNear          = 1;
+    shadowMappingSettings.projection.zFar           = 100;
 
     settings.shadowMappingSettings = shadowMappingSettings;
 
@@ -116,13 +116,6 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                                        std::vector<Texture>());
 
     createMainRenderPass(appContext, renderContext);
-
-    auto& mainPassSetLayouts =
-        renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts;
-
-    mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.transformDescriptorSetLayout);
-    mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.materialDescriptorSetLayout);
-    mainPassSetLayouts.push_back(renderContext.renderPasses.mainPass.depthDescriptorSetLayout);
 
     /*
     createGraphicsPipeline(
@@ -805,39 +798,55 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
 
     std::vector<VkDescriptorPoolSize> poolSizes;
 
+    uint32_t maxSets = 0;
+
+    uint32_t shadowTransformCount = 1;
+    maxSets += shadowTransformCount;
+
     VkDescriptorPoolSize shadowTransformPoolSize;
     shadowTransformPoolSize.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    shadowTransformPoolSize.descriptorCount = 1;
+    shadowTransformPoolSize.descriptorCount = shadowTransformCount;
     poolSizes.push_back(shadowTransformPoolSize);
 
+    uint32_t mainTransformCount = 2;
+    maxSets += mainTransformCount;
 
     VkDescriptorPoolSize mainTransformPoolSize;
     mainTransformPoolSize.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    mainTransformPoolSize.descriptorCount = 1;
+    mainTransformPoolSize.descriptorCount = mainTransformCount;
     poolSizes.push_back(mainTransformPoolSize);
+
+    uint32_t mainMaterialCount = 1;
+    maxSets += mainMaterialCount;
 
     VkDescriptorPoolSize mainMaterialPoolSize;
     mainMaterialPoolSize.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    mainMaterialPoolSize.descriptorCount = 1;
+    mainMaterialPoolSize.descriptorCount = mainMaterialCount;
     poolSizes.push_back(mainMaterialPoolSize);
+
+    uint32_t mainTextureCount = 100;  // hardcoded max texture limit because I
+                                      // don't want to also recreate this after
+                                      // texture creation
+    maxSets += mainTextureCount;
 
     VkDescriptorPoolSize mainTexturePoolSize;
     mainTexturePoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    mainTexturePoolSize.descriptorCount =
-        100;  // hardcoded max texture limit because I don't want to also
-              // recreate this after texture creation
+    mainTexturePoolSize.descriptorCount = mainTextureCount;
     poolSizes.push_back(mainTexturePoolSize);
+
+    uint32_t mainDepthCount = 1;
+    maxSets += mainDepthCount;
 
     VkDescriptorPoolSize mainDepthPoolSize;
     mainDepthPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    mainDepthPoolSize.descriptorCount = 2;
+    mainDepthPoolSize.descriptorCount = mainDepthCount;
     poolSizes.push_back(mainDepthPoolSize);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes    = poolSizes.data();
-    poolInfo.maxSets       = 5;
+    poolInfo.maxSets       = maxSets;
 
     if(vkCreateDescriptorPool(baseContext.device, &poolInfo, nullptr,
                               &renderContext.descriptorPool)
@@ -918,6 +927,9 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
     createBufferResources(appContext, sizeof(SceneTransform),
                           renderContext.renderPasses.mainPass.transformBuffer);
 
+    createBufferResources(appContext, sizeof(SceneTransform),
+                          renderContext.renderPasses.mainPass.lightTransformBuffer);
+
     createMaterialsBuffer(appContext, renderContext, materials);
 }
 
@@ -934,11 +946,12 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
     samplerInfo.anisotropyEnable = VK_FALSE;
 
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
     samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp     = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.compareOp     = VK_COMPARE_OP_NEVER;
 
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     samplerInfo.mipLodBias = 0.0f;
@@ -964,6 +977,9 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::VERTEX_SHADER)));
 
+    transformBindings.push_back(
+        createLayoutBinding(SceneBindings::eLight, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                            getStageFlag(ShaderStage::VERTEX_SHADER)));
 
     materialBindings.push_back(createLayoutBinding(
         MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -1027,6 +1043,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     std::vector<VkWriteDescriptorSet> descriptorWrites;
 
+
     VkDescriptorBufferInfo transformBufferInfo{};
     transformBufferInfo.buffer = mainPass.transformBuffer.buffer;
     transformBufferInfo.offset = 0;
@@ -1043,6 +1060,24 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     transformDescriptorWrite.pBufferInfo     = &transformBufferInfo;
 
     descriptorWrites.emplace_back(transformDescriptorWrite);
+
+
+    VkDescriptorBufferInfo lightTransformBufferInfo{};
+    lightTransformBufferInfo.buffer = mainPass.lightTransformBuffer.buffer;
+    lightTransformBufferInfo.offset = 0;
+    lightTransformBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet lightTransformDescriptorWrite;
+    lightTransformDescriptorWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    lightTransformDescriptorWrite.pNext  = nullptr;
+    lightTransformDescriptorWrite.dstSet = mainPass.transformDescriptorSet;
+    lightTransformDescriptorWrite.dstBinding      = SceneBindings::eLight;
+    lightTransformDescriptorWrite.dstArrayElement = 0;
+    lightTransformDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    lightTransformDescriptorWrite.descriptorCount = 1;
+    lightTransformDescriptorWrite.pBufferInfo     = &lightTransformBufferInfo;
+
+    descriptorWrites.emplace_back(lightTransformDescriptorWrite);
 
 
     VkDescriptorSetAllocateInfo materialAllocInfo{};
@@ -1140,6 +1175,10 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyBuffer(baseContext.device, mainPass.transformBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.transformBuffer.bufferMemory, nullptr);
+
+    vkDestroyBuffer(baseContext.device, mainPass.lightTransformBuffer.buffer, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.lightTransformBuffer.bufferMemory, nullptr);
+
 
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);

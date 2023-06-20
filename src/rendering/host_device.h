@@ -25,7 +25,8 @@
 // access for descriptor sets
 // note that the names have to be unique, because they are unique in the shader
 START_BINDING(SceneBindings)
-    eCamera    = 0  // Global uniform containing camera matrices
+    eCamera    = 0,  // Global uniform containing camera matrices
+    eLight    = 1  // Global uniform containing camera matrices
 END_BINDING();
 
 START_BINDING(MaterialsBindings)
