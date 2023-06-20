@@ -117,15 +117,28 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &avai
 
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window *window);
 
-void createImage(const VulkanBaseContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
-                 VkFormat format, VkImageTiling tiling,
-                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
-                 VkDeviceMemory &imageMemory);
+void createImage(const VulkanBaseContext& context,
+                 uint32_t                 width,
+                 uint32_t                 height,
+                 uint32_t                 mipLevels,
+                 uint32_t                 arrayLayers,
+                 VkSampleCountFlagBits    numSamples,
+                 VkFormat                 format,
+                 VkImageTiling            tiling,
+                 VkImageUsageFlags        usage,
+                 VkMemoryPropertyFlags    properties,
+                 VkImage&                 image,
+                 VkDeviceMemory&          imageMemory);
 
 VkImageView createImageView(const VulkanBaseContext &context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
+
+void createCubeMap(VulkanBaseContext context,
+                   CommandContext    commandContext,
+                   CubeMap&          cubemap,
+                   bool              mipmaps);
 
 void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
@@ -143,7 +156,9 @@ void copyBufferToImage(const VulkanBaseContext& context,
                        VkBuffer                 buffer,
                        VkImage                  image,
                        uint32_t                 width,
-                       uint32_t                 height);
+                       uint32_t                 height,
+                       uint32_t                 offset,
+                       uint32_t                 baseArrayLayer);
 
 VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext  &context, const CommandContext &commandContext);
 
@@ -178,6 +193,7 @@ void transitionImageLayout(const VulkanBaseContext& context,
                            const CommandContext&    commandContext,
                            VkImage                  image,
                            VkFormat                 format,
+                           uint32_t                 baseArrayLayer,
                            VkImageLayout            oldLayout,
                            VkImageLayout            newLayout);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

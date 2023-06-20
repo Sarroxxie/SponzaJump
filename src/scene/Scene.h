@@ -33,6 +33,8 @@ private:
     std::vector<Model>         models;
     std::vector<ModelInstance> instances;
 
+    CubeMap cubemap;
+
     Camera m_Camera;
 
     b2World m_World;
@@ -90,6 +92,8 @@ public:
     std::vector<Material> &getMaterials();
     std::vector<Model> &getModels();
     std::vector<ModelInstance> &getInstances();
+
+    CubeMap &getCubeMap();
 
     Camera &getCameraRef();
     void doCameraUpdate();

@@ -20,6 +20,7 @@ void Scene::cleanup() {
     for (auto &texture: textures) {
         texture.cleanup(m_baseContext);
     }
+    cubemap.cleanup(m_baseContext);
 }
 
 /*
@@ -68,6 +69,10 @@ std::vector<Model> &Scene::getModels() {
 
 std::vector<ModelInstance> &Scene::getInstances() {
     return instances;
+}
+
+CubeMap& Scene::getCubeMap() {
+    return cubemap;
 }
 
 Camera &Scene::getCameraRef() {

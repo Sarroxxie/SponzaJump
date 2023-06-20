@@ -225,6 +225,7 @@ void createImage(const VulkanBaseContext& context,
                  uint32_t                 width,
                  uint32_t                 height,
                  uint32_t                 mipLevels,
+                 uint32_t                 arrayLayers,
                  VkSampleCountFlagBits    numSamples,
                  VkFormat                 format,
                  VkImageTiling            tiling,
@@ -239,7 +240,7 @@ void createImage(const VulkanBaseContext& context,
     imageInfo.extent.height = height;
     imageInfo.extent.depth  = 1;
     imageInfo.mipLevels     = mipLevels;
-    imageInfo.arrayLayers   = 1;
+    imageInfo.arrayLayers   = arrayLayers;
     imageInfo.format        = format;
     imageInfo.tiling        = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -325,6 +326,104 @@ void createBuffer(const VulkanBaseContext& context,
     vkBindBufferMemory(context.device, buffer, bufferMemory, 0);
 }
 
+void createCubeMap(VulkanBaseContext context,
+                   CommandContext    commandContext,
+                   CubeMap&          cubemap,
+                   bool              mipmaps) {
+    int      texWidth, texHeight, texChannels;
+    stbi_uc* pixels[6];
+
+    // load all faces of the cube map to CPU
+    for(int i = 0; i < 6; i++) {
+        pixels[i] = stbi_load(cubemap.paths[i].c_str(), &texWidth, &texHeight,
+                              &texChannels, STBI_rgb_alpha);
+        if(!pixels[i]) {
+            std::cerr << "failed to load cubemap image: \"" + cubemap.paths[i] + "\"\n";
+            throw std::runtime_error("failed to load cubemap image: \""
+                                     + cubemap.paths[i] + "\"");
+        }
+    }
+
+    uint32_t mipLevels = 1;
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    if(mipmaps) {
+        mipLevels =
+            static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+        // prepare mip level 0 for the creation of the next mip level
+        usageFlags = usageFlags | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    // every image will be stored with 4 channels and the cube has 6 sides in total
+    VkDeviceSize layerSize = texWidth * texHeight * 4;
+    VkDeviceSize imageSize = layerSize * 6;
+
+    // load image into staging buffer on GPU
+    VkBuffer       stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(context.device, stagingBufferMemory, 0, imageSize, 0, &data);
+    for(int i = 0; i < 6; i++) {
+        // TODO: check this arithmetic!
+        // for arithmetic operations to be done on the pointer, it cannot have type "void*"
+        memcpy(static_cast<char*>(data) + (layerSize * i), pixels[i],
+               static_cast<size_t>(layerSize));
+    }
+    vkUnmapMemory(context.device, stagingBufferMemory);
+
+    // free images from CPU
+    for(int i = 0; i < 6; i++) {
+        stbi_image_free(pixels[i]);
+    }
+
+    // allocate memory and create image
+    createImage(context, texWidth, texHeight, mipLevels, 6, VK_SAMPLE_COUNT_1_BIT,
+                VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, usageFlags,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, cubemap.image, cubemap.imageMemory);
+
+    for(int i = 0; i < 6; i++) {
+        // copy staging buffer to image
+        transitionImageLayout(context, commandContext, cubemap.image,
+                              VK_FORMAT_R8G8B8A8_SRGB, i, VK_IMAGE_LAYOUT_UNDEFINED,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+        copyBufferToImage(context, commandContext, stagingBuffer, cubemap.image,
+                          static_cast<uint32_t>(texWidth),
+                          static_cast<uint32_t>(texHeight), (layerSize * i), i);
+    }
+    // TODO: mip maps will have to get generated for each array layer -> does not yet work like that
+    if(mipmaps) {
+        // after mipmap generation, all the levels are already in "SHADER_READ" format
+        generateMipmaps(context, commandContext, cubemap.image,
+                        VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+    } else {
+        transitionImageLayout(context, commandContext, cubemap.image,
+                              VK_FORMAT_R8G8B8A8_SRGB, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+
+    // cleanup buffers
+    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+
+    // create image view
+    // TODO: image view has to take "VK_IMAGE_VIEW_TYPE_CUBE" as viewType somehow
+    cubemap.imageView = createImageView(context, cubemap.image, VK_FORMAT_R8G8B8A8_SRGB,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+
+    // create texture sampler
+    createTextureSampler(context, cubemap.sampler, mipLevels);
+
+    // create descriptor info
+    cubemap.descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    cubemap.descriptorInfo.imageView = cubemap.imageView;
+    cubemap.descriptorInfo.sampler   = cubemap.sampler;
+}
+
 // TODO: instead of using "beginSingleTimeCommands", record everything into one command buffer
 void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
@@ -337,7 +436,11 @@ void createTextureImage(VulkanBaseContext& context,
     stbi_uc* pixels =
         stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
-    // @mip
+    if(!pixels) {
+        std::cerr << "failed to load texture image: \"" + path + "\"\n";
+        throw std::runtime_error("failed to load texture image: \"" + path + "\"");
+    }
+
     uint32_t mipLevels = 1;
     VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     if(mipmaps) {
@@ -348,11 +451,6 @@ void createTextureImage(VulkanBaseContext& context,
     }
 
     VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-    if(!pixels) {
-        std::cerr << "failed to load texture image: \"" + path + "\"\n";
-        throw std::runtime_error("failed to load texture image: \"" + path + "\"");
-    }
 
     // load image into staging buffer on GPU
     VkBuffer       stagingBuffer;
@@ -371,21 +469,22 @@ void createTextureImage(VulkanBaseContext& context,
     stbi_image_free(pixels);
 
     // allocate memory and create image
-    createImage(context, texWidth, texHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT,
+    createImage(context, texWidth, texHeight, mipLevels, 1, VK_SAMPLE_COUNT_1_BIT,
                 format, VK_IMAGE_TILING_OPTIMAL, usageFlags,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture.image, texture.imageMemory);
 
     // copy staging buffer to image
-    transitionImageLayout(context, commandContext, texture.image, format,
+    transitionImageLayout(context, commandContext, texture.image, format, 0,
                           VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(context, commandContext, stagingBuffer, texture.image,
-                      static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+                      static_cast<uint32_t>(texWidth),
+                      static_cast<uint32_t>(texHeight), 0, 0);
     if(mipmaps) {
         // after mipmap generation, all the levels are already in "SHADER_READ" format
-        generateMipmaps(context, commandContext, texture.image, format, texWidth,
-                        texHeight, mipLevels);
+        generateMipmaps(context, commandContext, texture.image, format,
+                        texWidth, texHeight, mipLevels);
     } else {
-        transitionImageLayout(context, commandContext, texture.image, format,
+        transitionImageLayout(context, commandContext, texture.image, format, 0,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
@@ -452,17 +551,19 @@ void copyBufferToImage(const VulkanBaseContext& context,
                        VkBuffer                 buffer,
                        VkImage                  image,
                        uint32_t                 width,
-                       uint32_t                 height) {
+                       uint32_t                 height,
+                       uint32_t                 offset,
+                       uint32_t                 baseArrayLayer) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(context, commandContext);
 
     VkBufferImageCopy region{};
-    region.bufferOffset      = 0;
+    region.bufferOffset      = offset;
     region.bufferRowLength   = 0;
     region.bufferImageHeight = 0;
 
     region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
     region.imageSubresource.mipLevel       = 0;
-    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.baseArrayLayer = baseArrayLayer;
     region.imageSubresource.layerCount     = 1;
 
     region.imageOffset = {0, 0, 0};
@@ -726,6 +827,7 @@ void transitionImageLayout(const VulkanBaseContext& context,
                            const CommandContext&    commandContext,
                            VkImage                  image,
                            VkFormat                 format,
+                           uint32_t                 baseArrayLayer,
                            VkImageLayout            oldLayout,
                            VkImageLayout            newLayout) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(context, commandContext);
@@ -740,7 +842,7 @@ void transitionImageLayout(const VulkanBaseContext& context,
     barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel   = 0;
     barrier.subresourceRange.levelCount     = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
     barrier.subresourceRange.layerCount     = 1;
 
     VkPipelineStageFlags sourceStage;
