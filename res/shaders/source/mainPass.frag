@@ -119,7 +119,7 @@ float getShadow(vec4 shadowCoords) {
         float dist = texture( depthSampler, shadowCoords.st ).r;
         if ( shadowCoords.w > 0.0 && dist < shadowCoords.z )
         {
-            shadow = 0.1;
+            shadow = 0.0;
         }
     }
 
@@ -164,8 +164,10 @@ void main() {
 
     // directional light source
     {
-        vec3 L = normalize(-lightingInformation.lightDirection);
-        Lo += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, metallic, roughness);
+        if (shadow > 0) {
+            vec3 L = normalize(-lightingInformation.lightDirection);
+            Lo += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, metallic, roughness) * shadow;
+        }
     }
 
     // iterate over omnidirectional light sources
@@ -191,8 +193,8 @@ void main() {
 
     outColor = vec4(color, 1);
 
-    outColor = vec4(color.xyz * shadow, 1);
+    //outColor = vec4(color.xyz * shadow, 1);
 
     // sample skybox
-    //outColor = texture(skybox, vec3(0.5, 0.5, 1.0));
+    //outColor = texture(skybox, normalize(inPosition - lightingInformation.cameraPosition));
 }
