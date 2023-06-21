@@ -75,6 +75,7 @@ typedef struct
     VkDescriptorSet       transformDescriptorSet;
 
     BufferResources transformBuffer;
+    BufferResources lightingBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;
@@ -131,6 +132,12 @@ typedef struct
 
 typedef struct
 {
+    // color of sunlight according to https://www.color-name.com/sunlight.color
+    glm::vec3 sunColor = glm::vec3(0.95686, 0.91373, 0.60784);
+} LightingSettings;
+
+typedef struct
+{
     Camera        lightCamera;
     OrthoSettings projection;
 } ShadowMappingSettings;
@@ -140,6 +147,8 @@ typedef struct
     ShadowMappingSettings shadowMappingSettings;
 
     PerspectiveSettings perspectiveSettings;
+
+    LightingSettings lightingSetting;
 } RenderSettings;
 
 static inline glm::mat4 getPerspectiveMatrix(PerspectiveSettings perspectiveSettings,

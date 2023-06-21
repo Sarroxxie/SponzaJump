@@ -85,7 +85,8 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext& appContext,
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext&                  renderContext,
-                                  const std::vector<Texture>&     textures);
+                                  const std::vector<Texture>&     textures,
+                                  const CubeMap                   cubemap);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 

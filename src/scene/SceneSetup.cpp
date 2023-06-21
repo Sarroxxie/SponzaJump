@@ -15,16 +15,13 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     cubemap.paths[3] = "res/assets/textures/cubemap/ny.png";
     cubemap.paths[4] = "res/assets/textures/cubemap/pz.png";
     cubemap.paths[5] = "res/assets/textures/cubemap/nz.png";
-    createCubeMap(context.baseContext, context.commandContext, cubemap, false);
+    createCubeMap(context.baseContext, context.commandContext, cubemap, true);
 
     ModelLoader loader;
 
     loader.loadModel("res/assets/models/debug_model4/debug_model4.gltf",
                      scene.getModelLoadingOffsets(), context.baseContext,
                      context.commandContext);
-
-    // trying out the cubemap code
-
 
     addToScene(scene, loader, contactListener);
 }

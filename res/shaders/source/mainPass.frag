@@ -15,26 +15,24 @@ layout(location = 0) out vec4 outColor;
 
 in vec4 gl_FragCoord ;
 
+layout(set = 0, binding = eLighting) uniform _LightingInformation {LightingInformation lightingInformation; };
+
 // materials array
 layout(std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
 
 layout(set = 1, binding = eTextures) uniform sampler2D samplers[];
+layout(set = 1, binding = eSkybox) uniform samplerCube skybox;
 
 layout(set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
 // TODO: these light sources only serve as debug and will be replaced when deferred rendering is implemented
-const vec3 CAMERA_POS = vec3(0.0, 9.0, 10.0);
 const int LIGHT_COUNT = 2;
 const vec3 LIGHT_POS[LIGHT_COUNT] = {vec3(2.5, 3.5, 1.5),
                                     vec3(3.2, 3.0, -1.0)};
 const vec3 LIGHT_COL[LIGHT_COUNT] = {vec3(0.9, 10.6, 2.9),
                                     vec3(0.0, 4.5, 12.7)};
-
-const vec3 DIRECTIONAL_LIGHT_DIR = vec3(-0.2, 1.0, 0.3);
-// color of sunlight according to https://www.color-name.com/sunlight.color
-const vec3 DIRECTIONAL_LIGHT_COL = vec3(0.95686, 0.91373, 0.60784);
 
 const float PI = 3.14159265359;
 
@@ -157,7 +155,7 @@ void main() {
 
     vec3 Lo = vec3(0.0);
 
-    vec3 V = normalize(CAMERA_POS - inPosition);
+    vec3 V = normalize(lightingInformation.cameraPosition - inPosition);
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)
@@ -166,8 +164,8 @@ void main() {
 
     // directional light source
     {
-        vec3 L = normalize(DIRECTIONAL_LIGHT_DIR);
-        Lo += BRDF(L, V, normal, DIRECTIONAL_LIGHT_COL, albedo, metallic, roughness);
+        vec3 L = normalize(-lightingInformation.lightDirection);
+        Lo += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, metallic, roughness);
     }
 
     // iterate over omnidirectional light sources
@@ -194,4 +192,7 @@ void main() {
     outColor = vec4(color, 1);
 
     outColor = vec4(color.xyz * shadow, 1);
+
+    // sample skybox
+    //outColor = texture(skybox, vec3(0.5, 0.5, 1.0));
 }

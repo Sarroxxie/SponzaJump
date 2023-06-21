@@ -940,6 +940,9 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
     createBufferResources(appContext, sizeof(SceneTransform),
                           renderContext.renderPasses.mainPass.transformBuffer);
 
+    createBufferResources(appContext, sizeof(LightingInformation),
+                          renderContext.renderPasses.mainPass.lightingBuffer);
+
     createMaterialsBuffer(appContext, renderContext, materials);
 }
 
@@ -991,12 +994,21 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         createLayoutBinding(SceneBindings::eLight, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::VERTEX_SHADER)));
 
+    transformBindings.push_back(
+        createLayoutBinding(SceneBindings::eLighting, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
     materialBindings.push_back(createLayoutBinding(
         MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
         getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     materialBindings.push_back(
         createLayoutBinding(MaterialsBindings::eTextures, textures.size(),
+                            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    materialBindings.push_back(
+        createLayoutBinding(MaterialsBindings::eSkybox, 1,
                             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
@@ -1035,7 +1047,8 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext&                  renderContext,
-                                  const std::vector<Texture>&     textures) {
+                                  const std::vector<Texture>&     textures,
+                                  const CubeMap                   cubemap) {
 
     MainPass& mainPass = renderContext.renderPasses.mainPass;
 
@@ -1089,6 +1102,24 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(lightTransformDescriptorWrite);
 
+    // TODO: check if this works
+    VkDescriptorBufferInfo lightingInformationBufferInfo{};
+    lightingInformationBufferInfo.buffer = mainPass.lightingBuffer.buffer;
+    lightingInformationBufferInfo.offset = 0;
+    lightingInformationBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet lightingInformationDescriptorWrite;
+    lightingInformationDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    lightingInformationDescriptorWrite.pNext  = nullptr;
+    lightingInformationDescriptorWrite.dstSet = mainPass.transformDescriptorSet;
+    lightingInformationDescriptorWrite.dstBinding = SceneBindings::eLighting;
+    lightingInformationDescriptorWrite.dstArrayElement = 0;
+    lightingInformationDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    lightingInformationDescriptorWrite.descriptorCount = 1;
+    lightingInformationDescriptorWrite.pBufferInfo = &lightingInformationBufferInfo;
+
+    descriptorWrites.emplace_back(lightingInformationDescriptorWrite);
+
 
     VkDescriptorSetAllocateInfo materialAllocInfo{};
     materialAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1139,6 +1170,18 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(texturesWrite);
 
+    // Sykbox
+    VkWriteDescriptorSet skyboxWrite{};
+    skyboxWrite.sType             = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    skyboxWrite.dstSet            = mainPass.materialDescriptorSet;
+    skyboxWrite.dstBinding        = MaterialsBindings::eSkybox;
+    skyboxWrite.dstArrayElement   = 0;
+    skyboxWrite.descriptorType    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    skyboxWrite.descriptorCount = 1;
+    skyboxWrite.pImageInfo      = &cubemap.descriptorInfo;
+
+    descriptorWrites.emplace_back(skyboxWrite);
+
     /*
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
@@ -1185,6 +1228,9 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyBuffer(baseContext.device, mainPass.transformBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.transformBuffer.bufferMemory, nullptr);
+
+    vkDestroyBuffer(baseContext.device, mainPass.lightingBuffer.buffer, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.lightingBuffer.bufferMemory, nullptr);
 
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);

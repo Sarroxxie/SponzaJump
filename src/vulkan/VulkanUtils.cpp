@@ -380,10 +380,40 @@ void createCubeMap(VulkanBaseContext context,
         stbi_image_free(pixels[i]);
     }
 
-    // allocate memory and create image
-    createImage(context, texWidth, texHeight, mipLevels, 6, VK_SAMPLE_COUNT_1_BIT,
-                VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, usageFlags,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, cubemap.image, cubemap.imageMemory);
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+    imageInfo.flags         = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    imageInfo.extent.width  = texWidth;
+    imageInfo.extent.height = texHeight;
+    imageInfo.extent.depth  = 1;
+    imageInfo.mipLevels     = mipLevels;
+    imageInfo.arrayLayers   = 6;
+    imageInfo.format        = VK_FORMAT_R8G8B8A8_SRGB;
+    imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage         = usageFlags;
+    imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateImage(context.device, &imageInfo, nullptr, &cubemap.image) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create image!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(context.device, cubemap.image, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(context, memRequirements.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    if(vkAllocateMemory(context.device, &allocInfo, nullptr, &cubemap.imageMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate image memory!");
+    }
+
+    vkBindImageMemory(context.device, cubemap.image, cubemap.imageMemory, 0);
 
     for(int i = 0; i < 6; i++) {
         // copy staging buffer to image
@@ -416,9 +446,20 @@ void createCubeMap(VulkanBaseContext context,
     vkFreeMemory(context.device, stagingBufferMemory, nullptr);
 
     // create image view
-    // TODO: image view has to take "VK_IMAGE_VIEW_TYPE_CUBE" as viewType somehow
-    cubemap.imageView = createImageView(context, cubemap.image, VK_FORMAT_R8G8B8A8_SRGB,
-                                        VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+    VkImageViewCreateInfo createInfo{};
+    createInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    createInfo.image    = cubemap.image;
+    createInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    createInfo.format   = VK_FORMAT_R8G8B8A8_SRGB;
+    createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    createInfo.subresourceRange.baseMipLevel   = 0;
+    createInfo.subresourceRange.levelCount     = mipLevels;
+    createInfo.subresourceRange.baseArrayLayer = 0;
+    createInfo.subresourceRange.layerCount     = 6;
+
+    if(vkCreateImageView(context.device, &createInfo, nullptr, &cubemap.imageView) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create image view!");
+    }
 
     // create texture sampler
     createTextureSampler(context, cubemap.sampler, mipLevels);

@@ -438,6 +438,15 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
 
     memcpy(m_RenderContext.renderPasses.mainPass.transformBuffer.bufferMemoryMapping,
            &sceneTransform, sizeof(SceneTransform));
+
+    LightingInformation lightingInformation;
+    lightingInformation.cameraPosition = scene.getCameraRef().getWorldPos();
+    lightingInformation.lightDirection =
+        m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDir();
+    lightingInformation.lightIntensity = m_RenderContext.renderSettings.lightingSetting.sunColor;
+
+    memcpy(m_RenderContext.renderPasses.mainPass.lightingBuffer.bufferMemoryMapping,
+           &lightingInformation, sizeof(LightingInformation));
     // memcpy(scene.getUniformBufferMapping(), &sceneTransform, sizeof(sceneTransform));
 }
 

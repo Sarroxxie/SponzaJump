@@ -64,7 +64,7 @@ int main() {
 
     createMainPassResources(appContext, renderContext, scene.getSceneData().materials);
 
-    createMainPassDescriptorSets(appContext, renderContext, scene.getSceneData().textures);
+    createMainPassDescriptorSets(appContext, renderContext, scene.getSceneData().textures, scene.getSceneData().cubemap);
 
     VulkanRenderer renderer(appContext, renderContext);
 

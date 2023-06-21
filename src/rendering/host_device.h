@@ -25,13 +25,15 @@
 // access for descriptor sets
 // note that the names have to be unique, because they are unique in the shader
 START_BINDING(SceneBindings)
-    eCamera    = 0,  // Global uniform containing camera matrices
-    eLight    = 1  // Global uniform containing camera matrices
+    eCamera   = 0,  // Global uniform containing camera matrices
+    eLight    = 1,  // Global uniform containing camera matrices
+    eLighting = 2
 END_BINDING();
 
 START_BINDING(MaterialsBindings)
     eMaterials = 0,  // storage buffer containing materials
-    eTextures  = 1      // storage buffer containing image views
+    eTextures  = 1,  // storage buffer containing image views
+    eSkybox    = 3
 END_BINDING();
 
 START_BINDING(DepthBindings)
@@ -64,4 +66,12 @@ struct PushConstant
     ALIGN_AS(16) mat4 transformation;
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
+};
+
+struct LightingInformation
+{
+    ALIGN_AS(16) vec3 cameraPosition;
+    ALIGN_AS(16) vec3 lightDirection;
+    ALIGN_AS(16) vec3 lightIntensity;
+    // could store some omnidirectional light sources here for demonstration
 };
