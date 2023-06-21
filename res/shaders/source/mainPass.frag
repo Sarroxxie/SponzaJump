@@ -163,11 +163,9 @@ void main() {
     F0 = mix(F0, albedo, metallic);
 
     // directional light source
-    {
-        if (shadow > 0) {
-            vec3 L = normalize(-lightingInformation.lightDirection);
-            Lo += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, metallic, roughness) * shadow;
-        }
+    if (shadow > 0) {
+        vec3 L = normalize(-lightingInformation.lightDirection);
+        Lo += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, metallic, roughness) * shadow;
     }
 
     // iterate over omnidirectional light sources
