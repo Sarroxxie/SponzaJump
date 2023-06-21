@@ -177,6 +177,7 @@ void generateMipmaps(const VulkanBaseContext& context,
                      VkFormat                 imageFormat,
                      int32_t                  texWidth,
                      int32_t                  texHeight,
+                     uint32_t                 baseArrayLayer,
                      uint32_t                 mipLevels);
 
 void transitionImageLayout(const VulkanBaseContext& context,

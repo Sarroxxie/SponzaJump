@@ -395,15 +395,20 @@ void createCubeMap(VulkanBaseContext context,
                           static_cast<uint32_t>(texWidth),
                           static_cast<uint32_t>(texHeight), (layerSize * i), i);
     }
-    // TODO: mip maps will have to get generated for each array layer -> does not yet work like that
     if(mipmaps) {
         // after mipmap generation, all the levels are already in "SHADER_READ" format
-        generateMipmaps(context, commandContext, cubemap.image,
-                        VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+        for(int i = 0; i < 6; i++) {
+            generateMipmaps(context, commandContext, cubemap.image,
+                            VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, i, mipLevels);
+        }
     } else {
-        transitionImageLayout(context, commandContext, cubemap.image,
-                              VK_FORMAT_R8G8B8A8_SRGB, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        // if no mipmaps were created, the image layers still need to get
+        // transitioned into "SHADER_READ" layout
+        for(int i = 0; i < 6; i++) {
+            transitionImageLayout(context, commandContext, cubemap.image, VK_FORMAT_R8G8B8A8_SRGB,
+                                  i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
     }
 
     // cleanup buffers
@@ -482,8 +487,9 @@ void createTextureImage(VulkanBaseContext& context,
     if(mipmaps) {
         // after mipmap generation, all the levels are already in "SHADER_READ" format
         generateMipmaps(context, commandContext, texture.image, format,
-                        texWidth, texHeight, mipLevels);
+                        texWidth, texHeight, 0, mipLevels);
     } else {
+        // if no mipmaps were created, the image still needs to get transitioned into "SHADER_READ" layout
         transitionImageLayout(context, commandContext, texture.image, format, 0,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -661,6 +667,7 @@ void generateMipmaps(const VulkanBaseContext& context,
                      VkFormat                 imageFormat,
                      int32_t                  texWidth,
                      int32_t                  texHeight,
+                     uint32_t                 baseArrayLayer,
                      uint32_t                 mipLevels) {
     // check for linear blitting support
     VkFormatProperties formatProperties;
@@ -677,7 +684,7 @@ void generateMipmaps(const VulkanBaseContext& context,
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
     barrier.subresourceRange.layerCount     = 1;
     barrier.subresourceRange.levelCount     = 1;
 
@@ -713,7 +720,7 @@ void generateMipmaps(const VulkanBaseContext& context,
         blit.srcOffsets[1]                 = {mipWidth, mipHeight, 1};
         blit.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.srcSubresource.mipLevel       = i - 1;
-        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.baseArrayLayer = baseArrayLayer;
         blit.srcSubresource.layerCount     = 1;
 
         blit.dstOffsets[0]                 = {0, 0, 0};
@@ -721,7 +728,7 @@ void generateMipmaps(const VulkanBaseContext& context,
                               mipHeight > 1 ? mipHeight / 2 : 1, 1};
         blit.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.dstSubresource.mipLevel       = i;
-        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.baseArrayLayer = baseArrayLayer;
         blit.dstSubresource.layerCount     = 1;
 
         vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
