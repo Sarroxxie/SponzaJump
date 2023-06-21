@@ -89,6 +89,13 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
         &renderContext.renderSettings.shadowMappingSettings.projection.zFar,
         renderContext.renderSettings.shadowMappingSettings.projection.zNear, 400);
 
+    ImGui::Spacing();
+    ImGui::SliderFloat("Depth Bias Constant",
+                       &renderContext.imguiData.depthBiasConstant, -5, 5);
+
+    ImGui::SliderFloat("Depth Bias Slope",
+                       &renderContext.imguiData.depthBiasSlope, -5, 5);
+
     ImGui::End();
 }
 

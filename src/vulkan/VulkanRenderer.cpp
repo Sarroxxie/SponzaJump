@@ -183,6 +183,14 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     scissor.extent = shadowExtent;
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
+
+    vkCmdSetDepthBias(
+        m_Context.commandContext.commandBuffer,
+        m_RenderContext.imguiData.depthBiasConstant,
+        0.0f,
+        m_RenderContext.imguiData.depthBiasSlope);
+
+
     // Without Index Buffer
     // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
 
@@ -199,9 +207,6 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     sceneTransform.cameraTransform = m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getCameraMatrix();
 
     memcpy(m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping,
-           &sceneTransform, sizeof(SceneTransform));
-
-    memcpy(m_RenderContext.renderPasses.mainPass.lightTransformBuffer.bufferMemoryMapping,
            &sceneTransform, sizeof(SceneTransform));
 
     // bind DescriptorSet 0 (Camera Transformations)

@@ -41,6 +41,8 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     shadowPassDescription.pushConstantRanges.push_back(createPushConstantRange(
         0, sizeof(glm::mat4), getStageFlag(ShaderStage::VERTEX_SHADER)));
 
+    shadowPassDescription.enableDepthBias = true;
+
     renderSetupDescription.shadowPassDescription = shadowPassDescription;
 
     // --- Main Render Pass
@@ -388,8 +390,10 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
 
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
-    const uint32_t SHADOW_MAP_WIDTH  = 1920;
-    const uint32_t SHADOW_MAP_HEIGHT = 1920;
+
+
+    const uint32_t SHADOW_MAP_WIDTH  = 2048;
+    const uint32_t SHADOW_MAP_HEIGHT = 2048;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
@@ -487,6 +491,11 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+    if (renderPassDescription.enableDepthBias) {
+        rasterizer.depthBiasEnable = VK_TRUE;
+    }
+
 
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
 
@@ -497,7 +506,6 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.cullMode        = VK_CULL_MODE_NONE;
     rasterizer.frontFace       = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -543,6 +551,11 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
 
     std::vector<VkDynamicState>      dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                                       VK_DYNAMIC_STATE_SCISSOR};
+
+    if (renderPassDescription.enableDepthBias) {
+        dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    }
+
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -927,9 +940,6 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
     createBufferResources(appContext, sizeof(SceneTransform),
                           renderContext.renderPasses.mainPass.transformBuffer);
 
-    createBufferResources(appContext, sizeof(SceneTransform),
-                          renderContext.renderPasses.mainPass.lightTransformBuffer);
-
     createMaterialsBuffer(appContext, renderContext, materials);
 }
 
@@ -1063,7 +1073,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 
     VkDescriptorBufferInfo lightTransformBufferInfo{};
-    lightTransformBufferInfo.buffer = mainPass.lightTransformBuffer.buffer;
+    lightTransformBufferInfo.buffer = renderContext.renderPasses.shadowPass.transformBuffer.buffer;
     lightTransformBufferInfo.offset = 0;
     lightTransformBufferInfo.range  = VK_WHOLE_SIZE;
 
@@ -1175,10 +1185,6 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyBuffer(baseContext.device, mainPass.transformBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.transformBuffer.bufferMemory, nullptr);
-
-    vkDestroyBuffer(baseContext.device, mainPass.lightTransformBuffer.buffer, nullptr);
-    vkFreeMemory(baseContext.device, mainPass.lightTransformBuffer.bufferMemory, nullptr);
-
 
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);

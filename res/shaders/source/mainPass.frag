@@ -24,13 +24,16 @@ layout(set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
+
 // this function is inspired by Sasha Willems shadow mapping example in https://github.com/SaschaWillems/Vulkan
 float getShadow(vec4 shadowCoords) {
     float shadow = 1.0;
+    float eps = 1.5e-3;
+    eps = 0;
 
     if ( shadowCoords.z > -1.0 && shadowCoords.z < 1.0 ) {
         float dist = texture( depthSampler, shadowCoords.st ).r;
-		if ( shadowCoords.w > 0.0 && dist < shadowCoords.z )
+		if ( shadowCoords.w > 0.0 && dist + eps < shadowCoords.z )
 		{
 			shadow = 0.1;
 		}

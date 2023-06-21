@@ -5,12 +5,14 @@
 #include <vector>
 #include "Shader.h"
 
-typedef struct
+typedef struct s_renderPassDescription
 {
     Shader vertexShader;
     Shader fragmentShader;
 
     std::vector<VkPushConstantRange> pushConstantRanges;
+
+    bool enableDepthBias = false;
 }RenderPassDescription;
 
 typedef struct

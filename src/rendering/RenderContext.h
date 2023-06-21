@@ -75,7 +75,6 @@ typedef struct
     VkDescriptorSet       transformDescriptorSet;
 
     BufferResources transformBuffer;
-    BufferResources lightTransformBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;
@@ -105,6 +104,9 @@ typedef struct
     bool lockCamera = true;
 
     bool visualizeShadowBuffer = false;
+
+    float depthBiasConstant = 0.0f;
+    float depthBiasSlope = 2.0f;
 } ImguiData;
 
 typedef struct
@@ -115,10 +117,7 @@ typedef struct
 typedef struct
 {
     float widthHeightDim;
-    /*
-    float width;
-    float height;
-     */
+
     float zNear;
     float zFar;
 } OrthoSettings;
