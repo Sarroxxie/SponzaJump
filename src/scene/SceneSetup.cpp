@@ -6,6 +6,17 @@
 void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                               Scene&                          scene,
                               GameContactListener&            contactListener) {
+
+    CubeMap& cubemap = scene.getSceneData().cubemap;
+
+    cubemap.paths[0] = "res/assets/textures/cubemap/px.png";
+    cubemap.paths[1] = "res/assets/textures/cubemap/nx.png";
+    cubemap.paths[2] = "res/assets/textures/cubemap/py.png";
+    cubemap.paths[3] = "res/assets/textures/cubemap/ny.png";
+    cubemap.paths[4] = "res/assets/textures/cubemap/pz.png";
+    cubemap.paths[5] = "res/assets/textures/cubemap/nz.png";
+    createCubeMap(context.baseContext, context.commandContext, cubemap, false);
+
     ModelLoader loader;
 
     loader.loadModel("res/assets/models/debug_model4/debug_model4.gltf",
@@ -15,12 +26,11 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     // trying out the cubemap code
 
 
-    addToScene(context, scene, loader, contactListener);
+    addToScene(scene, loader, contactListener);
 }
 
 
-void addToScene(const ApplicationVulkanContext& context,
-                Scene&                          scene,
+void addToScene(Scene&                          scene,
                 ModelLoader&                    loader,
                 GameContactListener&            contactListener) {
     SceneData& sceneData = scene.getSceneData();
@@ -35,16 +45,6 @@ void addToScene(const ApplicationVulkanContext& context,
                                loader.materials.begin(), loader.materials.end());
     sceneData.models.insert(sceneData.models.end(), loader.models.begin(),
                             loader.models.end());
-
-    CubeMap& cubemap = scene.getSceneData().cubemap;
-
-    cubemap.paths[0] = "res/assets/textures/cubemap/px.png";
-    cubemap.paths[1] = "res/assets/textures/cubemap/nx.png";
-    cubemap.paths[2] = "res/assets/textures/cubemap/py.png";
-    cubemap.paths[3] = "res/assets/textures/cubemap/ny.png";
-    cubemap.paths[4] = "res/assets/textures/cubemap/pz.png";
-    cubemap.paths[5] = "res/assets/textures/cubemap/nz.png";
-    createCubeMap(context.baseContext, context.commandContext, cubemap, false);
 
     for(ModelInstance& instance : loader.instances) {
         EntityId entityId = scene.addEntity();

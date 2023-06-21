@@ -11,8 +11,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                               Scene&                          scene,
                               GameContactListener&            contactListener);
 
-void addToScene(const ApplicationVulkanContext& context,
-                Scene&                          scene,
+void addToScene(Scene&                          scene,
                 ModelLoader&                    loader,
                 GameContactListener&            contactListener);
 
