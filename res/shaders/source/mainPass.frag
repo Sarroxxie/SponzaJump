@@ -114,11 +114,12 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 radiance, vec3 albedo, float metallic, fl
     return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
-float getShadow(vec4 shadowCoords) {
+// following two functions largely taken from sasha willems shadow mapping example in https://github.com/SaschaWillems/Vulkan
+float getShadow(vec4 shadowCoords, vec2 offset) {
     float shadow = 1.0;
 
     if ( shadowCoords.z > -1.0 && shadowCoords.z < 1.0 ) {
-        float dist = texture( depthSampler, shadowCoords.st ).r;
+        float dist = texture( depthSampler, shadowCoords.st + offset ).r;
         if ( shadowCoords.w > 0.0 && dist < shadowCoords.z )
         {
             shadow = 0.1;
@@ -128,11 +129,35 @@ float getShadow(vec4 shadowCoords) {
     return shadow;
 }
 
+float filterPCF(vec4 sc)
+{
+    ivec2 texDim = textureSize(depthSampler, 0);
+    float scale = 1;
+    float dx = scale * 1.0 / float(texDim.x);
+    float dy = scale * 1.0 / float(texDim.y);
+
+    float shadowFactor = 0.0;
+    int count = 0;
+    int range = 1;
+
+    for (int x = -range; x <= range; x++)
+    {
+        for (int y = -range; y <= range; y++)
+        {
+            shadowFactor += getShadow(sc, vec2(dx*x, dy*y));
+            count++;
+        }
+
+    }
+    return shadowFactor / count;
+}
+
 void main() {
     vec4 shadowCoordsHom = inShadowCoords / inShadowCoords.w;
     vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xy + vec2(1)) / 2, shadowCoordsHom.ba);
 
-    float shadow = getShadow(normalizedShadowCoords);
+    const uint doPCF = 1;
+    float shadow = doPCF == 1 ? filterPCF(normalizedShadowCoords) : getShadow(normalizedShadowCoords, vec2(0));
 
     // fetch material
     MaterialDescription material = materials.m[pushConstant.materialIndex];
