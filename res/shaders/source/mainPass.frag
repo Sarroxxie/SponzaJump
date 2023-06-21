@@ -135,23 +135,35 @@ void main() {
     // fetch material
     MaterialDescription material = materials.m[pushConstant.materialIndex];
 
-    // apply normal mappingd
-    vec3 N = normalize(inNormal);
-	vec3 T = normalize(inTangents.xyz);
-    vec3 B = cross(N, T) * inTangents.w;
-	mat3 TBN = mat3(T, B, N);
-	vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
-    normal = normalize(TBN * normal);
+    vec3 albedo = material.albedo;
+    if(material.albedoTextureID != -1) {
+        vec4 albedoTexture = texture(samplers[material.albedoTextureID], inTexCoords);
+        // allow alpha masking
+        if (albedoTexture.a == 0)
+            discard;
+        albedo = pow(albedoTexture.rgb, vec3(2.2, 2.2, 2.2)); // convert color into linear space
+    }
 
-    // fetch PBR textures
-    vec4 albedoTexture = texture(samplers[material.albedoTextureID], inTexCoords);
-    vec3 aoRoughnessMetallic = texture(samplers[material.aoRoughnessMetallicTextureID], inTexCoords).rgb;
+    vec3 normal = inNormal;
+    if (material.normalTextureID != -1) {
+        // apply normal mapping
+        vec3 N = normalize(inNormal);
+        vec3 T = normalize(inTangents.xyz);
+        vec3 B = cross(N, T) * inTangents.w;
+        mat3 TBN = mat3(T, B, N);
+        vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
+        normal = normalize(TBN * normal);
+    }
 
-    vec3 albedo = pow(albedoTexture.rgb, vec3(2.2, 2.2, 2.2)); // convert color into linear space
-    float alpha = albedoTexture.a;
-    float ao = aoRoughnessMetallic.r;
-    float roughness = aoRoughnessMetallic.g;
-    float metallic = aoRoughnessMetallic.b;
+    float ao = 1.0;
+    float roughness = material.aoRoughnessMetallic.g;
+    float metallic = material.aoRoughnessMetallic.b;
+    if (material.aoRoughnessMetallicTextureID != -1) {
+        vec3 aoRoughnessMetallic = texture(samplers[material.aoRoughnessMetallicTextureID], inTexCoords).rgb;
+        ao = aoRoughnessMetallic.r;
+        roughness = aoRoughnessMetallic.g;
+        metallic = aoRoughnessMetallic.b;
+    }
 
     vec3 Lo = vec3(0.0);
 
