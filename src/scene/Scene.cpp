@@ -196,7 +196,7 @@ void Scene::doCameraUpdate(const RenderContext& renderContext) {
             auto prevPos = m_Camera.getWorldPos();
 
             m_Camera.setPosition(glm::vec3(transformation->translation.x,
-                                           transformation->translation.y,
+                                           transformation->translation.y + 10,
                                            prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
                                          transformation->translation.y, 0));
