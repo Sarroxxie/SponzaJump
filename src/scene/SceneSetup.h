@@ -11,8 +11,11 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                               Scene&                          scene,
                               GameContactListener&            contactListener);
 
-void addToScene(Scene &scene, ModelLoader &loader, GameContactListener &contactListener);
+void addToScene(const ApplicationVulkanContext& context,
+                Scene&                          scene,
+                ModelLoader&                    loader,
+                GameContactListener&            contactListener);
 
-b2Fixture* addPhysicsComponent(Scene &scene, EntityId entityId, ModelInstance &instance, bool isDynamic);
+b2Fixture* addPhysicsComponent(Scene& scene, EntityId entityId, ModelInstance& instance, bool isDynamic);
 
-#endif //GRAPHICSPRAKTIKUM_SCENESETUP_H
+#endif  // GRAPHICSPRAKTIKUM_SCENESETUP_H

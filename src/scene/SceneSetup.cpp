@@ -13,20 +13,16 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                      context.commandContext);
 
     // trying out the cubemap code
-    scene.getCubeMap().paths[0] = "res/assets/textures/cubemap/px.png";
-    scene.getCubeMap().paths[1] = "res/assets/textures/cubemap/nx.png";
-    scene.getCubeMap().paths[2] = "res/assets/textures/cubemap/py.png";
-    scene.getCubeMap().paths[3] = "res/assets/textures/cubemap/ny.png";
-    scene.getCubeMap().paths[4] = "res/assets/textures/cubemap/pz.png";
-    scene.getCubeMap().paths[5] = "res/assets/textures/cubemap/nz.png";
-    createCubeMap(context.baseContext, context.commandContext, scene.getCubeMap(), false);
 
 
-    addToScene(scene, loader, contactListener);
+    addToScene(context, scene, loader, contactListener);
 }
 
 
-void addToScene(Scene& scene, ModelLoader& loader, GameContactListener& contactListener) {
+void addToScene(const ApplicationVulkanContext& context,
+                Scene&                          scene,
+                ModelLoader&                    loader,
+                GameContactListener&            contactListener) {
     SceneData& sceneData = scene.getSceneData();
 
     sceneData.meshes.insert(sceneData.meshes.end(), loader.meshes.begin(),
@@ -39,6 +35,16 @@ void addToScene(Scene& scene, ModelLoader& loader, GameContactListener& contactL
                                loader.materials.begin(), loader.materials.end());
     sceneData.models.insert(sceneData.models.end(), loader.models.begin(),
                             loader.models.end());
+
+    CubeMap& cubemap = scene.getSceneData().cubemap;
+
+    cubemap.paths[0] = "res/assets/textures/cubemap/px.png";
+    cubemap.paths[1] = "res/assets/textures/cubemap/nx.png";
+    cubemap.paths[2] = "res/assets/textures/cubemap/py.png";
+    cubemap.paths[3] = "res/assets/textures/cubemap/ny.png";
+    cubemap.paths[4] = "res/assets/textures/cubemap/pz.png";
+    cubemap.paths[5] = "res/assets/textures/cubemap/nz.png";
+    createCubeMap(context.baseContext, context.commandContext, cubemap, false);
 
     for(ModelInstance& instance : loader.instances) {
         EntityId entityId = scene.addEntity();
@@ -72,7 +78,7 @@ b2Fixture* addPhysicsComponent(Scene& scene, EntityId entityId, ModelInstance& i
     auto* physicsComponent = scene.assign<PhysicsComponent>(entityId);
 
     b2BodyDef bodyDef;
-    bodyDef.type          = isDynamic ? b2BodyType::b2_dynamicBody : b2BodyType::b2_staticBody;
+    bodyDef.type = isDynamic ? b2BodyType::b2_dynamicBody : b2BodyType::b2_staticBody;
     bodyDef.fixedRotation = true;
     bodyDef.position.Set(instance.translation.x, instance.translation.y);
     bodyDef.angle = instance.rotation.z;

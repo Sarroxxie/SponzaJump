@@ -10,6 +10,8 @@ typedef struct {
     std::vector<Texture>       textures;
     std::vector<Material>      materials;
     std::vector<Model>         models;
+
+    CubeMap cubemap;
 } SceneData;
 
 #endif  // GRAPHICSPRAKTIKUM_SCENEDATA_H

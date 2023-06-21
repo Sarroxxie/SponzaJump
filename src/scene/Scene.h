@@ -29,8 +29,6 @@ private:
 
     SceneData sceneData;
 
-    CubeMap cubemap;
-
     Camera m_Camera;
 
     b2World m_World;
@@ -81,8 +79,6 @@ public:
     ModelLoadingOffsets getModelLoadingOffsets();
 
     SceneData& getSceneData();
-
-    CubeMap &getCubeMap();
 
     Camera &getCameraRef();
     void doCameraUpdate(const RenderContext& renderContext);
