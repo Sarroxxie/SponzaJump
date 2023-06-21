@@ -169,23 +169,37 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &avai
 
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, Window *window);
 
-void createImage(const VulkanBaseContext &context, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples,
-                 VkFormat format, VkImageTiling tiling,
-                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
-                 VkDeviceMemory &imageMemory);
+void createImage(const VulkanBaseContext& context,
+                 uint32_t                 width,
+                 uint32_t                 height,
+                 uint32_t                 mipLevels,
+                 uint32_t                 arrayLayers,
+                 VkSampleCountFlagBits    numSamples,
+                 VkFormat                 format,
+                 VkImageTiling            tiling,
+                 VkImageUsageFlags        usage,
+                 VkMemoryPropertyFlags    properties,
+                 VkImage&                 image,
+                 VkDeviceMemory&          imageMemory);
 
 VkImageView createImageView(const VulkanBaseContext &context, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 void createBuffer(const VulkanBaseContext &context, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
                   VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
+void createCubeMap(VulkanBaseContext context,
+                   CommandContext    commandContext,
+                   CubeMap&          cubemap,
+                   bool              mipmaps);
+
 void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
                         std::string        path,
                         VkFormat           format,
-                        Texture&           texture);
+                        Texture&           texture,
+                        bool               mipmaps);
 
-void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler);
+void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler, uint32_t mipLevels);
 
 void copyBuffer(const VulkanBaseContext &context, const CommandContext &commandContext, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
@@ -194,7 +208,9 @@ void copyBufferToImage(const VulkanBaseContext& context,
                        VkBuffer                 buffer,
                        VkImage                  image,
                        uint32_t                 width,
-                       uint32_t                 height);
+                       uint32_t                 height,
+                       uint32_t                 offset,
+                       uint32_t                 baseArrayLayer);
 
 VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext  &context, const CommandContext &commandContext);
 
@@ -206,6 +222,15 @@ VkFormat findDepthFormat(const VulkanBaseContext &context);
 
 VkFormat findSupportedFormat(const VulkanBaseContext &context, const std::vector<VkFormat> &candidates, VkImageTiling tiling,
                              VkFormatFeatureFlags features);
+
+void generateMipmaps(const VulkanBaseContext& context,
+                     const CommandContext&    commandContext,
+                     VkImage                  image,
+                     VkFormat                 imageFormat,
+                     int32_t                  texWidth,
+                     int32_t                  texHeight,
+                     uint32_t                 baseArrayLayer,
+                     uint32_t                 mipLevels);
 
 void transitionImageLayout(const VulkanBaseContext& context,
                            const CommandContext&    commandContext,
@@ -221,6 +246,7 @@ void transitionImageLayout(const VulkanBaseContext& context,
                            const CommandContext&    commandContext,
                            VkImage                  image,
                            VkFormat                 format,
+                           uint32_t                 baseArrayLayer,
                            VkImageLayout            oldLayout,
                            VkImageLayout            newLayout);
 #endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H

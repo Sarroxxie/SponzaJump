@@ -22,6 +22,7 @@ void Scene::cleanup() {
     for(auto& texture : sceneData.textures) {
         texture.cleanup(m_baseContext);
     }
+    cubemap.cleanup(m_baseContext);
 }
 
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {
@@ -37,6 +38,10 @@ ModelLoadingOffsets Scene::getModelLoadingOffsets() {
 
 SceneData& Scene::getSceneData() {
     return sceneData;
+}
+
+CubeMap& Scene::getCubeMap() {
+    return cubemap;
 }
 
 Camera& Scene::getCameraRef() {

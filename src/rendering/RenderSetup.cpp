@@ -401,7 +401,7 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     // VkFormat depthFormat = findDepthFormat(appContext.baseContext);
     VkFormat depthFormat = customDepthFormat;
 
-    createImage(appContext.baseContext, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, 1,
+    createImage(appContext.baseContext, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, 1, 1,
                 VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

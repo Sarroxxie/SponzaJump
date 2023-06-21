@@ -26,13 +26,40 @@ struct Material
 
 struct Texture
 {
-    std::string    uri = "";
-    VkImage        image;
-    VkDeviceMemory imageMemory;
-    VkImageView    imageView;
-    VkSampler      sampler;
-    // TODO: this has to be created per texture!
+    std::string           uri = "";
+    VkImage               image;
+    VkDeviceMemory        imageMemory;
+    VkImageView           imageView;
+    VkSampler             sampler;
     VkDescriptorImageInfo descriptorInfo;
+
+    void cleanup(VulkanBaseContext& baseContext) {
+        vkDestroySampler(baseContext.device, sampler, nullptr);
+        vkDestroyImageView(baseContext.device, imageView, nullptr);
+
+        vkDestroyImage(baseContext.device, image, nullptr);
+        vkFreeMemory(baseContext.device, imageMemory, nullptr);
+    }
+};
+
+struct CubeMap
+{
+    // vulkan specified order for the cubemap layers is as follows (see vulkan spec 16.5.4:
+    // https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap16.html#_cube_map_face_selection_and_transformations)
+    //
+    // layer number  ->   cubemap face
+    //       0       ->    positive X
+    //       1       ->    negative X
+    //       2       ->    positive Y
+    //       3       ->    negative Y
+    //       4       ->    positive Z
+    //       5       ->    negative Z
+    std::array<std::string, 6> paths;
+    VkImage                    image;
+    VkDeviceMemory             imageMemory;
+    VkImageView                imageView;
+    VkSampler                  sampler;
+    VkDescriptorImageInfo      descriptorInfo;
 
     void cleanup(VulkanBaseContext& baseContext) {
         vkDestroySampler(baseContext.device, sampler, nullptr);

@@ -12,6 +12,16 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                      scene.getModelLoadingOffsets(), context.baseContext,
                      context.commandContext);
 
+    // trying out the cubemap code
+    scene.getCubeMap().paths[0] = "res/assets/textures/cubemap/px.png";
+    scene.getCubeMap().paths[1] = "res/assets/textures/cubemap/nx.png";
+    scene.getCubeMap().paths[2] = "res/assets/textures/cubemap/py.png";
+    scene.getCubeMap().paths[3] = "res/assets/textures/cubemap/ny.png";
+    scene.getCubeMap().paths[4] = "res/assets/textures/cubemap/pz.png";
+    scene.getCubeMap().paths[5] = "res/assets/textures/cubemap/nz.png";
+    createCubeMap(context.baseContext, context.commandContext, scene.getCubeMap(), false);
+
+
     addToScene(scene, loader, contactListener);
 }
 
