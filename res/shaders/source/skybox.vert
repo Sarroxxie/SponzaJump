@@ -26,6 +26,7 @@ layout(location = 0) out vec3 outPosition;
 
 void main() {
     gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
-    vec4 projected = inverse(sceneTransform.proj) * vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    // revert projection and view transformation to get world space coordinates of the quad
+    vec4 projected = inverse(sceneTransform.view) * inverse(sceneTransform.proj) * vec4(positions[gl_VertexIndex], 0.0, 1.0);
     outPosition = projected.xyz / projected.w;
 }
