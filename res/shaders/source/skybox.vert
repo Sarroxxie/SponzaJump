@@ -25,7 +25,8 @@ layout(set = 0, binding = eCamera) uniform SceneTransform {
 layout(location = 0) out vec3 outPosition;
 
 void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    // set depth to maximum amount so the skybox will always be behind all other objects
+    gl_Position = vec4(positions[gl_VertexIndex], 1.0, 1.0);
     // revert projection and view transformation to get world space coordinates of the quad
     vec4 projected = inverse(sceneTransform.view) * inverse(sceneTransform.proj) * vec4(positions[gl_VertexIndex], 0.0, 1.0);
     outPosition = projected.xyz / projected.w;

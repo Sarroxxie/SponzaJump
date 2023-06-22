@@ -1538,7 +1538,8 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable       = VK_TRUE;
     depthStencil.depthWriteEnable      = VK_FALSE;
-    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+    // in the shader we set the depth of the screen quad to 1.0, so this has to be lesser-equals
+    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable     = VK_FALSE;
 
