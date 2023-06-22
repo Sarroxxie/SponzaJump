@@ -62,6 +62,10 @@ int main() {
         renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
 
+    // TODO: skybox should have own descriptor set
+    // same goes for the skybox pipeline (as it uses the descriptor set that contains the textures for now)
+    createSkyboxPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
+
     createMainPassResources(appContext, renderContext, scene.getSceneData().materials);
 
     createMainPassDescriptorSets(appContext, renderContext, scene.getSceneData().textures, scene.getSceneData().cubemap);

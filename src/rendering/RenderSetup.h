@@ -98,6 +98,12 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
 
 void cleanVisualizationPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
+void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
+                          const RenderContext&            renderContext,
+                          MainPass&                       mainPass);
+
+void cleanSkyboxPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
+
 // -----
 
 

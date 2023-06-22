@@ -86,6 +86,10 @@ typedef struct
     VkPipelineLayout visualizePipelineLayout;
     VkPipeline       visualizePipeline;
 
+    VkPipelineLayout skyboxPipelineLayout;
+    VkPipeline       skyboxPipeline;
+    uint32_t         skyboxSubpassID = 0;
+
     BufferResources materialBuffer;
 
     VkSampler depthSampler;
