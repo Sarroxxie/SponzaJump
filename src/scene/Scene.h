@@ -81,7 +81,7 @@ public:
     SceneData& getSceneData();
 
     Camera &getCameraRef();
-    void doCameraUpdate(const RenderContext& renderContext);
+    void doCameraUpdate(RenderContext& renderContext);
 
     b2World &getWorld();
     void doPhysicsUpdate(uint64_t deltaMillis);

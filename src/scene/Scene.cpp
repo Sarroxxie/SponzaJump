@@ -63,16 +63,16 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::Spacing();
 
     ImGui::SliderFloat3(
-        "Light Camera Pos",
-        glm::value_ptr(
-            renderContext.renderSettings.shadowMappingSettings.lightCamera.getWorldPosRef()),
-        -100, 100);
-
-    ImGui::SliderFloat3(
         "Light Camera Dir",
         glm::value_ptr(
             renderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDirRef()),
-        -glm::pi<float>(), glm::pi<float>());
+        -1, 1);
+
+    ImGui::SliderFloat(
+        "Light Camera Dist",
+        &renderContext.renderSettings.shadowMappingSettings.lightCameraDist,
+        -100, 100);
+    ImGui::Checkbox("Lock shadow to player", &renderContext.renderSettings.shadowMappingSettings.snapToPlayer);
 
     ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
 
@@ -95,8 +95,7 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     ImGui::SliderFloat("Depth Bias Constant",
                        &renderContext.imguiData.depthBiasConstant, -5, 5);
 
-    ImGui::SliderFloat("Depth Bias Slope",
-                       &renderContext.imguiData.depthBiasSlope, -5, 5);
+    ImGui::SliderFloat("Depth Bias Slope", &renderContext.imguiData.depthBiasSlope, -5, 5);
 
     ImGui::End();
 }
@@ -190,7 +189,7 @@ void Scene::handleUserInput() {
 void Scene::setInputController(InputController* inputController) {
     m_InputController = inputController;
 }
-void Scene::doCameraUpdate(const RenderContext& renderContext) {
+void Scene::doCameraUpdate(RenderContext& renderContext) {
     for(auto id : SceneView<PlayerComponent, Transformation>(*this)) {
         auto* transformation = getComponent<Transformation>(id);
 
@@ -202,6 +201,18 @@ void Scene::doCameraUpdate(const RenderContext& renderContext) {
                                            prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
                                          transformation->translation.y, 0));
+        }
+
+        if(renderContext.renderSettings.shadowMappingSettings.snapToPlayer) {
+            Camera& lightCamera =
+                renderContext.renderSettings.shadowMappingSettings.lightCamera;
+
+            lightCamera.normalizeViewDir();
+
+            lightCamera.setPosition(
+                transformation->translation
+                - lightCamera.getViewDir()
+                      * renderContext.renderSettings.shadowMappingSettings.lightCameraDist);
         }
     }
 }

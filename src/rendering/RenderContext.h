@@ -132,6 +132,9 @@ typedef struct
 typedef struct
 {
     Camera        lightCamera;
+    float lightCameraDist = 60;
+    bool snapToPlayer = true;
+
     OrthoSettings projection;
 } ShadowMappingSettings;
 

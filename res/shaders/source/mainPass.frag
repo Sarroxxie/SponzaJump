@@ -1,36 +1,36 @@
 #version 460
-#extension GL_GOOGLE_include_directive : enable
-#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_GOOGLE_include_directive: enable
+#extension GL_EXT_nonuniform_qualifier: enable
 
 #include "../../../src/rendering/host_device.h"
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec4 inTangents;
-layout(location = 4) in vec2 inTexCoords;
+layout (location = 0) in vec3 inPosition;
+layout (location = 1) in vec3 inNormal;
+layout (location = 2) in vec4 inTangents;
+layout (location = 4) in vec2 inTexCoords;
 
-layout(location = 5) in vec4 inShadowCoords;
+layout (location = 5) in vec4 inShadowCoords;
 
-layout(location = 0) out vec4 outColor;
+layout (location = 0) out vec4 outColor;
 
-in vec4 gl_FragCoord ;
+in vec4 gl_FragCoord;
 
 // materials array
-layout(std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
+layout (std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
 
-layout(set = 1, binding = eTextures) uniform sampler2D samplers[];
+layout (set = 1, binding = eTextures) uniform sampler2D samplers[];
 
-layout(set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
+layout (set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 
-layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
+layout (push_constant) uniform _PushConstant { PushConstant pushConstant; };
 
 // TODO: these light sources only serve as debug and will be replaced when deferred rendering is implemented
 const vec3 CAMERA_POS = vec3(0.0, 9.0, 10.0);
 const int LIGHT_COUNT = 2;
-const vec3 LIGHT_POS[LIGHT_COUNT] = {vec3(2.5, 3.5, 1.5),
-                                    vec3(3.2, 3.0, -1.0)};
-const vec3 LIGHT_COL[LIGHT_COUNT] = {vec3(0.9, 10.6, 2.9),
-                                    vec3(0.0, 4.5, 12.7)};
+const vec3 LIGHT_POS[LIGHT_COUNT] = { vec3(2.5, 3.5, 1.5),
+vec3(3.2, 3.0, -1.0) };
+const vec3 LIGHT_COL[LIGHT_COUNT] = { vec3(0.9, 10.6, 2.9),
+vec3(0.0, 4.5, 12.7) };
 
 const vec3 DIRECTIONAL_LIGHT_DIR = vec3(-0.2, 1.0, 0.3);
 // color of sunlight according to https://www.color-name.com/sunlight.color
@@ -41,12 +41,12 @@ const float PI = 3.14159265359;
 // shader heavily based on https://learnopengl.com/PBR/Lighting
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-    float a = roughness*roughness;
-    float a2 = a*a;
+    float a = roughness * roughness;
+    float a2 = a * a;
     float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
+    float NdotH2 = NdotH * NdotH;
 
-    float nom   = a2;
+    float nom = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
 
@@ -56,9 +56,9 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
+    float k = (r * r) / 8.0;
 
-    float nom   = NdotV;
+    float nom = NdotV;
     float denom = NdotV * (1.0 - k) + k;
 
     return nom / denom;
@@ -88,10 +88,10 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 radiance, vec3 albedo, float metallic, fl
 
     // Cook-Torrance BRDF
     float NDF = DistributionGGX(N, H, roughness);
-    float G   = GeometrySmith(N, V, L, roughness);
-    vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    float G = GeometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-    vec3 numerator    = NDF * G * F;
+    vec3 numerator = NDF * G * F;
     float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
     vec3 specular = numerator / denominator;
 
@@ -118,9 +118,9 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 radiance, vec3 albedo, float metallic, fl
 float getShadow(vec4 shadowCoords, vec2 offset) {
     float shadow = 1.0;
 
-    if ( shadowCoords.z > -1.0 && shadowCoords.z < 1.0 ) {
-        float dist = texture( depthSampler, shadowCoords.st + offset ).r;
-        if ( shadowCoords.w > 0.0 && dist < shadowCoords.z )
+    if (shadowCoords.z > -1.0 && shadowCoords.z < 1.0) {
+        float dist = texture(depthSampler, shadowCoords.st + offset).r;
+        if (shadowCoords.w > 0.0 && dist < shadowCoords.z)
         {
             shadow = 0.1;
         }
@@ -144,7 +144,7 @@ float filterPCF(vec4 sc)
     {
         for (int y = -range; y <= range; y++)
         {
-            shadowFactor += getShadow(sc, vec2(dx*x, dy*y));
+            shadowFactor += getShadow(sc, vec2(dx * x, dy * y));
             count++;
         }
 
@@ -156,18 +156,23 @@ void main() {
     vec4 shadowCoordsHom = inShadowCoords / inShadowCoords.w;
     vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xy + vec2(1)) / 2, shadowCoordsHom.ba);
 
-    const uint doPCF = 1;
+    const uint doPCF = 0;
     float shadow = doPCF == 1 ? filterPCF(normalizedShadowCoords) : getShadow(normalizedShadowCoords, vec2(0));
+
+    if (normalizedShadowCoords.x < 0 || normalizedShadowCoords.x > 1
+    || normalizedShadowCoords.y < 0 || normalizedShadowCoords.y > 1) {
+        shadow = 1.0;
+    }
 
     // fetch material
     MaterialDescription material = materials.m[pushConstant.materialIndex];
 
     // apply normal mappingd
     vec3 N = normalize(inNormal);
-	vec3 T = normalize(inTangents.xyz);
+    vec3 T = normalize(inTangents.xyz);
     vec3 B = cross(N, T) * inTangents.w;
-	mat3 TBN = mat3(T, B, N);
-	vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
+    mat3 TBN = mat3(T, B, N);
+    vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
     normal = normalize(TBN * normal);
 
     // fetch PBR textures
@@ -214,7 +219,7 @@ void main() {
     // HDR tonemapping
     color = color / (color + vec3(1.0));
     // gamma correct
-    color = pow(color, vec3(1.0/2.2));
+    color = pow(color, vec3(1.0 / 2.2));
 
     outColor = vec4(color, 1);
 

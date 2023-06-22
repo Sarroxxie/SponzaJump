@@ -956,7 +956,6 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
     samplerInfo.anisotropyEnable = VK_FALSE;
 
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 

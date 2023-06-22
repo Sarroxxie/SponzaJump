@@ -20,6 +20,8 @@ public:
     void setPosition(glm::vec3 newPosition);
     void setLookAt(glm::vec3 newCenter);
 
+    void normalizeViewDir();
+
     glm::vec3 getWorldPos();
     glm::vec3 getViewDir();
 

@@ -38,3 +38,6 @@ glm::vec3 Camera::getWorldPos() {
 glm::vec3 Camera::getViewDir() {
     return m_ViewDir;
 }
+void Camera::normalizeViewDir() {
+    m_ViewDir = glm::normalize(m_ViewDir);
+}
