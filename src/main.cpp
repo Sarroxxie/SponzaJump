@@ -31,7 +31,7 @@ int main() {
     auto          renderSetupDescription =
         initializeSimpleSceneRenderContext(appContext, renderContext);
 
-    Scene               scene(appContext.baseContext, renderContext);
+    Scene               scene(appContext, renderContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
 

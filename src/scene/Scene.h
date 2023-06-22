@@ -35,10 +35,10 @@ private:
 
     InputController *m_InputController = nullptr;
 
-    VulkanBaseContext m_baseContext;
+    ApplicationVulkanContext& m_Context;
 
 public:
-    Scene(VulkanBaseContext vulkanBaseContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 45)));
+    Scene(ApplicationVulkanContext &vulkanContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 45)));
 
     // ECS ---
     EntityId addEntity();
