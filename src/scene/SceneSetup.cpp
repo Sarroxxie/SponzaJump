@@ -19,7 +19,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
 
     ModelLoader loader;
 
-    loader.loadModel("res/assets/models/debug_model4/debug_model4.gltf",
+    loader.loadModel("res/assets/models/scene/crystalshroom_scene.gltf",
                      scene.getModelLoadingOffsets(), context.baseContext,
                      context.commandContext);
 
@@ -71,6 +71,10 @@ void addToScene(Scene&                          scene,
         }
     }
 }
+/*
+* NOTE: This function will only set the collision box correctly when the origin of the 3D model is also the
+*       center point of its xy-bounds!
+*/
 b2Fixture* addPhysicsComponent(Scene& scene, EntityId entityId, ModelInstance& instance, bool isDynamic) {
     auto* physicsComponent = scene.assign<PhysicsComponent>(entityId);
 

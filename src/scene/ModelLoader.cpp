@@ -309,7 +309,6 @@ bool ModelLoader::loadModel(const std::string&  filename,
         } else {
             instance.rotation = glm::vec3(0);
         }
-
         int meshIndex = node.mesh;
 
         std::string posPrimitiveName = "POSITION";
@@ -319,30 +318,47 @@ bool ModelLoader::loadModel(const std::string&  filename,
         instance.max = glm::vec3(1);
 
         if (!primitives.empty()) {
-            if(primitives[0].attributes.count(posPrimitiveName)) {
-                int accessorIndex = primitives[0].attributes.at(posPrimitiveName);
-
-                tinygltf::Accessor acc = gltfModel.accessors[accessorIndex];
-
-                if (acc.minValues.size() == 3) {
-                    instance.min.x = acc.minValues[0];
-                    instance.min.y = acc.minValues[1];
-                    instance.min.z = acc.minValues[2];
-                }
-
-                if (acc.maxValues.size() == 3) {
-                    instance.max.x = acc.maxValues[0];
-                    instance.max.y = acc.maxValues[1];
-                    instance.max.z = acc.maxValues[2];
-                }
+            // initialize min and max from the first primitive
+            extractBoundsFromPrimitive(gltfModel, primitives[0],instance.min, instance.max);
+            // grab maximum over all primitives (skipping the first one that was used for initialization)
+            for(int primitiveID = 1; primitiveID < primitives.size(); primitiveID++) {
+                glm::vec3 min, max;
+                extractBoundsFromPrimitive(gltfModel, primitives[primitiveID], min, max);
+                instance.min = glm::min(instance.min, min);
+                instance.max = glm::max(instance.max, max);
             }
         }
-
-
 
         instances.push_back(instance);
     }
     return true;
+}
+
+/*
+* min and max are the outputs
+*/
+void extractBoundsFromPrimitive(tinygltf::Model &gltfModel,
+                                tinygltf::Primitive &primitive,
+                                glm::vec3& min,
+                                glm::vec3& max) {
+    std::string posPrimitiveName = "POSITION";
+    if(primitive.attributes.count(posPrimitiveName)) {
+        int accessorIndex = primitive.attributes.at(posPrimitiveName);
+
+        tinygltf::Accessor acc = gltfModel.accessors[accessorIndex];
+
+        if(acc.minValues.size() == 3) {
+            min.x = acc.minValues[0];
+            min.y = acc.minValues[1];
+            min.z = acc.minValues[2];
+        }
+
+        if(acc.maxValues.size() == 3) {
+            max.x = acc.maxValues[0];
+            max.y = acc.maxValues[1];
+            max.z = acc.maxValues[2];
+        }
+    }
 }
 
 /*

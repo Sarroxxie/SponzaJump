@@ -27,6 +27,11 @@ void createSampleIndexBuffer(VulkanBaseContext&        baseContext,
                               CommandContext&           commandContext,
                               std::vector<unsigned int> indices,
                               Mesh&                     mesh);
+void extractBoundsFromPrimitive(tinygltf::Model&     gltfModel,
+                                tinygltf::Primitive& primitive,
+                                glm::vec3&           min,
+                                glm::vec3&           max);
+
 
 struct ModelLoadingOffsets
 {

@@ -29,10 +29,10 @@ layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
 // TODO: these light sources only serve as debug and will be replaced when deferred rendering is implemented
 const int LIGHT_COUNT = 2;
-const vec3 LIGHT_POS[LIGHT_COUNT] = {vec3(2.5, 3.5, 1.5),
-                                    vec3(3.2, 3.0, -1.0)};
-const vec3 LIGHT_COL[LIGHT_COUNT] = {vec3(0.9, 10.6, 2.9),
-                                    vec3(0.0, 4.5, 12.7)};
+const vec3 LIGHT_POS[LIGHT_COUNT] = {vec3(1.0, 2.5, 4.0),
+                                    vec3(0.0, 2.5, -4.0)};
+const vec3 LIGHT_COL[LIGHT_COUNT] = {vec3(10, 10, 6),
+                                    vec3(11, 9, 7)};
 
 const float PI = 3.14159265359;
 
