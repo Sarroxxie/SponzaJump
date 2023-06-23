@@ -1582,9 +1582,7 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    // TODO: check if the correct descriptor set is sent
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-
     descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
     descriptorSetLayouts.push_back(mainPass.materialDescriptorSetLayout);
 
