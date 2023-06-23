@@ -8,6 +8,10 @@ Project for the graphics and game development praktikum during SS23 of Josias Di
 
 The working directory needs to be set to the project root directory.
 
+### Shader Compile Directory
+
+A directory called "spv" has to be created in "res/shaders/". Final path is "res/shaders/spv" and this directory is used to store the compiled shaders.
+
 ### Submodules
 
 This repository contains [submodules](https://git-scm.com/book/de/v2/Git-Tools-Submodule) for some of its libraries. Cloning it does not automatically clone its submodules. 
