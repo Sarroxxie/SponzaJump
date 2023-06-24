@@ -38,7 +38,7 @@ private:
     ApplicationVulkanContext& m_Context;
 
 public:
-    Scene(ApplicationVulkanContext &vulkanContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 45)));
+    Scene(ApplicationVulkanContext &vulkanContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 30)));
 
     // ECS ---
     EntityId addEntity();

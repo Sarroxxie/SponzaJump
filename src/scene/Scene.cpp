@@ -209,7 +209,7 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
                                            transformation->translation.y + 10,
                                            prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
-                                         transformation->translation.y, 0));
+                                         transformation->translation.y + 5, 0));
         }
 
         if(renderContext.renderSettings.shadowMappingSettings.snapToPlayer) {
