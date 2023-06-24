@@ -30,6 +30,7 @@ private:
     SceneData sceneData;
 
     Camera m_Camera;
+    float  cameraOffsetY = 5;
 
     b2World m_World;
 

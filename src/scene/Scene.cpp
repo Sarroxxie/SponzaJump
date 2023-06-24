@@ -66,6 +66,8 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
         ImGui::SliderFloat3("Camera Dir", glm::value_ptr(m_Camera.getViewDirRef()),
                             -glm::pi<float>(), glm::pi<float>());
 
+        ImGui::SliderFloat("Y Lookat Offset", &cameraOffsetY, 0.0f, 10.0f);
+
         ImGui::Checkbox("Lock Camera to Player", &renderContext.imguiData.lockCamera);
     }
     if(ImGui::CollapsingHeader("Shadow Controls")) {
@@ -83,6 +85,10 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
                         &renderContext.renderSettings.shadowMappingSettings.snapToPlayer);
 
         ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
+
+        ImGui::Checkbox("Player Spikes Shadow", &renderContext.imguiData.playerSpikesShadow);
+
+        ImGui::Checkbox("Percentage Closer Filtering", &renderContext.imguiData.doPCF);
 
         ImGui::SliderFloat(
             "Ortho Dim",
@@ -209,7 +215,7 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
                                            transformation->translation.y + 10,
                                            prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
-                                         transformation->translation.y + 5, 0));
+                                         transformation->translation.y + cameraOffsetY, 0));
         }
 
         if(renderContext.renderSettings.shadowMappingSettings.snapToPlayer) {

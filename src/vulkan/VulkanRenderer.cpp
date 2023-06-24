@@ -7,6 +7,7 @@
 #include "rendering/RenderContext.h"
 #include "rendering/RenderSetup.h"
 #include "rendering/host_device.h"
+#include "game/PlayerComponent.h"
 
 VulkanRenderer::VulkanRenderer(ApplicationVulkanContext& context, RenderContext& renderContext)
     : m_Context(context)
@@ -220,6 +221,12 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     pushConstant.transformation = glm::mat4(1);
     pushConstant.materialIndex  = 0;
 
+    EntityId playerID = -1;
+
+    for(EntityId id : SceneView<PlayerComponent, Transformation>(scene)) {
+        playerID = id;
+    }
+
     for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
         auto* modelComponent     = scene.getComponent<ModelComponent>(id);
         auto* transformComponent = scene.getComponent<Transformation>(id);
@@ -227,8 +234,15 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
         Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
         pushConstant.transformation = transformComponent->getMatrix();
-
+        int counter                 = 0;
         for(auto& meshPartIndex : model.meshPartIndices) {
+            // this is fairly hardcoded so that the spiky mesh of the player has no shadow
+            // the meshes of the spikes are at position 1 and 2 (this is the hardcoded part)
+            if(!m_RenderContext.imguiData.playerSpikesShadow && id == playerID
+               && (counter == 1 || counter == 2)) {
+                counter++;
+                continue;
+            }
             MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
             Mesh     mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
             VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
@@ -251,6 +265,8 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
             vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                              mesh.indicesCount, 1, 0, 0, 0);
+
+            counter++;
         }
     }
 
@@ -462,6 +478,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     lightingInformation.lightDirection =
         m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDir();
     lightingInformation.lightIntensity = m_RenderContext.renderSettings.lightingSetting.sunColor;
+    lightingInformation.doPCF = m_RenderContext.imguiData.doPCF;
 
     memcpy(m_RenderContext.renderPasses.mainPass.lightingBuffer.bufferMemoryMapping,
            &lightingInformation, sizeof(LightingInformation));

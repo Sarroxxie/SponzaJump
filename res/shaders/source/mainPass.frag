@@ -154,8 +154,7 @@ void main() {
     vec4 shadowCoordsHom = inShadowCoords / inShadowCoords.w;
     vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xy + vec2(1)) / 2, shadowCoordsHom.ba);
 
-    const uint doPCF = 0;
-    float shadow = doPCF == 1 ? filterPCF(normalizedShadowCoords) : getShadow(normalizedShadowCoords, vec2(0));
+    float shadow = lightingInformation.doPCF == 1 ? filterPCF(normalizedShadowCoords) : getShadow(normalizedShadowCoords, vec2(0));
 
     if (normalizedShadowCoords.x < 0 || normalizedShadowCoords.x > 1
     || normalizedShadowCoords.y < 0 || normalizedShadowCoords.y > 1) {
