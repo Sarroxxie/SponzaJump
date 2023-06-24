@@ -392,8 +392,8 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
 
 
 
-    const uint32_t SHADOW_MAP_WIDTH  = 2048;
-    const uint32_t SHADOW_MAP_HEIGHT = 2048;
+    const uint32_t SHADOW_MAP_WIDTH  = 3840;
+    const uint32_t SHADOW_MAP_HEIGHT = 3840;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
@@ -959,7 +959,6 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
     samplerInfo.anisotropyEnable = VK_FALSE;
 
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
