@@ -297,7 +297,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
     if(m_RenderContext.imguiData.visualizeShadowBuffer) {
-        /*vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
                                VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.visualizePipeline);
 
@@ -305,23 +305,6 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0,
             1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
-
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);*/
-
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          m_RenderContext.renderPasses.mainPass.skyboxPipeline);
-
-        // bind DescriptorSet 0 (Camera Transformations)
-        vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0,
-            1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
-
-        // bind DescriptorSet 1 (Materials)
-        vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1,
-            1, &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
@@ -399,6 +382,23 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             }
         }
     }
+
+    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      m_RenderContext.renderPasses.mainPass.skyboxPipeline);
+
+    // bind DescriptorSet 0 (Camera Transformations)
+    vkCmdBindDescriptorSets(
+        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0, 1,
+        &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+
+    // bind DescriptorSet 1 (Materials)
+    vkCmdBindDescriptorSets(
+        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
+        &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
+
+    vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
     if(m_RenderContext.usesImgui) {
         // @IMGUI
