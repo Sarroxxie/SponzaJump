@@ -325,6 +325,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
     } else {
+        // render meshes
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           mainRenderPass.graphicsPipelines[mainRenderPass.activePipelineIndex]);
 
@@ -399,6 +400,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         }
     }
 
+    // render skybpx
     vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       m_RenderContext.renderPasses.mainPass.skyboxPipeline);
 
@@ -422,7 +424,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
                                         m_Context.commandContext.commandBuffer);
     }
-
+    
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
 
