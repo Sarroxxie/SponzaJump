@@ -180,7 +180,7 @@ void main() {
         vec3 T = normalize(inTangents.xyz);
         vec3 B = cross(N, T) * inTangents.w;
         mat3 TBN = mat3(T, B, N);
-        vec3 normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
+        normal = texture(samplers[material.normalTextureID], inTexCoords).rgb * 2.0 - vec3(1.0);
         normal = normalize(TBN * normal);
     }
 
