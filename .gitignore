@@ -13,6 +13,9 @@ build/
 #ImGUI
 imgui.ini
 
+#Sponza Scene and Textures
+res/assets/models/sponza
+res/assets/textures/sponza
 
 
 ## Ignore Visual Studio temporary files, build results, and

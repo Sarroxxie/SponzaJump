@@ -17,13 +17,25 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     cubemap.paths[5] = "res/assets/textures/cubemap/nz.png";
     createCubeMap(context.baseContext, context.commandContext, cubemap, true);
 
-    ModelLoader loader;
+    {
+        ModelLoader loader;
 
-    loader.loadModel("res/assets/models/scene/crystalshroom_scene.gltf",
-                     scene.getModelLoadingOffsets(), context.baseContext,
-                     context.commandContext);
+        loader.loadModel("res/assets/models/scene/crystalshroom_scene.gltf",
+                         scene.getModelLoadingOffsets(), context.baseContext,
+                         context.commandContext);
 
-    addToScene(scene, loader, contactListener);
+        addToScene(scene, loader, contactListener);
+    }
+
+    {
+        ModelLoader loader;
+
+        loader.loadModel("res/assets/models/scene/sponza.gltf",
+                         scene.getModelLoadingOffsets(), context.baseContext,
+                         context.commandContext);
+
+        addToScene(scene, loader, contactListener);
+    }
 }
 
 

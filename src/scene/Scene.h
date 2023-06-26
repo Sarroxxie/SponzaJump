@@ -30,7 +30,7 @@ private:
     SceneData sceneData;
 
     Camera m_Camera;
-    float  cameraOffsetY = 5;
+    float  cameraOffsetY = 3.5;
 
     b2World m_World;
 
@@ -39,7 +39,7 @@ private:
     ApplicationVulkanContext& m_Context;
 
 public:
-    Scene(ApplicationVulkanContext &vulkanContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 30)));
+    Scene(ApplicationVulkanContext &vulkanContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 25)));
 
     // ECS ---
     EntityId addEntity();
