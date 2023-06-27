@@ -75,6 +75,25 @@ void addToScene(Scene&                          scene,
             addPhysicsComponent(scene, entityId, instance, false);
         }
 
+        const std::string hazardNamePrefix = "Hazard";
+        if(instance.name.rfind(hazardNamePrefix, 0) == 0) {
+            auto* fixture = addPhysicsComponent(scene, entityId, instance, false);
+
+            b2Filter filter;
+            filter.categoryBits |= HAZARD_CATEGORY_BITS;
+
+            fixture->SetFilterData(filter);
+        }
+
+        const std::string winAreaNamePrefix = "Win";
+        if(instance.name.rfind(winAreaNamePrefix, 0) == 0) {
+            auto* fixture = addPhysicsComponent(scene, entityId, instance, false);
+
+            b2Filter filter;
+            filter.categoryBits |= WIN_AREA_CATEGORY_BITS;
+
+            fixture->SetFilterData(filter);
+        }
 
         const std::string playerNamePrefix = "Player";
         if(instance.name.rfind(playerNamePrefix, 0) == 0) {

@@ -4,6 +4,8 @@
 #ifndef GRAPHICSPRAKTIKUM_GAMECONTACTLISTENER_H
 #define GRAPHICSPRAKTIKUM_GAMECONTACTLISTENER_H
 
+#define FIXTURE_ID_A 1
+#define FIXTURE_ID_B 2
 
 class GameContactListener : b2ContactListener {
 
@@ -31,6 +33,9 @@ private:
 
     bool contactIsBelow(b2Contact *contact, int fixture_id);
 
+    bool playerHitCategory(b2Contact *contact, int fixture_id, uint32 categoryBits);
+
+    bool hasHazardBits(b2Fixture *fixture, uint32 categoryBits);
 };
 
 
