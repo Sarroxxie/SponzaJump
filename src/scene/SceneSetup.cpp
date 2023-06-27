@@ -27,7 +27,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
         addToScene(scene, loader, contactListener);
     }
 
-    {
+    /*{
         ModelLoader loader;
 
         loader.loadModel("res/assets/models/sponza/sponza.gltf",
@@ -35,7 +35,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                          context.commandContext);
 
         addToScene(scene, loader, contactListener);
-    }
+    }*/
 }
 
 
