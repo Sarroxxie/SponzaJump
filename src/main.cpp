@@ -113,23 +113,26 @@ int main() {
             ImGui::End();
         }
         renderer.render(scene);
-        delta      = (CURRENT_MILLIS - lastUpdate);
-        lastUpdate = CURRENT_MILLIS;
 
-        accumulatedDelta += delta;
-        if(accumulatedDelta >= targetPhysicsRate) {
-            scene.doPhysicsUpdate(targetPhysicsRate.count());
+        if (scene.gameplayActive()) {
+            delta      = (CURRENT_MILLIS - lastUpdate);
+            lastUpdate = CURRENT_MILLIS;
 
-            // accumulatedDelta -= targetPhysicsRate;
-            int amountStepsInAcc = accumulatedDelta / targetPhysicsRate;
-            if(amountStepsInAcc > 1) {
-                std::cout << "Skipping " << amountStepsInAcc - 1
-                          << " physics steps" << std::endl;
+            accumulatedDelta += delta;
+            if(accumulatedDelta >= targetPhysicsRate) {
+                scene.doPhysicsUpdate(targetPhysicsRate.count());
+
+                // accumulatedDelta -= targetPhysicsRate;
+                int amountStepsInAcc = accumulatedDelta / targetPhysicsRate;
+                if(amountStepsInAcc > 1) {
+                    std::cout << "Skipping " << amountStepsInAcc - 1
+                              << " physics steps" << std::endl;
+                }
+                accumulatedDelta = accumulatedDelta % targetPhysicsRate;
             }
-            accumulatedDelta = accumulatedDelta % targetPhysicsRate;
-        }
 
-        scene.handleUserInput();
+            scene.handleUserInput();
+        }
     }
     vkDeviceWaitIdle(appContext.baseContext.device);
 

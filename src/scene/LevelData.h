@@ -10,7 +10,7 @@ typedef struct s_levelData {
     glm::vec3 playerSpawnLocation;
 
     bool disableDeath = false;
-    float deathPlaneHeight = 0;
+    float deathPlaneHeight = -5;
 
     bool hasWon = false;
 } LevelData;

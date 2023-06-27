@@ -20,7 +20,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/scene/crystalshroom_scene.gltf",
+        loader.loadModel("res/assets/models/scene2/playable.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 

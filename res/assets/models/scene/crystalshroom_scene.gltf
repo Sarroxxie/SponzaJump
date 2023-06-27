@@ -21,7 +21,7 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Win-1",
+			"name":"Static-1",
 			"translation":[
 				-16.637664794921875,
 				10.027755737304688,
@@ -53,7 +53,7 @@
 		},
 		{
 			"mesh":3,
-			"name":"Hazard-2",
+			"name":"Static-2",
 			"translation":[
 				-11.293960571289062,
 				6.98098087310791,

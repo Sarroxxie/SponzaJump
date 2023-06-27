@@ -97,6 +97,7 @@ class Scene
     void     doPhysicsUpdate(uint64_t deltaMillis);
 
     void doGameplayUpdate();
+    bool gameplayActive();
 
     void setInputController(InputController* inputController);
     void handleUserInput();

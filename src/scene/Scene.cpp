@@ -306,11 +306,14 @@ void Scene::doGameplayUpdate() {
         }
     }
 }
+bool Scene::gameplayActive() {
+    return !levelData.hasWon;
+}
+
 void Scene::resetLevel() {
     levelData.hasWon = false;
     resetPlayer();
 }
-
 void Scene::resetPlayer() {
     for(auto id : SceneView<PlayerComponent, Transformation, PhysicsComponent>(*this)) {
         auto* playerComponent  = getComponent<PlayerComponent>(id);
