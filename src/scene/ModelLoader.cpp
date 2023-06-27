@@ -200,8 +200,8 @@ void createSampleIndexBuffer(VulkanBaseContext&        baseContext,
  */
 bool ModelLoader::loadModel(const std::string&  filename,
                             ModelLoadingOffsets offsets,
-                            VulkanBaseContext  context,
-                            CommandContext     commandContext) {
+                            VulkanBaseContext   context,
+                            CommandContext      commandContext) {
     tinygltf::Model    gltfModel;
     tinygltf::TinyGLTF loader;
     std::string        errors;
@@ -227,117 +227,179 @@ bool ModelLoader::loadModel(const std::string&  filename,
 
     this->offsets = offsets;
 
-    // 1. create Meshes
+    // 1. create Models
     for(auto& gltfMesh : gltfModel.meshes) {
         // a "Mesh" from the glTF file is called a "Model" in our program
-        Model model;
-        for(auto& primitive : gltfMesh.primitives) {
-            int meshPartIndex = -1;
-            int meshIndex     = findGeometryData(primitive);
-            if(meshIndex < 0) {
-                // Mesh not yet created, so create a new one alongside a MeshPart
-                Mesh mesh = createMesh(primitive, gltfModel.accessors, gltfModel.bufferViews,
-                                       gltfModel.buffers, context, commandContext);
-                meshes.push_back(mesh);
-                meshParts.push_back(MeshPart(meshes.size() - 1 + offsets.meshesOffset,
-                                             primitive.material + offsets.materialsOffset));
-                model.meshPartIndices.push_back((int)meshParts.size() - 1
-                                                + offsets.meshPartsOffset);
-                meshLookups.push_back(MeshLookup(primitive, meshes.size() - 1));
-            } else {
-                // Mesh exists, so we need to see if there exists a MeshPart
-                // pointing at that Mesh and sharing the material index
-                bool meshPartExists = false;
-                for(int i = 0; i < meshParts.size(); i++) {
-                    if(meshParts[i].meshIndex == (meshIndex + offsets.meshesOffset)
-                       && meshParts[i].materialIndex == (primitive.material + offsets.materialsOffset)) {
-                        meshPartExists = true;
-                        model.meshPartIndices.push_back(i + offsets.meshPartsOffset);
-                        break;
-                    }
-                }
-                if(!meshPartExists) {
-                    // create the MeshPart that points to the found Mesh and
-                    // the material of the primitive
-                    meshParts.push_back(MeshPart(meshIndex + offsets.meshesOffset,
-                                                 primitive.material + offsets.materialsOffset));
-                    model.meshPartIndices.push_back(meshParts.size() - 1
-                                                    + offsets.meshPartsOffset);
-                }
-            }
-        }
+        Model model = createModelFromMesh(gltfModel, gltfMesh, context, commandContext);
         models.push_back(model);
     }
+
     // 2. create Materials
     for(auto& gltfMaterial : gltfModel.materials) {
-        materials.push_back(createMaterial(gltfMaterial, offsets.texturesOffset,
+        Material material = createMaterial(gltfMaterial, offsets.texturesOffset,
                                            gltfModel.textures, gltfModel.images,
-                                           context, commandContext));
+                                           context, commandContext);
+        materials.push_back(material);
     }
 
-    // 3. create ModelInstances (from list of Nodes)
+    // 3. create ModelInstances and PointLights (from list of Nodes)
     for(auto& node : gltfModel.nodes) {
-        ModelInstance instance(node.mesh + offsets.modelsOffset);
-
-        instance.name = node.name;
-
-        if (node.translation.size() == 3) {
-            instance.translation.x = node.translation[0];
-            instance.translation.y = node.translation[1];
-            instance.translation.z = node.translation[2];
+        if(node.mesh != -1) {
+            // node references a mesh
+            ModelInstance instance = nodeToInstance(gltfModel, node);
+            instances.push_back(instance);
         } else {
-            instance.translation = glm::vec3(0);
-        }
-
-        if (node.scale.size() == 3) {
-            instance.scaling.x = node.scale[0];
-            instance.scaling.y = node.scale[1];
-            instance.scaling.z = node.scale[2];
-        } else {
-            instance.scaling = glm::vec3(1);
-        }
-
-        if (node.rotation.size() == 4) {
-            glm::quat q;
-
-            q.x = node.rotation[0];
-            q.y = node.rotation[1];
-            q.z = node.rotation[2];
-            q.w = node.rotation[3];
-
-            instance.rotation = eulerAngles(q);
-        } else {
-            instance.rotation = glm::vec3(0);
-        }
-        int meshIndex = node.mesh;
-
-        std::string posPrimitiveName = "POSITION";
-        std::vector<tinygltf::Primitive> primitives = gltfModel.meshes[meshIndex].primitives;
-
-        instance.min = glm::vec3(-1);
-        instance.max = glm::vec3(1);
-
-        if (!primitives.empty()) {
-            // initialize min and max from the first primitive
-            extractBoundsFromPrimitive(gltfModel, primitives[0],instance.min, instance.max);
-            // grab maximum over all primitives (skipping the first one that was used for initialization)
-            for(int primitiveID = 1; primitiveID < primitives.size(); primitiveID++) {
-                glm::vec3 min, max;
-                extractBoundsFromPrimitive(gltfModel, primitives[primitiveID], min, max);
-                instance.min = glm::min(instance.min, min);
-                instance.max = glm::max(instance.max, max);
+            // node references a light source (probably)
+            PointLight pointLight;
+            if(nodeToLight(gltfModel, node, pointLight)) {
+                lights.push_back(pointLight);
             }
         }
-
-        instances.push_back(instance);
     }
     return true;
 }
 
 /*
+ * Takes a mesh out of the glTF Mesh and transforms it into the internally used
+ * Model. This function checks if the data used by this glTF Mesh is already
+ * converted into the internal format and only sets the reference in this case.
+ * If the data is not yet created, it will create Vertex and Index Buffers so
+ * the Model can be used for GPU rendering later.
+ */
+Model ModelLoader::createModelFromMesh(tinygltf::Model&  gltfModel,
+                                       tinygltf::Mesh&   gltfMesh,
+                                       VulkanBaseContext context,
+                                       CommandContext    commandContext) {
+    Model model;
+    for(auto& primitive : gltfMesh.primitives) {
+        int meshPartIndex = -1;
+        int meshIndex     = findGeometryData(primitive);
+        if(meshIndex < 0) {
+            // Mesh not yet created, so create a new one alongside a MeshPart
+            Mesh mesh = createMesh(primitive, gltfModel.accessors, gltfModel.bufferViews,
+                                   gltfModel.buffers, context, commandContext);
+            meshes.push_back(mesh);
+            meshParts.push_back(MeshPart(meshes.size() - 1 + offsets.meshesOffset,
+                                         primitive.material + offsets.materialsOffset));
+            model.meshPartIndices.push_back((int)meshParts.size() - 1 + offsets.meshPartsOffset);
+            meshLookups.push_back(MeshLookup(primitive, meshes.size() - 1));
+        } else {
+            // Mesh exists, so we need to see if there exists a MeshPart
+            // pointing at that Mesh and sharing the material index
+            bool meshPartExists = false;
+            for(int i = 0; i < meshParts.size(); i++) {
+                if(meshParts[i].meshIndex == (meshIndex + offsets.meshesOffset)
+                   && meshParts[i].materialIndex
+                          == (primitive.material + offsets.materialsOffset)) {
+                    meshPartExists = true;
+                    model.meshPartIndices.push_back(i + offsets.meshPartsOffset);
+                    break;
+                }
+            }
+            if(!meshPartExists) {
+                // create the MeshPart that points to the found Mesh and
+                // the material of the primitive
+                meshParts.push_back(MeshPart(meshIndex + offsets.meshesOffset,
+                                             primitive.material + offsets.materialsOffset));
+                model.meshPartIndices.push_back(meshParts.size() - 1 + offsets.meshPartsOffset);
+            }
+        }
+    }
+    return model;
+}
+
+/*
+ * Checks if a node references a light source.
+ * If the node is a light source, this function returns true and writes its
+ * contents into the paramter "pointLight". If the node is not a light source,
+ * this function returns false and does not modify anything.
+ */
+bool ModelLoader::nodeToLight(tinygltf::Model& gltfModel, tinygltf::Node& node, PointLight& pointLight) {
+    const std::string extensionName = "KHR_lights_punctual";
+
+    for(auto entry : node.extensions) {
+        // if the node contains the "KHR_lights_punctual"-extension, it is considered a light source
+        if(entry.first == extensionName) {
+            int lightID = entry.second.Get("light").GetNumberAsInt();
+            tinygltf::Light light = gltfModel.lights[lightID];
+            pointLight.intensity  = glm::vec3(light.color[0] * light.intensity,
+                                              light.color[1] * light.intensity,
+                                              light.color[2] * light.intensity);
+            if(node.translation.size() == 3) {
+                pointLight.position = glm::vec3(node.translation[0], node.translation[1],
+                                                node.translation[2]);
+            } else {
+                pointLight.position = glm::vec3(0);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+* Creates a ModelInstance from the data inside a node of the glTF model.
+*/
+ModelInstance ModelLoader::nodeToInstance(tinygltf::Model& gltfModel, tinygltf::Node& node) {
+    ModelInstance instance(node.mesh + offsets.modelsOffset);
+
+    instance.name = node.name;
+
+    if(node.translation.size() == 3) {
+        instance.translation.x = node.translation[0];
+        instance.translation.y = node.translation[1];
+        instance.translation.z = node.translation[2];
+    } else {
+        instance.translation = glm::vec3(0);
+    }
+
+    if(node.scale.size() == 3) {
+        instance.scaling.x = node.scale[0];
+        instance.scaling.y = node.scale[1];
+        instance.scaling.z = node.scale[2];
+    } else {
+        instance.scaling = glm::vec3(1);
+    }
+
+    if(node.rotation.size() == 4) {
+        glm::quat q;
+
+        q.x = node.rotation[0];
+        q.y = node.rotation[1];
+        q.z = node.rotation[2];
+        q.w = node.rotation[3];
+
+        instance.rotation = eulerAngles(q);
+    } else {
+        instance.rotation = glm::vec3(0);
+    }
+    int meshIndex = node.mesh;
+
+    std::string posPrimitiveName = "POSITION";
+    std::vector<tinygltf::Primitive> primitives = gltfModel.meshes[meshIndex].primitives;
+
+    instance.min = glm::vec3(-1);
+    instance.max = glm::vec3(1);
+
+    if(!primitives.empty()) {
+        // initialize min and max from the first primitive
+        extractBoundsFromPrimitive(gltfModel, primitives[0], instance.min,
+                                   instance.max);
+        // grab maximum over all primitives (skipping the first one that was used for initialization)
+        for(int primitiveID = 1; primitiveID < primitives.size(); primitiveID++) {
+            glm::vec3 min, max;
+            extractBoundsFromPrimitive(gltfModel, primitives[primitiveID], min, max);
+            instance.min = glm::min(instance.min, min);
+            instance.max = glm::max(instance.max, max);
+        }
+    }
+    return instance;
+}
+
+/*
 * min and max are the outputs
 */
-void extractBoundsFromPrimitive(tinygltf::Model &gltfModel,
+void ModelLoader::extractBoundsFromPrimitive(tinygltf::Model &gltfModel,
                                 tinygltf::Primitive &primitive,
                                 glm::vec3& min,
                                 glm::vec3& max) {

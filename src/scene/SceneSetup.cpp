@@ -30,7 +30,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/scene/sponza.gltf",
+        loader.loadModel("res/assets/models/sponza/sponza.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
@@ -54,6 +54,8 @@ void addToScene(Scene&                          scene,
                                loader.materials.begin(), loader.materials.end());
     sceneData.models.insert(sceneData.models.end(), loader.models.begin(),
                             loader.models.end());
+    sceneData.lights.insert(sceneData.lights.end(), loader.lights.begin(),
+                            loader.lights.end());
 
     for(ModelInstance& instance : loader.instances) {
         EntityId entityId = scene.addEntity();

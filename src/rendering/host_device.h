@@ -5,6 +5,7 @@
  */
 
 #ifdef __cplusplus
+    #pragma once
     #include "glm/glm.hpp"
     using vec3 = glm::vec3;
     using mat4 = glm::mat4;
@@ -45,19 +46,26 @@ END_BINDING();
 // copy of "Material"-struct from "scene/Model.h" for use on GPU
 struct MaterialDescription
 {
-    vec3 albedo;
-    vec3 aoRoughnessMetallic;
-    int  albedoTextureID;
-    int  normalTextureID;
-    int  aoRoughnessMetallicTextureID;
+    ALIGN_AS(16) vec3 albedo;
+    ALIGN_AS(16) vec3 aoRoughnessMetallic;
+    ALIGN_AS(4) int albedoTextureID;
+    ALIGN_AS(4) int normalTextureID;
+    ALIGN_AS(4) int aoRoughnessMetallicTextureID;
+};
+
+struct PointLight
+{
+    ALIGN_AS(16) vec3 position;
+    ALIGN_AS(16) vec3 intensity;
+    ALIGN_AS(4) float radius;
 };
 
 // used per camera
 struct CameraUniform
 {
-    mat4 viewProj;
-    mat4 viewInverse;
-    mat4 projInverse;
+    ALIGN_AS(16) mat4 viewProj;
+    ALIGN_AS(16) mat4 viewInverse;
+    ALIGN_AS(16) mat4 projInverse;
 };
 
 struct PushConstant
@@ -73,6 +81,6 @@ struct LightingInformation
     ALIGN_AS(16) vec3 cameraPosition;
     ALIGN_AS(16) vec3 lightDirection;
     ALIGN_AS(16) vec3 lightIntensity;
-    ALIGN_AS(4)  int  doPCF;
+    ALIGN_AS(4) int doPCF;
     // could store some omnidirectional light sources here for demonstration
 };

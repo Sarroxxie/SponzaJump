@@ -4,6 +4,7 @@
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 #include "vulkan/VulkanUtils.h"
+#include "rendering/host_device.h"
 
 struct VertexObj
 {
@@ -27,10 +28,6 @@ void createSampleIndexBuffer(VulkanBaseContext&        baseContext,
                               CommandContext&           commandContext,
                               std::vector<unsigned int> indices,
                               Mesh&                     mesh);
-void extractBoundsFromPrimitive(tinygltf::Model&     gltfModel,
-                                tinygltf::Primitive& primitive,
-                                glm::vec3&           min,
-                                glm::vec3&           max);
 
 
 struct ModelLoadingOffsets
@@ -73,8 +70,19 @@ class ModelLoader
     std::vector<Material>      materials;
     std::vector<Model>         models;
     std::vector<ModelInstance> instances;
+    std::vector<PointLight>    lights;
 
   private:
+    Model createModelFromMesh(tinygltf::Model&  gltfModel,
+                              tinygltf::Mesh&   gltfMesh,
+                              VulkanBaseContext context,
+                              CommandContext    commandContext);
+    bool nodeToLight(tinygltf::Model& gltfModel, tinygltf::Node& node, PointLight& pointLight);
+    ModelInstance nodeToInstance(tinygltf::Model& gltfModel, tinygltf::Node& node);
+    void      extractBoundsFromPrimitive(tinygltf::Model&     gltfModel,
+                                         tinygltf::Primitive& primitive,
+                                         glm::vec3&           min,
+                                         glm::vec3&           max);
     glm::mat4 getTransform(tinygltf::Node node);
     Material  createMaterial(tinygltf::Material&             gltfMaterial,
                              int                             texturesOffset,
@@ -93,7 +101,7 @@ class ModelLoader
                             VkFormat          format,
                             VulkanBaseContext context,
                             CommandContext    commandContext);
-    int findGeometryData(tinygltf::Primitive& primitive);
+    int       findGeometryData(tinygltf::Primitive& primitive);
 
     std::vector<MeshLookup> meshLookups;
 };
