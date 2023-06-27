@@ -90,6 +90,15 @@ typedef struct
     VkPipeline       skyboxPipeline;
     uint32_t         skyboxSubpassID = 0;
 
+    // deferred rendering
+    VkPipelineLayout geometryPassPipelineLayout;
+    VkPipeline       geometryPassPipeline;
+    uint32_t         geometryPassSubpassID = 0;
+
+    VkPipelineLayout lightingPassPipelineLayout;
+    VkPipeline       lightingPassPipeline;
+    uint32_t         lightingPassSubpassID = 0;
+
     BufferResources materialBuffer;
 
     VkSampler depthSampler;
