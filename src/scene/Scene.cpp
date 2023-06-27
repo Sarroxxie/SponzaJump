@@ -5,7 +5,7 @@
 #include "rendering/host_device.h"
 #include <glm/gtc/type_ptr.hpp>
 
-Scene::Scene(ApplicationVulkanContext &vulkanContext, RenderContext& renderContext, Camera camera)
+Scene::Scene(ApplicationVulkanContext& vulkanContext, RenderContext& renderContext, Camera camera)
     : m_Camera(camera)
     , m_World(b2World(b2Vec2(0, -30.0)))
     , m_Context(vulkanContext) {}
@@ -112,6 +112,13 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
         ImGui::SliderFloat("Depth Bias Slope",
                            &renderContext.imguiData.depthBiasSlope, -5, 5);
     }
+
+    if(ImGui::CollapsingHeader("Gameplay Controls")) {
+        ImGui::Checkbox("Disable Death", &levelData.disableDeath);
+
+        ImGui::SliderFloat("Death Plane height", &levelData.deathPlaneHeight, -30, 30);
+    }
+
     ImGui::End();
 }
 
@@ -228,6 +235,28 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
                 transformation->translation
                 - lightCamera.getViewDir()
                       * renderContext.renderSettings.shadowMappingSettings.lightCameraDist);
+        }
+    }
+}
+
+LevelData& Scene::getLevelData() {
+    return levelData;
+}
+
+void Scene::doGameplayUpdate() {
+    for(auto id : SceneView<PlayerComponent, Transformation, PhysicsComponent>(*this)) {
+        auto* transformation   = getComponent<Transformation>(id);
+        auto* physicsComponent = getComponent<PhysicsComponent>(id);
+
+        if(transformation->translation.y <= levelData.deathPlaneHeight
+           && !levelData.disableDeath) {
+            std::cout << "Died to death plane" << std::endl;
+
+            transformation->translation = levelData.playerSpawnLocation;
+            physicsComponent->body->SetTransform(
+                b2Vec2(levelData.playerSpawnLocation.x,
+                       levelData.playerSpawnLocation.y),
+                physicsComponent->body->GetAngle());
         }
     }
 }

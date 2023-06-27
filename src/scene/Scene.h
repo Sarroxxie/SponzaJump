@@ -16,6 +16,7 @@
 #include "Model.h"
 #include "ModelLoader.h"
 #include "SceneData.h"
+#include "LevelData.h"
 
 template <typename... ComponentTypes>
 struct SceneView;
@@ -28,6 +29,7 @@ private:
     std::map<ComponentTypeId, ComponentPool> componentPools;
 
     SceneData sceneData;
+    LevelData levelData;
 
     Camera m_Camera;
     float  cameraOffsetY = 3.5;
@@ -80,12 +82,15 @@ public:
     ModelLoadingOffsets getModelLoadingOffsets();
 
     SceneData& getSceneData();
+    LevelData& getLevelData();
 
     Camera &getCameraRef();
     void doCameraUpdate(RenderContext& renderContext);
 
     b2World &getWorld();
     void doPhysicsUpdate(uint64_t deltaMillis);
+
+    void doGameplayUpdate();
 
     void setInputController(InputController *inputController);
     void handleUserInput();

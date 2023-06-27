@@ -65,6 +65,7 @@ void VulkanRenderer::render(Scene& scene) {
     }
 
     scene.doCameraUpdate(m_RenderContext);
+    scene.doGameplayUpdate();
 
     updateUniformBuffer(scene);
 

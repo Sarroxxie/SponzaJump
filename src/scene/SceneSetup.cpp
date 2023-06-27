@@ -43,6 +43,7 @@ void addToScene(Scene&                          scene,
                 ModelLoader&                    loader,
                 GameContactListener&            contactListener) {
     SceneData& sceneData = scene.getSceneData();
+    LevelData& levelData = scene.getLevelData();
 
     sceneData.meshes.insert(sceneData.meshes.end(), loader.meshes.begin(),
                             loader.meshes.end());
@@ -82,6 +83,8 @@ void addToScene(Scene&                          scene,
             auto* playerComponent = scene.assign<PlayerComponent>(entityId);
             contactListener.setPlayerComponent(playerComponent);
             contactListener.setPlayerFixture(fixture);
+
+            levelData.playerSpawnLocation = glm::vec3(instance.translation.x, instance.translation.y, 0);
         }
     }
 }
