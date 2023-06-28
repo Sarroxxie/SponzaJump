@@ -5,7 +5,7 @@
 #include "rendering/host_device.h"
 #include <glm/gtc/type_ptr.hpp>
 
-Scene::Scene(ApplicationVulkanContext &vulkanContext, RenderContext& renderContext, Camera camera)
+Scene::Scene(ApplicationVulkanContext& vulkanContext, Camera camera)
     : m_Camera(camera)
     , m_World(b2World(b2Vec2(0, -30.0)))
     , m_Context(vulkanContext) {}
@@ -112,6 +112,39 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
         ImGui::SliderFloat("Depth Bias Slope",
                            &renderContext.imguiData.depthBiasSlope, -5, 5);
     }
+
+    if(ImGui::CollapsingHeader("Gameplay Controls")) {
+        ImGui::Checkbox("Disable Death", &levelData.disableDeath);
+
+        ImGui::SliderFloat("Death Plane height", &levelData.deathPlaneHeight, -30, 30);
+    }
+
+    ImGui::End();
+
+    if(levelData.hasWon) {
+        registerWinDialog();
+    }
+}
+
+void Scene::registerWinDialog() {
+    auto width = static_cast<float>(m_Context.swapchainContext.swapChainExtent.width);
+    auto height = static_cast<float>(m_Context.swapchainContext.swapChainExtent.height);
+
+    auto imguiWindowWidth  = width / 5;
+    auto imguiWindowHeight = height / 5;
+
+    ImGui::SetNextWindowSize(ImVec2(imguiWindowWidth, imguiWindowHeight));
+
+    ImGui::SetNextWindowPos(ImVec2(width / 2, height / 2), ImGuiCond_Always,
+                            ImVec2(0.5, 0.5));
+
+    ImGui::Begin("Win Dialog");
+
+    ImGui::Text("You Won");
+    if(ImGui::Button("Restart")) {
+        resetLevel();
+    }
+
     ImGui::End();
 }
 
@@ -200,10 +233,10 @@ void Scene::handleUserInput() {
         physicsComponent->body->SetLinearVelocity(newVel);
     }
 }
-
 void Scene::setInputController(InputController* inputController) {
     m_InputController = inputController;
 }
+
 void Scene::doCameraUpdate(RenderContext& renderContext) {
     for(auto id : SceneView<PlayerComponent, Transformation>(*this)) {
         auto* transformation = getComponent<Transformation>(id);
@@ -229,5 +262,72 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
                 - lightCamera.getViewDir()
                       * renderContext.renderSettings.shadowMappingSettings.lightCameraDist);
         }
+    }
+}
+
+LevelData& Scene::getLevelData() {
+    return levelData;
+}
+void Scene::doGameplayUpdate() {
+    for(auto id : SceneView<PlayerComponent, Transformation, PhysicsComponent>(*this)) {
+        auto* playerComponent  = getComponent<PlayerComponent>(id);
+        auto* transformation   = getComponent<Transformation>(id);
+        auto* physicsComponent = getComponent<PhysicsComponent>(id);
+
+        bool died = false;
+
+        if(!levelData.disableDeath) {
+            if(transformation->translation.y <= levelData.deathPlaneHeight) {
+                std::cout << "Died to death plane" << std::endl;
+
+                died = true;
+            }
+
+            if(playerComponent->touchesHazard) {
+                std::cout << "Died to Hazard" << std::endl;
+
+                playerComponent->touchesHazard = false;
+                died                           = true;
+            }
+        }
+
+        if(died) {
+            transformation->translation = levelData.playerSpawnLocation;
+            physicsComponent->body->SetTransform(
+                b2Vec2(levelData.playerSpawnLocation.x,
+                       levelData.playerSpawnLocation.y),
+                physicsComponent->body->GetAngle());
+
+            playerComponent->touchesWin = false;
+        }
+
+        if(playerComponent->touchesWin) {
+            levelData.hasWon = true;
+        }
+    }
+}
+bool Scene::gameplayActive() {
+    return !levelData.hasWon;
+}
+
+void Scene::resetLevel() {
+    levelData.hasWon = false;
+    resetPlayer();
+}
+void Scene::resetPlayer() {
+    for(auto id : SceneView<PlayerComponent, Transformation, PhysicsComponent>(*this)) {
+        auto* playerComponent  = getComponent<PlayerComponent>(id);
+        auto* transformation   = getComponent<Transformation>(id);
+        auto* physicsComponent = getComponent<PhysicsComponent>(id);
+
+        *playerComponent = PlayerComponent();
+
+        transformation->translation = levelData.playerSpawnLocation;
+        physicsComponent->body->SetTransform(
+            b2Vec2(levelData.playerSpawnLocation.x,
+                   levelData.playerSpawnLocation.y),
+            physicsComponent->body->GetAngle());
+
+        playerComponent->touchesWin = false;
     }
 }

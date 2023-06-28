@@ -20,7 +20,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/scene/crystalshroom_scene.gltf",
+        loader.loadModel("res/assets/models/scene2/playable.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
@@ -43,6 +43,7 @@ void addToScene(Scene&                          scene,
                 ModelLoader&                    loader,
                 GameContactListener&            contactListener) {
     SceneData& sceneData = scene.getSceneData();
+    LevelData& levelData = scene.getLevelData();
 
     sceneData.meshes.insert(sceneData.meshes.end(), loader.meshes.begin(),
                             loader.meshes.end());
@@ -74,6 +75,25 @@ void addToScene(Scene&                          scene,
             addPhysicsComponent(scene, entityId, instance, false);
         }
 
+        const std::string hazardNamePrefix = "Hazard";
+        if(instance.name.rfind(hazardNamePrefix, 0) == 0) {
+            auto* fixture = addPhysicsComponent(scene, entityId, instance, false);
+
+            b2Filter filter;
+            filter.categoryBits |= HAZARD_CATEGORY_BITS;
+
+            fixture->SetFilterData(filter);
+        }
+
+        const std::string winAreaNamePrefix = "Win";
+        if(instance.name.rfind(winAreaNamePrefix, 0) == 0) {
+            auto* fixture = addPhysicsComponent(scene, entityId, instance, false);
+
+            b2Filter filter;
+            filter.categoryBits |= WIN_AREA_CATEGORY_BITS;
+
+            fixture->SetFilterData(filter);
+        }
 
         const std::string playerNamePrefix = "Player";
         if(instance.name.rfind(playerNamePrefix, 0) == 0) {
@@ -82,6 +102,8 @@ void addToScene(Scene&                          scene,
             auto* playerComponent = scene.assign<PlayerComponent>(entityId);
             contactListener.setPlayerComponent(playerComponent);
             contactListener.setPlayerFixture(fixture);
+
+            levelData.playerSpawnLocation = glm::vec3(instance.translation.x, instance.translation.y, 0);
         }
     }
 }

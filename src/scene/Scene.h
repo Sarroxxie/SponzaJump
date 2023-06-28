@@ -16,100 +16,117 @@
 #include "Model.h"
 #include "ModelLoader.h"
 #include "SceneData.h"
+#include "LevelData.h"
 
 template <typename... ComponentTypes>
 struct SceneView;
 
-class Scene {
-private:
-    std::vector<Entity> entities;
+class Scene
+{
+  private:
+    std::vector<Entity>   entities;
     std::vector<EntityId> freeEntities;
 
     std::map<ComponentTypeId, ComponentPool> componentPools;
 
     SceneData sceneData;
+    LevelData levelData;
 
     Camera m_Camera;
     float  cameraOffsetY = 3.5;
 
     b2World m_World;
 
-    InputController *m_InputController = nullptr;
+    InputController* m_InputController = nullptr;
 
     ApplicationVulkanContext& m_Context;
 
-public:
-    Scene(ApplicationVulkanContext &vulkanContext, RenderContext &renderContext, Camera camera = Camera(glm::vec3(0, 0, 25)));
+  public:
+    Scene(ApplicationVulkanContext& vulkanContext,
+          Camera                    camera = Camera(glm::vec3(0, 0, 25)));
 
     // ECS ---
     EntityId addEntity();
 
     bool removeEntity(EntityId id);
 
-    std::vector<Entity> &getEntities();
+    std::vector<Entity>& getEntities();
 
-    template<typename T>
-    T *assign(EntityId entityId) {
+    template <typename T>
+    T* assign(EntityId entityId) {
         ComponentTypeId componentTypeId = getComponentTypeId<T>();
 
-        if (componentPools.find(componentTypeId) == componentPools.end()) {
+        if(componentPools.find(componentTypeId) == componentPools.end()) {
             componentPools[componentTypeId] = std::move(ComponentPool(sizeof(T)));
         }
 
-        ComponentPool &pool = componentPools[componentTypeId];
-        ComponentId componentId = pool.getNewComponentId();
+        ComponentPool& pool        = componentPools[componentTypeId];
+        ComponentId    componentId = pool.getNewComponentId();
 
         pool.mapComponent(entityId, componentId);
         entities[entityId].componentMask.set(componentTypeId);
 
-        return (T*) pool.getComponent(entityId);
+        T* component = (T*)pool.getComponent(entityId);
+        *component   = T();
+
+        return component;
     }
 
-    template<typename T>
-    T *getComponent(EntityId entityId) {
+    template <typename T>
+    T* getComponent(EntityId entityId) {
         ComponentTypeId componentTypeId = getComponentTypeId<T>();
 
-        if (componentPools.find(componentTypeId) == componentPools.end()) {
+        if(componentPools.find(componentTypeId) == componentPools.end()) {
             return nullptr;
         }
 
-        return (T*) componentPools[componentTypeId].getComponent(entityId);
+        return (T*)componentPools[componentTypeId].getComponent(entityId);
     }
     // -------
 
     ModelLoadingOffsets getModelLoadingOffsets();
 
     SceneData& getSceneData();
+    LevelData& getLevelData();
 
-    Camera &getCameraRef();
-    void doCameraUpdate(RenderContext& renderContext);
+    Camera& getCameraRef();
+    void    doCameraUpdate(RenderContext& renderContext);
 
-    b2World &getWorld();
-    void doPhysicsUpdate(uint64_t deltaMillis);
+    b2World& getWorld();
+    void     doPhysicsUpdate(uint64_t deltaMillis);
 
-    void setInputController(InputController *inputController);
+    void doGameplayUpdate();
+    bool gameplayActive();
+
+    void setInputController(InputController* inputController);
     void handleUserInput();
 
     void cleanup();
     void registerSceneImgui(RenderContext& renderContext);
+    void registerWinDialog();
 
-    };
+  private:
+
+    void resetLevel();
+    void resetPlayer();
+};
 
 template <typename... ComponentTypes>
-struct SceneView {
-    Scene *scene {nullptr};
+struct SceneView
+{
+    Scene*        scene{nullptr};
     ComponentMask componentMask;
-    bool all {false};
+    bool          all{false};
 
-    SceneView(Scene &scene): scene(&scene)
-    {
+    SceneView(Scene& scene)
+        : scene(&scene) {
         auto numComponents = sizeof...(ComponentTypes);
-        if (numComponents == 0) {
+        if(numComponents == 0) {
             all = true;
         } else {
-            ComponentTypeId typeIds[] = { getComponentTypeId<ComponentTypes>() ..., 0 };
+            ComponentTypeId typeIds[] = {getComponentTypeId<ComponentTypes>()..., 0};
 
-            for (size_t i = 0; i < numComponents; i++) {
+            for(size_t i = 0; i < numComponents; i++) {
                 componentMask.set(typeIds[i]);
             }
         }
@@ -117,56 +134,52 @@ struct SceneView {
 
     struct Iterator
     {
-        Scene* scene;
-        EntityId index;
+        Scene*        scene;
+        EntityId      index;
         ComponentMask componentMask;
-        bool all{ false };
+        bool          all{false};
 
-        Iterator(Scene *scene, EntityId entityIndex, ComponentMask mask, bool all)
-                : scene(scene), index(entityIndex), componentMask(mask), all(all) { }
+        Iterator(Scene* scene, EntityId entityIndex, ComponentMask mask, bool all)
+            : scene(scene)
+            , index(entityIndex)
+            , componentMask(mask)
+            , all(all) {}
 
-        EntityId operator*() const {
-            return index;
-        }
+        EntityId operator*() const { return index; }
 
-        bool operator==(const Iterator& other) const
-        {
+        bool operator==(const Iterator& other) const {
             return index == other.index;
         }
 
-        bool operator!=(const Iterator& other) const
-        {
+        bool operator!=(const Iterator& other) const {
             return index != other.index;
         }
 
-        Iterator& operator++()
-        {
+        Iterator& operator++() {
             auto entities = scene->getEntities();
             do {
                 index++;
-            } while(index < entities.size() && (!entityValid(entities[index], all, componentMask)));
+            } while(index < entities.size()
+                    && (!entityValid(entities[index], all, componentMask)));
             return *this;
         }
     };
 
 
-
-    Iterator begin() const
-    {
-        int firstIndex = 0;
-        auto entities = scene->getEntities();
-        while (firstIndex < entities.size() && !entityValid(entities[firstIndex], all, componentMask)) {
+    Iterator begin() const {
+        int  firstIndex = 0;
+        auto entities   = scene->getEntities();
+        while(firstIndex < entities.size()
+              && !entityValid(entities[firstIndex], all, componentMask)) {
             firstIndex++;
         }
 
         return Iterator(scene, firstIndex, componentMask, all);
     }
 
-    Iterator end() const
-    {
+    Iterator end() const {
         return Iterator(scene, scene->getEntities().size(), componentMask, all);
     }
-
 };
 
-#endif //GRAPHICSPRAKTIKUM_SCENE_H
+#endif  // GRAPHICSPRAKTIKUM_SCENE_H

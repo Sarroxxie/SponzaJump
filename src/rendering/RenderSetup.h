@@ -5,18 +5,21 @@
 #include "RenderContext.h"
 #include "Shader.h"
 #include "scene/Model.h"
+#include "scene/Scene.h"
 
 
 // ----- Sample Render Setups
 
 RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
-                                                          RenderContext& renderContext);
+                                                          RenderContext& renderContext,
+                                                          Scene &scene);
 // ---
 
 
 void initializeRenderContext(ApplicationVulkanContext& appContext,
                              RenderContext&            renderContext,
-                             const RenderSetupDescription& renderSetupDescription);
+                             const RenderSetupDescription& renderSetupDescription,
+                             Scene &scene);
 
 // ----- Shadow Pass
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
@@ -63,30 +66,30 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 // ----- Main Pass
 void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
-                              const RenderPassDescription& renderPassDescription);
+                              const RenderPassDescription& renderPassDescription,
+                              Scene &scene);
 
 void createMainRenderPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext);
 
 void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
-                             const std::vector<Material>&    materials);
+                             Scene &scene);
 
 void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
                            RenderContext&                  renderContext,
-                           const std::vector<Material>&    materials);
+                           Scene &scene);
 
 void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
                                         MainPass&                   mainPass,
-                                        const std::vector<Texture>& textures);
+                                        Scene &scene);
 
 void cleanMainPassDescriptorLayouts(const VulkanBaseContext& appContext,
                                     const MainPass&          mainPass);
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext&                  renderContext,
-                                  const std::vector<Texture>&     textures,
-                                  const CubeMap                   cubemap);
+                                  Scene &scene);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 

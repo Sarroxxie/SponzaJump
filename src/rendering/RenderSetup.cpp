@@ -2,12 +2,12 @@
 #include <filesystem>
 #include "RenderSetup.h"
 #include "vulkan/VulkanUtils.h"
-#include "utils/FileUtils.h"
 #include "rendering/host_device.h"
 #include "vulkan/VulkanSetup.h"
 
 RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
-                                                          RenderContext& renderContext) {
+                                                          RenderContext& renderContext,
+                                                          Scene &scene) {
     auto& settings                         = renderContext.renderSettings;
     settings.perspectiveSettings.fov       = glm::radians(45.0f);
     settings.perspectiveSettings.nearPlane = 1;
@@ -79,13 +79,14 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
 
     renderSetupDescription.mainRenderPassDescription = mainRenderPassDescription;
 
-    initializeRenderContext(appContext, renderContext, renderSetupDescription);
+    initializeRenderContext(appContext, renderContext, renderSetupDescription, scene);
     return renderSetupDescription;
 }
 
 void initializeRenderContext(ApplicationVulkanContext& appContext,
                              RenderContext&            renderContext,
-                             const RenderSetupDescription& renderSetupDescription) {
+                             const RenderSetupDescription& renderSetupDescription,
+                             Scene &scene) {
 
     createDescriptorPool(appContext.baseContext, renderContext);
 
@@ -98,7 +99,7 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
     // --- Main Render Pass
     initializeMainRenderPass(appContext, renderContext,
-                             renderSetupDescription.mainRenderPassDescription);
+                             renderSetupDescription.mainRenderPassDescription, scene);
 
 
     renderContext.renderSetupDescription = renderSetupDescription;
@@ -112,25 +113,32 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
 void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
-                              const RenderPassDescription& renderPassDescription) {
+                              const RenderPassDescription& renderPassDescription,
+                              Scene &scene) {
 
     createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
-                                       std::vector<Texture>());
+                                       scene);
 
     createMainRenderPass(appContext, renderContext);
 
-    /*
+    createDepthSampler(appContext, renderContext.renderPasses.mainPass);
+    createMainPassResources(appContext, renderContext, scene);
+
     createGraphicsPipeline(
         appContext, renderContext.renderPasses.mainPass.renderPassContext,
         renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
         renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
-        renderPassDescription, mainPassSetLayouts);
-    */
+        renderPassDescription,
+        renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
+
+    // TODO: skybox should have own descriptor set
+    // same goes for the skybox pipeline (as it uses the descriptor set that contains the textures for now)
+    createSkyboxPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
+
+    createMainPassDescriptorSets(appContext, renderContext, scene);
 
     renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription =
         renderPassDescription;
-
-    createDepthSampler(appContext, renderContext.renderPasses.mainPass);
 
     createVisualizationPipeline(appContext, renderContext,
                                 renderContext.renderPasses.mainPass);
@@ -935,7 +943,7 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 
 void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
-                             const std::vector<Material>&    materials) {
+                             Scene &scene) {
 
     createBufferResources(appContext, sizeof(SceneTransform),
                           renderContext.renderPasses.mainPass.transformBuffer);
@@ -943,7 +951,7 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
     createBufferResources(appContext, sizeof(LightingInformation),
                           renderContext.renderPasses.mainPass.lightingBuffer);
 
-    createMaterialsBuffer(appContext, renderContext, materials);
+    createMaterialsBuffer(appContext, renderContext, scene);
 }
 
 void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass) {
@@ -979,7 +987,7 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
 
 void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
                                         MainPass&                   mainPass,
-                                        const std::vector<Texture>& textures) {
+                                        Scene &scene) {
     std::vector<VkDescriptorSetLayoutBinding> transformBindings;
     std::vector<VkDescriptorSetLayoutBinding> materialBindings;
     std::vector<VkDescriptorSetLayoutBinding> depthBindings;
@@ -1002,7 +1010,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     materialBindings.push_back(
-        createLayoutBinding(MaterialsBindings::eTextures, textures.size(),
+        createLayoutBinding(MaterialsBindings::eTextures, scene.getSceneData().textures.size(),
                             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
@@ -1046,8 +1054,7 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext&                  renderContext,
-                                  const std::vector<Texture>&     textures,
-                                  const CubeMap                   cubemap) {
+                                  Scene &scene) {
 
     MainPass& mainPass = renderContext.renderPasses.mainPass;
 
@@ -1151,7 +1158,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     descriptorWrites.emplace_back(materialDescriptorWrite);
 
     std::vector<VkDescriptorImageInfo> textureSamplers;
-    for(auto& texture : textures) {
+    for(auto& texture : scene.getSceneData().textures) {
         textureSamplers.emplace_back(texture.descriptorInfo);
     }
 
@@ -1176,7 +1183,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     skyboxWrite.dstArrayElement   = 0;
     skyboxWrite.descriptorType    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     skyboxWrite.descriptorCount = 1;
-    skyboxWrite.pImageInfo      = &cubemap.descriptorInfo;
+    skyboxWrite.pImageInfo      = &scene.getSceneData().cubemap.descriptorInfo;
 
     descriptorWrites.emplace_back(skyboxWrite);
 
@@ -1257,8 +1264,8 @@ void createBufferResources(const ApplicationVulkanContext& appContext,
  */
 void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
                            RenderContext&                  renderContext,
-                           const std::vector<Material>&    materials) {
-    VkDeviceSize bufferSize = sizeof(Material) * materials.size();
+                           Scene &scene) {
+    VkDeviceSize bufferSize = sizeof(Material) * scene.getSceneData().materials.size();
 
     VkBuffer       stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1271,7 +1278,7 @@ void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
     vkMapMemory(appContext.baseContext.device, stagingBufferMemory, 0, bufferSize, 0, &data);
 
     // We use Host Coherent Memory to make sure data is synchronized, could also manually flush Memory Ranges
-    memcpy(data, materials.data(), (size_t)bufferSize);
+    memcpy(data, scene.getSceneData().materials.data(), (size_t)bufferSize);
     vkUnmapMemory(appContext.baseContext.device, stagingBufferMemory);
 
     auto& materialsBuffer = renderContext.renderPasses.mainPass.materialBuffer;
