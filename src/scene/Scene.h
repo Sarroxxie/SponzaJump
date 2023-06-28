@@ -43,7 +43,6 @@ class Scene
 
   public:
     Scene(ApplicationVulkanContext& vulkanContext,
-          RenderContext&            renderContext,
           Camera                    camera = Camera(glm::vec3(0, 0, 25)));
 
     // ECS ---

@@ -27,48 +27,13 @@ int main() {
     appContext.window = &window;
     initializeGraphicsApplication(appContext);
 
-    RenderContext renderContext;
-    auto          renderSetupDescription =
-        initializeSimpleSceneRenderContext(appContext, renderContext);
-
-    Scene               scene(appContext, renderContext);
+    Scene               scene(appContext);
     GameContactListener contactListener;
     createSamplePhysicsScene(appContext, scene, contactListener);
 
-    vkDestroyPipeline(appContext.baseContext.device,
-                      renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
-                      nullptr);
-
-    vkDestroyPipelineLayout(
-        appContext.baseContext.device,
-        renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0], nullptr);
-
-    cleanMainPassDescriptorLayouts(appContext.baseContext,
-                                   renderContext.renderPasses.mainPass);
-
-    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
-                                       scene.getSceneData().textures);
-
-    /*
-    cleanVisualizationPipeline(appContext.baseContext, renderContext.renderPasses.mainPass);
-    createVisualizationPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
-    */
-
-     // TODO: create graphics pipeline here (all texture data is only available from here on)
-    createGraphicsPipeline(
-        appContext, renderContext.renderPasses.mainPass.renderPassContext,
-        renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
-        renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
-        renderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
-        renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
-
-    // TODO: skybox should have own descriptor set
-    // same goes for the skybox pipeline (as it uses the descriptor set that contains the textures for now)
-    createSkyboxPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
-
-    createMainPassResources(appContext, renderContext, scene.getSceneData().materials);
-
-    createMainPassDescriptorSets(appContext, renderContext, scene.getSceneData().textures, scene.getSceneData().cubemap);
+    RenderContext renderContext;
+    auto          renderSetupDescription =
+        initializeSimpleSceneRenderContext(appContext, renderContext, scene);
 
     VulkanRenderer renderer(appContext, renderContext);
 

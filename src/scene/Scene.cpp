@@ -5,7 +5,7 @@
 #include "rendering/host_device.h"
 #include <glm/gtc/type_ptr.hpp>
 
-Scene::Scene(ApplicationVulkanContext& vulkanContext, RenderContext& renderContext, Camera camera)
+Scene::Scene(ApplicationVulkanContext& vulkanContext, Camera camera)
     : m_Camera(camera)
     , m_World(b2World(b2Vec2(0, -30.0)))
     , m_Context(vulkanContext) {}
