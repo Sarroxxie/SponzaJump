@@ -41,6 +41,8 @@ START_BINDING(DepthBindings)
     eShadowDepthBuffer = 0
 END_BINDING();
 
+const uint MAX_CASCADES = 4;
+
 // clang-format on
 
 // copy of "Material"-struct from "scene/Model.h" for use on GPU
@@ -74,6 +76,23 @@ struct PushConstant
     ALIGN_AS(16) mat4 transformation;
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
+};
+
+struct SceneTransformStruct
+{
+    ALIGN_AS(16) mat4 projection;
+    ALIGN_AS(16) mat4 view;
+};
+
+struct ShadowPushConstant
+{
+    ALIGN_AS(16) mat4 transform;
+    ALIGN_AS(4) int cascadeIndex;
+};
+
+struct ShadowControlPushConstant
+{
+    ALIGN_AS(4) int cascadeIndex;
 };
 
 struct LightingInformation

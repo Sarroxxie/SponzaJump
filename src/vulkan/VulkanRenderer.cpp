@@ -8,6 +8,7 @@
 #include "rendering/RenderSetup.h"
 #include "rendering/host_device.h"
 #include "game/PlayerComponent.h"
+#include "rendering/RenderUtils.h"
 
 VulkanRenderer::VulkanRenderer(ApplicationVulkanContext& context, RenderContext& renderContext)
     : m_Context(context)
@@ -146,30 +147,13 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
 void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     ShadowPass& shadowPass = m_RenderContext.renderPasses.shadowPass;
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass  = shadowPass.renderPassContext.renderPass;
-    renderPassInfo.framebuffer = shadowPass.depthFrameBuffer;
-
     VkExtent2D shadowExtent;
     shadowExtent.width  = shadowPass.shadowMapWidth;
     shadowExtent.height = shadowPass.shadowMapHeight;
 
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = shadowExtent;
 
     VkClearValue clearValue;
     clearValue.depthStencil = {1.0f, 0};
-
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues    = &clearValue;
-
-    vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
-                         &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      shadowPass.renderPassContext
-                          .graphicsPipelines[shadowPass.renderPassContext.activePipelineIndex]);
 
     VkViewport viewport{};
     viewport.x        = 0.0f;
@@ -185,93 +169,117 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     scissor.extent = shadowExtent;
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
-
-    vkCmdSetDepthBias(
-        m_Context.commandContext.commandBuffer,
-        m_RenderContext.imguiData.depthBiasConstant,
-        0.0f,
-        m_RenderContext.imguiData.depthBiasSlope);
+    vkCmdSetDepthBias(m_Context.commandContext.commandBuffer,
+                      m_RenderContext.imguiData.depthBiasConstant, 0.0f,
+                      m_RenderContext.imguiData.depthBiasSlope);
 
 
-    // Without Index Buffer
-    // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
+    int numberCascades = m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
+
+    SceneTransform sceneTransforms[numberCascades];
+    float          splitDepths[numberCascades];
 
 
-    SceneTransform sceneTransform;
+    glm::mat4 invViewProj = glm::inverse(
+        getPerspectiveMatrix(m_RenderContext.renderSettings.perspectiveSettings,
+                             m_Context.swapchainContext.swapChainExtent.width,
+                             m_Context.swapchainContext.swapChainExtent.height)
+        * scene.getCameraRef().getCameraMatrix());
 
-    sceneTransform.perspectiveTransform = getOrthogonalProjectionMatrix(
-        m_RenderContext.renderSettings.shadowMappingSettings.projection);
+    calculateShadowCascades(m_RenderContext.renderSettings.perspectiveSettings, invViewProj,
+                            m_RenderContext.renderSettings.shadowMappingSettings,
+                            sceneTransforms, splitDepths);
 
-    // one tutorial says openGL has different convention for Y coordinates in
-    // clip space than vulkan, need to flip it
-    sceneTransform.perspectiveTransform[1][1] *= -1;
+    for(size_t i = 0; i < MAX_CASCADES; i++) {
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass  = shadowPass.renderPassContext.renderPass;
+        renderPassInfo.framebuffer = shadowPass.depthFrameBuffers[i];
 
-    sceneTransform.cameraTransform = m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getCameraMatrix();
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues    = &clearValue;
 
-    memcpy(m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping,
-           &sceneTransform, sizeof(SceneTransform));
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = shadowExtent;
 
-    // bind DescriptorSet 0 (Camera Transformations)
-    vkCmdBindDescriptorSets(
-        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        shadowPass.renderPassContext
-            .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-        0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet, 0, nullptr);
+        vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
+                             &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    PushConstant pushConstant;
-    pushConstant.transformation = glm::mat4(1);
-    pushConstant.materialIndex  = 0;
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          shadowPass.renderPassContext
+                              .graphicsPipelines[shadowPass.renderPassContext.activePipelineIndex]);
 
-    EntityId playerID = -1;
 
-    for(EntityId id : SceneView<PlayerComponent, Transformation>(scene)) {
-        playerID = id;
-    }
+        if(i < m_RenderContext.renderSettings.shadowMappingSettings.numberCascades) {
+            memcpy(((SceneTransform *) m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping) + i,
+                   &sceneTransforms[i], sizeof(SceneTransform));
 
-    for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
-        auto* modelComponent     = scene.getComponent<ModelComponent>(id);
-        auto* transformComponent = scene.getComponent<Transformation>(id);
+            vkCmdBindDescriptorSets(
+                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                shadowPass.renderPassContext
+                    .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
+                0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet,
+                0, nullptr);
 
-        Model& model = scene.getSceneData().models[modelComponent->modelIndex];
+            ShadowPushConstant shadowPushConstant;
+            shadowPushConstant.cascadeIndex = i;
 
-        pushConstant.transformation = transformComponent->getMatrix();
-        int counter                 = 0;
-        for(auto& meshPartIndex : model.meshPartIndices) {
-            // this is fairly hardcoded so that the spiky mesh of the player has no shadow
-            // the meshes of the spikes are at position 1 and 2 (this is the hardcoded part)
-            if(!m_RenderContext.imguiData.playerSpikesShadow && id == playerID
-               && (counter == 1 || counter == 2)) {
-                counter++;
-                continue;
+            EntityId playerID = -1;
+
+            for(EntityId id : SceneView<PlayerComponent, Transformation>(scene)) {
+                playerID = id;
             }
-            MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
-            Mesh     mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
-            VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
-            VkDeviceSize offsets[]   = {0};
 
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
+            for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
+                auto* modelComponent = scene.getComponent<ModelComponent>(id);
+                auto* transformComponent = scene.getComponent<Transformation>(id);
 
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
-            glm::mat4 transform = transformComponent->getMatrix();
+                int counter                 = 0;
+                for(auto& meshPartIndex : model.meshPartIndices) {
+                    // this is fairly hardcoded so that the spiky mesh of the
+                    // player has no shadow the meshes of the spikes are at
+                    // position 1 and 2 (this is the hardcoded part)
+                    if(!m_RenderContext.imguiData.playerSpikesShadow
+                       && id == playerID && (counter == 1 || counter == 2)) {
+                        counter++;
+                        continue;
+                    }
+                    MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                    Mesh mesh = scene.getSceneData().meshes[meshPart.meshIndex];
+                    VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
+                    VkDeviceSize offsets[]       = {0};
 
-            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                               shadowPass.renderPassContext
-                                   .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                               VK_SHADER_STAGE_VERTEX_BIT,
-                               0,  // offset
-                               sizeof(glm::mat4), &transform);
 
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                             mesh.indicesCount, 1, 0, 0, 0);
+                    vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                           0, 1, vertexBuffers, offsets);
 
-            counter++;
+                    vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                         mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+
+                    shadowPushConstant.transform = transformComponent->getMatrix();
+
+                    vkCmdPushConstants(
+                        m_Context.commandContext.commandBuffer,
+                        shadowPass.renderPassContext
+                            .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
+                        VK_SHADER_STAGE_VERTEX_BIT,
+                        0,  // offset
+                        sizeof(ShadowPushConstant), &shadowPushConstant);
+
+                    vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                     mesh.indicesCount, 1, 0, 0, 0);
+
+
+                    counter++;
+                }
+            }
         }
-    }
 
-    vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
+        vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
+    }
 }
 
 void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
@@ -314,14 +322,31 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
     if(m_RenderContext.imguiData.visualizeShadowBuffer) {
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
-                               VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.visualizePipeline);
 
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0,
-            1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
+            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0, 1,
+            &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
+
+        ShadowControlPushConstant pushConstant{};
+
+        ShadowMappingSettings shadowSettings =
+            m_RenderContext.renderSettings.shadowMappingSettings;
+
+        if(shadowSettings.cascadeVisIndex < 0)
+            shadowSettings.cascadeVisIndex = 0;
+        else if(shadowSettings.cascadeVisIndex >= shadowSettings.numberCascades)
+            shadowSettings.cascadeVisIndex = shadowSettings.numberCascades - 1;
+
+        pushConstant.cascadeIndex = shadowSettings.cascadeVisIndex;
+
+        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                           m_RenderContext.renderPasses.mainPass.visualizePipelineLayout,
+                           VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0,  // offset
+                           sizeof(ShadowControlPushConstant), &pushConstant);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
@@ -399,25 +424,24 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                                  mesh.indicesCount, 1, 0, 0, 0);
             }
         }
+        // render skybpx
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          m_RenderContext.renderPasses.mainPass.skyboxPipeline);
+
+        // bind DescriptorSet 0 (Camera Transformations)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0, 1,
+            &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+
+        // bind DescriptorSet 1 (Materials)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
+            &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
+
+        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
     }
-
-    // render skybpx
-    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      m_RenderContext.renderPasses.mainPass.skyboxPipeline);
-
-    // bind DescriptorSet 0 (Camera Transformations)
-    vkCmdBindDescriptorSets(
-        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0, 1,
-        &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
-
-    // bind DescriptorSet 1 (Materials)
-    vkCmdBindDescriptorSets(
-        m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
-        &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
-
-    vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
     if(m_RenderContext.usesImgui) {
         // @IMGUI
@@ -425,7 +449,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
                                         m_Context.commandContext.commandBuffer);
     }
-    
+
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
 
@@ -480,7 +504,8 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     lightingInformation.cameraPosition = scene.getCameraRef().getWorldPos();
     lightingInformation.lightDirection =
         m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDir();
-    lightingInformation.lightIntensity = m_RenderContext.renderSettings.lightingSetting.sunColor;
+    lightingInformation.lightIntensity =
+        m_RenderContext.renderSettings.lightingSetting.sunColor;
     lightingInformation.doPCF = m_RenderContext.imguiData.doPCF;
 
     memcpy(m_RenderContext.renderPasses.mainPass.lightingBuffer.bufferMemoryMapping,
@@ -496,8 +521,10 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
 
 
     vkDeviceWaitIdle(m_Context.baseContext.device);
-    cleanVisualizationPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
-    createVisualizationPipeline(m_Context, m_RenderContext, m_RenderContext.renderPasses.mainPass);
+    cleanVisualizationPipeline(m_Context.baseContext,
+                               m_RenderContext.renderPasses.mainPass);
+    createVisualizationPipeline(m_Context, m_RenderContext,
+                                m_RenderContext.renderPasses.mainPass);
 
     cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
     createSkyboxPipeline(m_Context, m_RenderContext,
@@ -506,7 +533,7 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
 
 void VulkanRenderer::swapToSecondaryPipeline() {
     swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.mainPass.renderPassContext);
-    //swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
+    // swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;

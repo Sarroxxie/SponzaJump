@@ -90,6 +90,14 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
         ImGui::Checkbox("Percentage Closer Filtering", &renderContext.imguiData.doPCF);
 
+        ImGui::SliderInt("Number Cascades",
+                         &renderContext.renderSettings.shadowMappingSettings.numberCascades,
+                         0, MAX_CASCADES);
+
+        ImGui::SliderInt("Vis Cascade Index",
+                         &renderContext.renderSettings.shadowMappingSettings.cascadeVisIndex,
+                         0, renderContext.renderSettings.shadowMappingSettings.numberCascades - 1);
+
         ImGui::SliderFloat(
             "Ortho Dim",
             &renderContext.renderSettings.shadowMappingSettings.projection.widthHeightDim,

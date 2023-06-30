@@ -23,7 +23,8 @@ layout (std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescrip
 layout(set = 1, binding = eTextures) uniform sampler2D samplers[];
 layout(set = 1, binding = eSkybox) uniform samplerCube skybox;
 
-layout (set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
+// layout (set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
+layout (set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSamplers[MAX_CASCADES];
 
 layout (push_constant) uniform _PushConstant { PushConstant pushConstant; };
 
@@ -117,7 +118,7 @@ float getShadow(vec4 shadowCoords, vec2 offset) {
     float shadow = 1.0;
 
     if (shadowCoords.z > -1.0 && shadowCoords.z < 1.0) {
-        float dist = texture(depthSampler, shadowCoords.st + offset).r;
+        float dist = texture(depthSamplers[0], shadowCoords.st + offset).r;
         if (shadowCoords.w > 0.0 && dist < shadowCoords.z)
         {
             shadow = 0.0;
@@ -129,7 +130,7 @@ float getShadow(vec4 shadowCoords, vec2 offset) {
 
 float filterPCF(vec4 sc)
 {
-    ivec2 texDim = textureSize(depthSampler, 0);
+    ivec2 texDim = textureSize(depthSamplers[0], 0);
     float scale = 1;
     float dx = scale * 1.0 / float(texDim.x);
     float dy = scale * 1.0 / float(texDim.y);
