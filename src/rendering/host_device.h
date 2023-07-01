@@ -87,6 +87,7 @@ struct PushConstant
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
     ALIGN_AS(4) int cascadeCount;
+    ALIGN_AS(4) int doPCF;
 };
 
 struct ShadowPushConstant

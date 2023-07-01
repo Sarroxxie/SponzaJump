@@ -396,6 +396,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         pushConstant.materialIndex    = 0;
         pushConstant.cascadeCount =
             m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
+        pushConstant.doPCF = m_RenderContext.imguiData.doPCF ? 1 : 0;
 
         for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
             auto* modelComponent     = scene.getComponent<ModelComponent>(id);

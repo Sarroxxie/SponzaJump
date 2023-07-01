@@ -172,9 +172,7 @@ void main() {
     shadowCoord = vec4((shadowCoord.xyz + vec3(1)) / 2, shadowCoord.a);
 
     float shadow = 0;
-
-    uint enablePCF = 1;
-    if (enablePCF == 1) {
+    if (pushConstant.doPCF == 1) {
         shadow = filterPCF(shadowCoord, cascadeIndex);
     } else {
         shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);

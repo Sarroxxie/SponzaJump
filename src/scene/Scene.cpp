@@ -92,24 +92,11 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
         ImGui::SliderInt("Number Cascades",
                          &renderContext.renderSettings.shadowMappingSettings.numberCascades,
-                         0, MAX_CASCADES);
+                         1, MAX_CASCADES);
 
         ImGui::SliderInt("Vis Cascade Index",
                          &renderContext.renderSettings.shadowMappingSettings.cascadeVisIndex,
                          0, renderContext.renderSettings.shadowMappingSettings.numberCascades - 1);
-
-        ImGui::SliderFloat(
-            "Ortho Dim",
-            &renderContext.renderSettings.shadowMappingSettings.projection.widthHeightDim,
-            0, 200);
-        ImGui::SliderFloat(
-            "Ortho zNear",
-            &renderContext.renderSettings.shadowMappingSettings.projection.zNear,
-            0, renderContext.renderSettings.shadowMappingSettings.projection.zFar);
-        ImGui::SliderFloat(
-            "Ortho zFar",
-            &renderContext.renderSettings.shadowMappingSettings.projection.zFar,
-            renderContext.renderSettings.shadowMappingSettings.projection.zNear, 400);
     }
 
 
