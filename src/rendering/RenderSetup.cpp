@@ -959,9 +959,6 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
     createBufferResources(appContext, MAX_CASCADES * sizeof(SplitDummyStruct),
                           renderContext.renderPasses.mainPass.cascadeSplitsBuffer);
 
-    createBufferResources(appContext, MAX_CASCADES * sizeof(glm::mat4),
-                          renderContext.renderPasses.mainPass.inverserLightVPBuffer);
-
     createMaterialsBuffer(appContext, renderContext, scene);
 }
 
@@ -1040,7 +1037,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     depthBindings.push_back(
-        createLayoutBinding(DepthBindings::eInverseLightVPs, 1,
+        createLayoutBinding(DepthBindings::eLightVPs, 1,
                             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
@@ -1273,7 +1270,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 
     VkDescriptorBufferInfo inverseLightVPBufferInfo{};
-    inverseLightVPBufferInfo.buffer = mainPass.inverserLightVPBuffer.buffer;
+    inverseLightVPBufferInfo.buffer = renderContext.renderPasses.shadowPass.transformBuffer.buffer;
     inverseLightVPBufferInfo.offset = 0;
     inverseLightVPBufferInfo.range  = VK_WHOLE_SIZE;
 
@@ -1281,7 +1278,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     inverseLightVPWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     inverseLightVPWrite.pNext  = nullptr;
     inverseLightVPWrite.dstSet = mainPass.depthDescriptorSet;
-    inverseLightVPWrite.dstBinding      = DepthBindings::eInverseLightVPs;
+    inverseLightVPWrite.dstBinding      = DepthBindings::eLightVPs;
     inverseLightVPWrite.dstArrayElement = 0;
     inverseLightVPWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     inverseLightVPWrite.descriptorCount = 1;
@@ -1305,9 +1302,6 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyBuffer(baseContext.device, mainPass.cascadeSplitsBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.cascadeSplitsBuffer.bufferMemory, nullptr);
-
-    vkDestroyBuffer(baseContext.device, mainPass.inverserLightVPBuffer.buffer, nullptr);
-    vkFreeMemory(baseContext.device, mainPass.inverserLightVPBuffer.bufferMemory, nullptr);
 
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);

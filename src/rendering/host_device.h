@@ -5,11 +5,11 @@
  */
 
 #ifdef __cplusplus
-    #pragma once
-    #include "glm/glm.hpp"
-    using vec3 = glm::vec3;
-    using mat4 = glm::mat4;
-    using uint = unsigned int;
+#pragma once
+#include "glm/glm.hpp"
+using vec3 = glm::vec3;
+using mat4 = glm::mat4;
+using uint = unsigned int;
 #endif
 
 // clang-format off
@@ -40,7 +40,7 @@ END_BINDING();
 START_BINDING(DepthBindings)
     eShadowDepthBuffer = 0,
     eCascadeSplits = 1,
-    eInverseLightVPs = 2
+    eLightVPs = 2
 END_BINDING();
 
 const uint MAX_CASCADES = 4;
@@ -72,7 +72,10 @@ struct CameraUniform
     ALIGN_AS(16) mat4 projInverse;
 };
 
-struct SplitDummyStruct {
+// For some reason, if I bind it as float array it has Byteoffset of 16, since
+// this will always be small anyways, I just use this dummy struct
+struct SplitDummyStruct
+{
     ALIGN_AS(16) float splitVal;
 };
 

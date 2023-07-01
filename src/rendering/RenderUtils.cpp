@@ -9,7 +9,6 @@ void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
                              glm::mat4             inverseViewProjection,
                              ShadowMappingSettings shadowSettings,
                              glm::mat4*            VPMats,
-                             glm::mat4*            invVPMats,
                              SplitDummyStruct*                splitDepths) {
 
     int   numberCascades = shadowSettings.numberCascades;
@@ -89,7 +88,6 @@ void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
         ortho[1][1] *= -1;
 
         VPMats[i] = ortho * view;
-        invVPMats[i] = VPMats[i];
 
         lastSplitDist = cascadeSplits[i];
     }

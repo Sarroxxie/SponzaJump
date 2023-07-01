@@ -173,7 +173,6 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     int numberCascades = m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
     glm::mat4 VPMats[numberCascades];
-    glm::mat4 invVPMats[numberCascades];
     SplitDummyStruct     splitDepths[numberCascades];
 
 
@@ -185,14 +184,14 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
     calculateShadowCascades(m_RenderContext.renderSettings.perspectiveSettings, invViewProj,
                             m_RenderContext.renderSettings.shadowMappingSettings,
-                            VPMats, invVPMats, splitDepths);
+                            VPMats, splitDepths);
 
 
     memcpy(m_RenderContext.renderPasses.mainPass.cascadeSplitsBuffer.bufferMemoryMapping,
            splitDepths, numberCascades * sizeof(SplitDummyStruct));
 
-    memcpy(m_RenderContext.renderPasses.mainPass.inverserLightVPBuffer.bufferMemoryMapping,
-           invVPMats, numberCascades * sizeof(glm::mat4));
+    memcpy(m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping,
+           VPMats, numberCascades * sizeof(glm::mat4));
 
 
     for(size_t i = 0; i < MAX_CASCADES; i++) {
@@ -216,10 +215,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
 
         if(i < m_RenderContext.renderSettings.shadowMappingSettings.numberCascades) {
-            memcpy(((glm::mat4*)
-                        m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping)
-                       + i,
-                   &VPMats[i], sizeof(glm::mat4));
+
 
             vkCmdSetDepthBias(m_Context.commandContext.commandBuffer,
                               m_RenderContext.imguiData.depthBiasConstant, 0.0f,

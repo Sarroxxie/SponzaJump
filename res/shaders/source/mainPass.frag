@@ -30,9 +30,9 @@ layout (set = 2, binding = eCascadeSplits) uniform _CascadeSplits {
     SplitDummyStruct split[MAX_CASCADES];
 } cascadeSplits;
 
-layout (set = 2, binding = eInverseLightVPs) uniform _InverseLightVPs {
+layout (set = 2, binding = eLightVPs) uniform _LightVPs {
     mat4 mats[MAX_CASCADES];
-} inverseLightVPs;
+} LightVPs;
 
 layout (push_constant) uniform _PushConstant { PushConstant pushConstant; };
 
@@ -166,33 +166,19 @@ void main() {
             cascadeIndex = i + 1;
         }
     }
-    vec4 shadowCoord = (inverseLightVPs.mats[cascadeIndex]) * vec4(inPosition, 1.0);
+    vec4 shadowCoord = (LightVPs.mats[cascadeIndex]) * vec4(inPosition, 1.0);
 
-    vec4 shadowCoordsHom = shadowCoord / shadowCoord.w;
-    vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xyz + vec3(1)) / 2, shadowCoordsHom.a);
+    shadowCoord = shadowCoord / shadowCoord.w;
+    shadowCoord = vec4((shadowCoord.xyz + vec3(1)) / 2, shadowCoord.a);
 
     float shadow = 0;
 
     uint enablePCF = 1;
     if (enablePCF == 1) {
-        shadow = filterPCF(normalizedShadowCoords, cascadeIndex);
+        shadow = filterPCF(shadowCoord, cascadeIndex);
     } else {
-        shadow = getShadow(normalizedShadowCoords, vec2(0.0), cascadeIndex);
+        shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);
     }
-
-
-    /*
-    vec4 shadowCoordsHom = inShadowCoords / inShadowCoords.w;
-    vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xy + vec2(1)) / 2, shadowCoordsHom.ba);
-
-    float shadow = lightingInformation.doPCF == 1 ? filterPCF(normalizedShadowCoords) : getShadow(normalizedShadowCoords, vec2(0));
-
-    if (normalizedShadowCoords.x < 0 || normalizedShadowCoords.x > 1
-    || normalizedShadowCoords.y < 0 || normalizedShadowCoords.y > 1) {
-        shadow = 1.0;
-    }
-    */
-    // float shadow = 1.0;
 
     // fetch material
     MaterialDescription material = materials.m[pushConstant.materialIndex];
