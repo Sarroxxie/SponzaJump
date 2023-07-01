@@ -77,6 +77,8 @@ typedef struct
 
     BufferResources transformBuffer;
     BufferResources lightingBuffer;
+    BufferResources cascadeSplitsBuffer;
+    BufferResources inverserLightVPBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;

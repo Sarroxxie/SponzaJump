@@ -9,7 +9,7 @@ layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec4 inTangents;
 layout (location = 4) in vec2 inTexCoords;
 
-layout (location = 5) in vec4 inShadowCoords;
+layout (location = 5) in vec3 inViewPos;
 
 layout (location = 0) out vec4 outColor;
 
@@ -25,6 +25,14 @@ layout(set = 1, binding = eSkybox) uniform samplerCube skybox;
 
 // layout (set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSampler;
 layout (set = 2, binding = eShadowDepthBuffer) uniform sampler2D depthSamplers[MAX_CASCADES];
+
+layout (set = 2, binding = eCascadeSplits) uniform _CascadeSplits {
+    SplitDummyStruct split[MAX_CASCADES];
+} cascadeSplits;
+
+layout (set = 2, binding = eInverseLightVPs) uniform _InverseLightVPs {
+    mat4 mats[MAX_CASCADES];
+} inverseLightVPs;
 
 layout (push_constant) uniform _PushConstant { PushConstant pushConstant; };
 
@@ -114,11 +122,11 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 radiance, vec3 albedo, float metallic, fl
 }
 
 // following two functions largely taken from sasha willems shadow mapping example in https://github.com/SaschaWillems/Vulkan
-float getShadow(vec4 shadowCoords, vec2 offset) {
+float getShadow(vec4 shadowCoords, vec2 offset, uint cascadeIndex) {
     float shadow = 1.0;
 
     if (shadowCoords.z > -1.0 && shadowCoords.z < 1.0) {
-        float dist = texture(depthSamplers[0], shadowCoords.st + offset).r;
+        float dist = texture(depthSamplers[cascadeIndex], shadowCoords.st + offset).r;
         if (shadowCoords.w > 0.0 && dist < shadowCoords.z)
         {
             shadow = 0.0;
@@ -128,9 +136,9 @@ float getShadow(vec4 shadowCoords, vec2 offset) {
     return shadow;
 }
 
-float filterPCF(vec4 sc)
+float filterPCF(vec4 sc, uint cascadeIndex)
 {
-    ivec2 texDim = textureSize(depthSamplers[0], 0);
+    ivec2 texDim = textureSize(depthSamplers[cascadeIndex], 0);
     float scale = 1;
     float dx = scale * 1.0 / float(texDim.x);
     float dy = scale * 1.0 / float(texDim.y);
@@ -143,7 +151,7 @@ float filterPCF(vec4 sc)
     {
         for (int y = -range; y <= range; y++)
         {
-            shadowFactor += getShadow(sc, vec2(dx * x, dy * y));
+            shadowFactor += getShadow(sc, vec2(dx * x, dy * y), cascadeIndex);
             count++;
         }
 
@@ -152,6 +160,28 @@ float filterPCF(vec4 sc)
 }
 
 void main() {
+    uint cascadeIndex = 0;
+    for(uint i = 0; i < pushConstant.cascadeCount - 1; ++i) {
+        if(inViewPos.z < cascadeSplits.split[i].splitVal) {
+            cascadeIndex = i + 1;
+        }
+    }
+    vec4 shadowCoord = (inverseLightVPs.mats[cascadeIndex]) * vec4(inPosition, 1.0);
+
+    vec4 shadowCoordsHom = shadowCoord / shadowCoord.w;
+    vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xyz + vec3(1)) / 2, shadowCoordsHom.a);
+
+    float shadow = 0;
+
+    uint enablePCF = 1;
+    if (enablePCF == 1) {
+        shadow = filterPCF(normalizedShadowCoords, cascadeIndex);
+    } else {
+        shadow = getShadow(normalizedShadowCoords, vec2(0.0), cascadeIndex);
+    }
+
+
+    /*
     vec4 shadowCoordsHom = inShadowCoords / inShadowCoords.w;
     vec4 normalizedShadowCoords = vec4((shadowCoordsHom.xy + vec2(1)) / 2, shadowCoordsHom.ba);
 
@@ -161,6 +191,8 @@ void main() {
     || normalizedShadowCoords.y < 0 || normalizedShadowCoords.y > 1) {
         shadow = 1.0;
     }
+    */
+    // float shadow = 1.0;
 
     // fetch material
     MaterialDescription material = materials.m[pushConstant.materialIndex];
@@ -231,10 +263,22 @@ void main() {
     // gamma correct
     color = pow(color, vec3(1.0 / 2.2));
 
-    outColor = vec4(color, 1);
 
-    //outColor = vec4(color.xyz * shadow, 1);
 
-    // sample skybox
-    //outColor = texture(skybox, normalize(inPosition - lightingInformation.cameraPosition));
+    outColor = vec4(shadow * color, 1);
+
+    vec3 addColor = vec3(0);
+    if (cascadeIndex == 0) {
+        addColor = vec3(1, 0, 0);
+    } else if (cascadeIndex == 1) {
+        addColor = vec3(1, 1, 0);
+    } else if (cascadeIndex == 2) {
+        addColor = vec3(0, 1, 0);
+    } else if (cascadeIndex == 3) {
+        addColor = vec3(0, 0, 1);
+    }
+
+    float factor = 0.2;
+    outColor = vec4(outColor.xyz + factor * addColor, 1);
+
 }

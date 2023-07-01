@@ -11,7 +11,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     auto& settings                         = renderContext.renderSettings;
     settings.perspectiveSettings.fov       = glm::radians(45.0f);
     settings.perspectiveSettings.nearPlane = 1;
-    settings.perspectiveSettings.farPlane  = 500;
+    settings.perspectiveSettings.farPlane  = 300;
 
     ShadowMappingSettings shadowMappingSettings;
     shadowMappingSettings.lightCamera =
@@ -899,7 +899,7 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = shadowPass.transformBuffer.buffer;
     bufferInfo.offset = 0;
-    bufferInfo.range  = MAX_CASCADES * sizeof(SceneTransform);
+    bufferInfo.range  = MAX_CASCADES * sizeof(glm::mat4);
 
     VkWriteDescriptorSet descriptorWrite;
     descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -921,7 +921,7 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
 void createShadowPassResources(const ApplicationVulkanContext& appContext,
                                RenderContext&                  renderContext) {
 
-    createBufferResources(appContext, MAX_CASCADES * sizeof(SceneTransform),
+    createBufferResources(appContext, MAX_CASCADES * sizeof(glm::mat4),
                           renderContext.renderPasses.shadowPass.transformBuffer);
 }
 
@@ -955,6 +955,12 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
 
     createBufferResources(appContext, sizeof(LightingInformation),
                           renderContext.renderPasses.mainPass.lightingBuffer);
+
+    createBufferResources(appContext, MAX_CASCADES * sizeof(SplitDummyStruct),
+                          renderContext.renderPasses.mainPass.cascadeSplitsBuffer);
+
+    createBufferResources(appContext, MAX_CASCADES * sizeof(glm::mat4),
+                          renderContext.renderPasses.mainPass.inverserLightVPBuffer);
 
     createMaterialsBuffer(appContext, renderContext, scene);
 }
@@ -1026,6 +1032,16 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     depthBindings.push_back(
         createLayoutBinding(DepthBindings::eShadowDepthBuffer, MAX_CASCADES,
                             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    depthBindings.push_back(
+        createLayoutBinding(DepthBindings::eCascadeSplits, 1,
+                            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    depthBindings.push_back(
+        createLayoutBinding(DepthBindings::eInverseLightVPs, 1,
+                            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     createDescriptorSetLayout(appContext.baseContext,
@@ -1237,6 +1253,43 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(depthDescriptorWrite);
 
+
+    VkDescriptorBufferInfo cascadeSplitBufferInfo{};
+    cascadeSplitBufferInfo.buffer = mainPass.cascadeSplitsBuffer.buffer;
+    cascadeSplitBufferInfo.offset = 0;
+    cascadeSplitBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet depthCascadeSplitsWrite;
+    depthCascadeSplitsWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    depthCascadeSplitsWrite.pNext  = nullptr;
+    depthCascadeSplitsWrite.dstSet = mainPass.depthDescriptorSet;
+    depthCascadeSplitsWrite.dstBinding      = DepthBindings::eCascadeSplits;
+    depthCascadeSplitsWrite.dstArrayElement = 0;
+    depthCascadeSplitsWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    depthCascadeSplitsWrite.descriptorCount = 1;
+    depthCascadeSplitsWrite.pBufferInfo     = &cascadeSplitBufferInfo;
+
+    descriptorWrites.emplace_back(depthCascadeSplitsWrite);
+
+
+    VkDescriptorBufferInfo inverseLightVPBufferInfo{};
+    inverseLightVPBufferInfo.buffer = mainPass.inverserLightVPBuffer.buffer;
+    inverseLightVPBufferInfo.offset = 0;
+    inverseLightVPBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet inverseLightVPWrite;
+    inverseLightVPWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    inverseLightVPWrite.pNext  = nullptr;
+    inverseLightVPWrite.dstSet = mainPass.depthDescriptorSet;
+    inverseLightVPWrite.dstBinding      = DepthBindings::eInverseLightVPs;
+    inverseLightVPWrite.dstArrayElement = 0;
+    inverseLightVPWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    inverseLightVPWrite.descriptorCount = 1;
+    inverseLightVPWrite.pBufferInfo     = &inverseLightVPBufferInfo;
+
+    descriptorWrites.emplace_back(inverseLightVPWrite);
+
+
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
@@ -1249,6 +1302,12 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyBuffer(baseContext.device, mainPass.lightingBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.lightingBuffer.bufferMemory, nullptr);
+
+    vkDestroyBuffer(baseContext.device, mainPass.cascadeSplitsBuffer.buffer, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.cascadeSplitsBuffer.bufferMemory, nullptr);
+
+    vkDestroyBuffer(baseContext.device, mainPass.inverserLightVPBuffer.buffer, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.inverserLightVPBuffer.bufferMemory, nullptr);
 
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);

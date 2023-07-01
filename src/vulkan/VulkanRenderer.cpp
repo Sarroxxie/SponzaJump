@@ -169,15 +169,12 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     scissor.extent = shadowExtent;
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
-    vkCmdSetDepthBias(m_Context.commandContext.commandBuffer,
-                      m_RenderContext.imguiData.depthBiasConstant, 0.0f,
-                      m_RenderContext.imguiData.depthBiasSlope);
-
 
     int numberCascades = m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
-    SceneTransform sceneTransforms[numberCascades];
-    float          splitDepths[numberCascades];
+    glm::mat4 VPMats[numberCascades];
+    glm::mat4 invVPMats[numberCascades];
+    SplitDummyStruct     splitDepths[numberCascades];
 
 
     glm::mat4 invViewProj = glm::inverse(
@@ -188,7 +185,15 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
     calculateShadowCascades(m_RenderContext.renderSettings.perspectiveSettings, invViewProj,
                             m_RenderContext.renderSettings.shadowMappingSettings,
-                            sceneTransforms, splitDepths);
+                            VPMats, invVPMats, splitDepths);
+
+
+    memcpy(m_RenderContext.renderPasses.mainPass.cascadeSplitsBuffer.bufferMemoryMapping,
+           splitDepths, numberCascades * sizeof(SplitDummyStruct));
+
+    memcpy(m_RenderContext.renderPasses.mainPass.inverserLightVPBuffer.bufferMemoryMapping,
+           invVPMats, numberCascades * sizeof(glm::mat4));
+
 
     for(size_t i = 0; i < MAX_CASCADES; i++) {
         VkRenderPassBeginInfo renderPassInfo{};
@@ -211,8 +216,14 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
 
         if(i < m_RenderContext.renderSettings.shadowMappingSettings.numberCascades) {
-            memcpy(((SceneTransform *) m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping) + i,
-                   &sceneTransforms[i], sizeof(SceneTransform));
+            memcpy(((glm::mat4*)
+                        m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping)
+                       + i,
+                   &VPMats[i], sizeof(glm::mat4));
+
+            vkCmdSetDepthBias(m_Context.commandContext.commandBuffer,
+                              m_RenderContext.imguiData.depthBiasConstant, 0.0f,
+                              m_RenderContext.imguiData.depthBiasSlope * (i + 1));
 
             vkCmdBindDescriptorSets(
                 m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -236,7 +247,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
                 Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
-                int counter                 = 0;
+                int counter = 0;
                 for(auto& meshPartIndex : model.meshPartIndices) {
                     // this is fairly hardcoded so that the spiky mesh of the
                     // player has no shadow the meshes of the spikes are at
@@ -384,8 +395,11 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
         // create PushConstant object and initialize with default values
         PushConstant pushConstant;
-        pushConstant.transformation = glm::mat4(1);
-        pushConstant.materialIndex  = 0;
+        pushConstant.transformation   = glm::mat4(1);
+        pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
+        pushConstant.materialIndex    = 0;
+        pushConstant.cascadeCount =
+            m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
         for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
             auto* modelComponent     = scene.getComponent<ModelComponent>(id);

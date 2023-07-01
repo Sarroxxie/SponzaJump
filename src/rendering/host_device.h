@@ -38,7 +38,9 @@ START_BINDING(MaterialsBindings)
 END_BINDING();
 
 START_BINDING(DepthBindings)
-    eShadowDepthBuffer = 0
+    eShadowDepthBuffer = 0,
+    eCascadeSplits = 1,
+    eInverseLightVPs = 2
 END_BINDING();
 
 const uint MAX_CASCADES = 4;
@@ -70,18 +72,18 @@ struct CameraUniform
     ALIGN_AS(16) mat4 projInverse;
 };
 
+struct SplitDummyStruct {
+    ALIGN_AS(16) float splitVal;
+};
+
 struct PushConstant
 {
     // transformation matrix of the current instance
     ALIGN_AS(16) mat4 transformation;
+    ALIGN_AS(16) vec3 worldCamPosition;
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
-};
-
-struct SceneTransformStruct
-{
-    ALIGN_AS(16) mat4 projection;
-    ALIGN_AS(16) mat4 view;
+    ALIGN_AS(4) int cascadeCount;
 };
 
 struct ShadowPushConstant

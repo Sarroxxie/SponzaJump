@@ -6,7 +6,8 @@
 void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
                              glm::mat4             inverseViewProjection,
                              ShadowMappingSettings shadowSettings,
-                             SceneTransform*       sceneTransforms,
-                             float*                splitDepths);
+                             glm::mat4*            VPMats,
+                             glm::mat4*            invVPMats,
+                             SplitDummyStruct*                splitDepths);
 
 #endif  // GRAPHICSPRAKTIKUM_RENDERUTILS_H

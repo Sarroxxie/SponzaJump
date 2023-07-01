@@ -8,8 +8,9 @@
 void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
                              glm::mat4             inverseViewProjection,
                              ShadowMappingSettings shadowSettings,
-                             SceneTransform*       sceneTransforms,
-                             float*                splitDepths) {
+                             glm::mat4*            VPMats,
+                             glm::mat4*            invVPMats,
+                             SplitDummyStruct*                splitDepths) {
 
     int   numberCascades = shadowSettings.numberCascades;
     float cascadeSplits[numberCascades];
@@ -78,19 +79,17 @@ void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
         glm::vec3 lightDir = shadowSettings.lightCamera.getViewDir();
 
         // Store split distance and matrix in cascade
-        splitDepths[i] = (near + splitDist * clipRange) * -1.0f;
+        splitDepths[i].splitVal = (near + splitDist * clipRange) * -1.0f;
 
-        sceneTransforms[i].cameraTransform =
-            glm::lookAt(frustumCenter - lightDir * -minExtents.z, frustumCenter,
+        glm::mat4 view = glm::lookAt(frustumCenter - lightDir * -minExtents.z, frustumCenter,
                         glm::vec3(0.0f, 1.0f, 0.0f));
 
-        float extents = maxExtents.z - minExtents.z;
+        glm::mat4 ortho = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, 0.0f, maxExtents.z - minExtents.z);
 
-        sceneTransforms[i].perspectiveTransform =
-            glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y,
-                       0.0f, extents);
+        ortho[1][1] *= -1;
 
-        sceneTransforms[i].perspectiveTransform[1][1] *= -1;
+        VPMats[i] = ortho * view;
+        invVPMats[i] = VPMats[i];
 
         lastSplitDist = cascadeSplits[i];
     }

@@ -9,8 +9,8 @@ layout (location = 2) in vec4 inTangents;
 layout (location = 3) in vec2 texCoords;
 
 layout (set = 0, binding = eCamera) uniform SceneTransform {
-    SceneTransformStruct data[MAX_CASCADES];
-} sceneTransform;
+    mat4 data[MAX_CASCADES];
+} VPMats;
 
 layout (push_constant) uniform ObjectTransform {
     mat4 transform;
@@ -23,9 +23,9 @@ out gl_PerVertex
 };
 
 void main() {
-    vec4 pos =  sceneTransform.data[objectTransform.cascadeIndex].projection
-                * sceneTransform.data[objectTransform.cascadeIndex].view
+    vec4 pos =  VPMats.data[objectTransform.cascadeIndex]
                 * objectTransform.transform * vec4(inPosition, 1);
 
     gl_Position = pos;
+    gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }
