@@ -8,7 +8,7 @@
 #include "rendering/RenderSetup.h"
 #include "rendering/host_device.h"
 #include "game/PlayerComponent.h"
-#include "rendering/RenderUtils.h"
+#include "rendering/CSMUtils.h"
 
 VulkanRenderer::VulkanRenderer(ApplicationVulkanContext& context, RenderContext& renderContext)
     : m_Context(context)
@@ -172,8 +172,8 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
     int numberCascades = m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
-    glm::mat4 VPMats[numberCascades];
-    SplitDummyStruct     splitDepths[numberCascades];
+    glm::mat4        VPMats[numberCascades];
+    SplitDummyStruct splitDepths[numberCascades];
 
 
     glm::mat4 invViewProj = glm::inverse(
@@ -182,9 +182,11 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                              m_Context.swapchainContext.swapChainExtent.height)
         * scene.getCameraRef().getCameraMatrix());
 
+    scene.getCameraRef().normalizeViewDir();
+
     calculateShadowCascades(m_RenderContext.renderSettings.perspectiveSettings, invViewProj,
                             m_RenderContext.renderSettings.shadowMappingSettings,
-                            VPMats, splitDepths);
+                            scene.getCameraRef().getViewDir(), VPMats, splitDepths);
 
 
     memcpy(m_RenderContext.renderPasses.mainPass.cascadeSplitsBuffer.bufferMemoryMapping,

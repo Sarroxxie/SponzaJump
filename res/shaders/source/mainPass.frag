@@ -249,7 +249,7 @@ void main() {
 
 
 
-    outColor = vec4(shadow * color, 1);
+    outColor = vec4(color, 1);
 
     vec3 addColor = vec3(0);
     if (cascadeIndex == 0) {
@@ -262,7 +262,7 @@ void main() {
         addColor = vec3(0, 0, 1);
     }
 
-    float factor = 0.2;
+    float factor = 0.0;
     outColor = vec4(outColor.xyz + factor * addColor, 1);
 
 }

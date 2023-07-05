@@ -78,13 +78,14 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
                 renderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDirRef()),
             -1, 1);
 
-        ImGui::SliderFloat("Light Camera Dist",
-                           &renderContext.renderSettings.shadowMappingSettings.lightCameraDist,
-                           -100, 100);
         ImGui::Checkbox("Lock shadow to player",
                         &renderContext.renderSettings.shadowMappingSettings.snapToPlayer);
 
+        ImGui::Checkbox("New Cascade Calculations", &renderContext.renderSettings.shadowMappingSettings.newCascadeCalculation);
+
         ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
+
+        ImGui::Checkbox("Cross Up Vec", &renderContext.renderSettings.shadowMappingSettings.crossProductUp);
 
         ImGui::Checkbox("Player Spikes Shadow", &renderContext.imguiData.playerSpikesShadow);
 

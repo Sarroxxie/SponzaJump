@@ -149,6 +149,8 @@ typedef struct
     Camera        lightCamera;
     float lightCameraDist = 60;
     bool snapToPlayer = true;
+    bool newCascadeCalculation = false;
+    bool crossProductUp = false;
 
     OrthoSettings projection;
 
