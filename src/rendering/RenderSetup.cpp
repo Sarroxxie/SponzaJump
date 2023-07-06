@@ -311,6 +311,149 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
         throw std::runtime_error("failed to create render pass!");
     }
 }
+// TODO: rename this funciton into "createMainRenderPass" once it is up and running
+/*
+ * Inspired by SashaWillems sample on deferred rendering
+ * (https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferred/deferred.cpp)
+ * and adjusted to fit our needs.
+ */
+void createMainRenderPass2(const ApplicationVulkanContext& appContext,
+                          RenderContext&                  renderContext) {
+    MainPass mainPass = renderContext.renderPasses.mainPass;
+    // create attachments
+    // World Space Position
+    createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                             mainPass.positionAttachment);
+    // World Space Normals
+    createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT,
+                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                             mainPass.normalAttachment);
+    // Albedo
+    createDeferredAttachment(appContext, VK_FORMAT_R8G8B8A8_UNORM,
+                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, mainPass.albedoAttachment);
+    // AO - Roughness - Metallic
+    createDeferredAttachment(appContext, VK_FORMAT_R8G8B8A8_UNORM,
+                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                             mainPass.aoRoughnessMetallicAttachment);
+    // Depth
+    VkFormat depthFormat = findDepthFormat(appContext.baseContext);
+    createDeferredAttachment(appContext, depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                             mainPass.depthAttachment);
+
+    // set up separate renderpass with references to the color and depth attachments
+    std::array<VkAttachmentDescription, 5> attachmentDescs = {};
+
+    // init attachment properties
+    for(uint32_t i = 0; i < 5; ++i) {
+        attachmentDescs[i].samples        = VK_SAMPLE_COUNT_1_BIT;
+        attachmentDescs[i].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachmentDescs[i].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        attachmentDescs[i].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        // need special case for depth attachment
+        if(i == 4) {
+            attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        } else {
+            attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+    }
+
+    // formats
+    attachmentDescs[0].format = mainPass.positionAttachment.imageFormat;
+    attachmentDescs[1].format = mainPass.normalAttachment.imageFormat;
+    attachmentDescs[2].format = mainPass.albedoAttachment.imageFormat;
+    attachmentDescs[3].format = mainPass.aoRoughnessMetallicAttachment.imageFormat;
+    attachmentDescs[4].format = mainPass.depthAttachment.imageFormat;
+
+    // attachment references
+    std::vector<VkAttachmentReference> colorReferences;
+    colorReferences.push_back({0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+    colorReferences.push_back({1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+    colorReferences.push_back({2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+    colorReferences.push_back({3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+
+    VkAttachmentReference depthReference = {};
+    depthReference.attachment            = 4;
+    depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.pColorAttachments    = colorReferences.data();
+    subpass.colorAttachmentCount = static_cast<uint32_t>(colorReferences.size());
+    subpass.pDepthStencilAttachment = &depthReference;
+
+    // TODO: need to integrate ImGUI somewhere here
+    // use subpass dependencies for attachment layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass   = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass   = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+                                    | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+                                    | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask   = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    // create render pass
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType        = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.pAttachments = attachmentDescs.data();
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
+    renderPassInfo.subpassCount    = 1;
+    renderPassInfo.pSubpasses      = &subpass;
+    renderPassInfo.dependencyCount = 2;
+    renderPassInfo.pDependencies   = dependencies.data();
+    vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr,
+                       &mainPass.renderPassContext.renderPass);
+
+    // create framebuffer (gBuffer)
+    std::array<VkImageView, 5> attachments;
+    attachments[0] = mainPass.positionAttachment.imageView;
+    attachments[1] = mainPass.normalAttachment.imageView;
+    attachments[2] = mainPass.albedoAttachment.imageView;
+    attachments[3] = mainPass.aoRoughnessMetallicAttachment.imageView;
+    attachments[4] = mainPass.depthAttachment.imageView;
+
+    VkFramebufferCreateInfo fbufCreateInfo = {};
+    fbufCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fbufCreateInfo.pNext           = NULL;
+    fbufCreateInfo.renderPass      = mainPass.renderPassContext.renderPass;
+    fbufCreateInfo.pAttachments    = attachments.data();
+    fbufCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    fbufCreateInfo.width  = appContext.swapchainContext.swapChainExtent.width;
+    fbufCreateInfo.height = appContext.swapchainContext.swapChainExtent.height;
+    fbufCreateInfo.layers = 1;
+    vkCreateFramebuffer(appContext.baseContext.device, &fbufCreateInfo, nullptr,
+                        &mainPass.gBuffer);
+
+    // create sampler to sample from the color attachments
+    VkSamplerCreateInfo sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    sampler.magFilter     = VK_FILTER_NEAREST;
+    sampler.minFilter     = VK_FILTER_NEAREST;
+    sampler.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler.addressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler.addressModeV  = sampler.addressModeU;
+    sampler.addressModeW  = sampler.addressModeU;
+    sampler.mipLodBias    = 0.0f;
+    sampler.maxAnisotropy = 1.0f;
+    sampler.minLod        = 0.0f;
+    sampler.maxLod        = 1.0f;
+    sampler.borderColor   = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    vkCreateSampler(appContext.baseContext.device, &sampler, nullptr,
+                    &mainPass.framebufferAttachmentSampler);
+}
 
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext,
@@ -814,6 +957,75 @@ void createBlankAttachment(const ApplicationVulkanContext& context,
     attachment.finalLayout   = finalLayout;
 }
 
+/*
+* Used to create framebuffer attachments for deferred rendering. Code inspired by SashaWillems sample.
+* (https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferred/deferred.cpp)
+*/
+void createDeferredAttachment(const ApplicationVulkanContext& context,
+                              VkFormat                        format,
+                              VkImageUsageFlagBits            usage,
+                              ImageResources&                 imageResources) {
+    VkImageAspectFlags aspectMask = 0;
+    VkImageLayout      imageLayout;
+
+    imageResources.imageFormat = format;
+
+    // need extra stuff for the depth layout
+    if(usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+        aspectMask  = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    if(usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if(format >= VK_FORMAT_D16_UNORM_S8_UINT)
+            aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    assert(aspectMask > 0);
+
+    VkImageCreateInfo imageCreateInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.format    = format;
+    imageCreateInfo.extent.width = context.swapchainContext.swapChainExtent.width;
+    imageCreateInfo.extent.height = context.swapchainContext.swapChainExtent.width;
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels    = 1;
+    imageCreateInfo.arrayLayers  = 1;
+    imageCreateInfo.samples      = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.tiling       = VK_IMAGE_TILING_OPTIMAL;
+    imageCreateInfo.usage        = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    VkMemoryAllocateInfo memAllocInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    VkMemoryRequirements memReqs;
+
+    vkCreateImage(context.baseContext.device, &imageCreateInfo, nullptr,
+                  &imageResources.image);
+    vkGetImageMemoryRequirements(context.baseContext.device, imageResources.image, &memReqs);
+    memAllocInfo.allocationSize = memReqs.size;
+
+    memAllocInfo.memoryTypeIndex =
+        findMemoryType(context.baseContext, memReqs.memoryTypeBits,
+                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    vkAllocateMemory(context.baseContext.device, &memAllocInfo, nullptr,
+                     &imageResources.memory);
+    vkBindImageMemory(context.baseContext.device, imageResources.image,
+                      imageResources.memory, 0);
+
+    VkImageViewCreateInfo imageViewCreateInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    imageViewCreateInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewCreateInfo.format                          = format;
+    imageViewCreateInfo.subresourceRange                = {};
+    imageViewCreateInfo.subresourceRange.aspectMask     = aspectMask;
+    imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
+    imageViewCreateInfo.subresourceRange.levelCount     = 1;
+    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+    imageViewCreateInfo.subresourceRange.layerCount     = 1;
+    imageViewCreateInfo.image                           = imageResources.image;
+    vkCreateImageView(context.baseContext.device, &imageViewCreateInfo, nullptr,
+                      &imageResources.imageView);
+}
+
 void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& renderContext) {
     // TODO try to find a better way to do descriptorPools
 
@@ -1240,9 +1452,43 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);
 
+    // destroy resources used for deferred rendering
+    vkDestroySampler(baseContext.device, mainPass.framebufferAttachmentSampler, nullptr);
+
+    vkDestroyImageView(baseContext.device, mainPass.positionAttachment.imageView, nullptr);
+    vkDestroyImage(baseContext.device, mainPass.positionAttachment.image, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.positionAttachment.memory, nullptr);
+
+    vkDestroyImageView(baseContext.device, mainPass.normalAttachment.imageView, nullptr);
+    vkDestroyImage(baseContext.device, mainPass.normalAttachment.image, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.normalAttachment.memory, nullptr);
+
+    vkDestroyImageView(baseContext.device, mainPass.albedoAttachment.imageView, nullptr);
+    vkDestroyImage(baseContext.device, mainPass.albedoAttachment.image, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.albedoAttachment.memory, nullptr);
+
+    vkDestroyImageView(baseContext.device,
+                       mainPass.aoRoughnessMetallicAttachment.imageView, nullptr);
+    vkDestroyImage(baseContext.device, mainPass.aoRoughnessMetallicAttachment.image, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.aoRoughnessMetallicAttachment.memory, nullptr);
+
+    vkDestroyImageView(baseContext.device, mainPass.depthAttachment.imageView, nullptr);
+    vkDestroyImage(baseContext.device, mainPass.depthAttachment.image, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.depthAttachment.memory, nullptr);
+
+    vkDestroyFramebuffer(baseContext.device, mainPass.gBuffer, nullptr);
+
+    // destroy pipelines
     cleanVisualizationPipeline(baseContext, mainPass);
 
     cleanSkyboxPipeline(baseContext, mainPass);
+
+    // deferred pipelines
+    vkDestroyPipeline(baseContext.device, mainPass.geometryPassPipeline, nullptr);
+    vkDestroyPipelineLayout(baseContext.device, mainPass.geometryPassPipelineLayout, nullptr);
+
+    vkDestroyPipeline(baseContext.device, mainPass.lightingPassPipeline, nullptr);
+    vkDestroyPipelineLayout(baseContext.device, mainPass.lightingPassPipelineLayout, nullptr);
 
     cleanupRenderPassContext(baseContext, mainPass.renderPassContext);
 

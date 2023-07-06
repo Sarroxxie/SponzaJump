@@ -51,6 +51,7 @@ typedef struct
     VkImage        image     = VK_NULL_HANDLE;
     VkDeviceMemory memory    = VK_NULL_HANDLE;
     VkImageView    imageView = VK_NULL_HANDLE;
+    VkFormat       imageFormat;
 } ImageResources;
 
 typedef struct
@@ -71,11 +72,13 @@ typedef struct
 
 typedef struct
 {
+    // descriptor stuff
     VkDescriptorSetLayout transformDescriptorSetLayout;
     VkDescriptorSet       transformDescriptorSet;
 
     BufferResources transformBuffer;
     BufferResources lightingBuffer;
+    BufferResources materialBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;
@@ -83,6 +86,7 @@ typedef struct
     VkDescriptorSetLayout depthDescriptorSetLayout;
     VkDescriptorSet       depthDescriptorSet;
 
+    // pipelines
     VkPipelineLayout visualizePipelineLayout;
     VkPipeline       visualizePipeline;
 
@@ -99,7 +103,15 @@ typedef struct
     VkPipeline       lightingPassPipeline;
     uint32_t         lightingPassSubpassID = 0;
 
-    BufferResources materialBuffer;
+    // deferred framebuffer attachments
+    VkFramebuffer  gBuffer;
+    // TODO: position could be calculated from depth but this may be harder to implement
+    ImageResources positionAttachment;
+    ImageResources normalAttachment;
+    ImageResources albedoAttachment;
+    ImageResources aoRoughnessMetallicAttachment;
+    ImageResources depthAttachment;
+    VkSampler      framebufferAttachmentSampler;
 
     VkSampler depthSampler;
 

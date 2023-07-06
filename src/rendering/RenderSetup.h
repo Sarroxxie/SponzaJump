@@ -72,6 +72,9 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 void createMainRenderPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext);
 
+void createMainRenderPass2(const ApplicationVulkanContext& appContext,
+                           RenderContext&                  renderContext);
+
 void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
                              Scene &scene);
@@ -124,6 +127,11 @@ void createBlankAttachment(const ApplicationVulkanContext& context,
                            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT,
                            VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
                            VkImageLayout finalLayout = VK_IMAGE_LAYOUT_UNDEFINED);
+
+void createDeferredAttachment(const ApplicationVulkanContext& context,
+                              VkFormat                        format,
+                              VkImageUsageFlagBits            usage,
+                              ImageResources&                 imageResources);
 
 void createDescriptorSetLayout(const VulkanBaseContext& context,
                                VkDescriptorSetLayout&   layout,
