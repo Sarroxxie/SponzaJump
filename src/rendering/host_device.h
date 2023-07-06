@@ -45,6 +45,8 @@ END_BINDING();
 
 const uint MAX_CASCADES = 4;
 
+const uint SAMPLE_CONTROL_FLAG = 0x01;
+
 // clang-format on
 
 // copy of "Material"-struct from "scene/Model.h" for use on GPU
