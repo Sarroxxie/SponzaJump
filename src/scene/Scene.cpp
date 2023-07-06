@@ -72,34 +72,37 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     }
     if(ImGui::CollapsingHeader("Shadow Controls")) {
 
-        ImGui::SliderFloat3(
-            "Light Camera Dir",
-            glm::value_ptr(
-                renderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDirRef()),
-            -1, 1);
+        ShadowMappingSettings& shadowSettings = renderContext.renderSettings.shadowMappingSettings;
 
-        ImGui::Checkbox("Lock shadow to player",
-                        &renderContext.renderSettings.shadowMappingSettings.snapToPlayer);
+        ImGui::SliderFloat3("Light Camera Dir",
+                            glm::value_ptr(shadowSettings.lightCamera.getViewDirRef()),
+                            -1, 1);
 
-        ImGui::Checkbox("New Cascade Calculations", &renderContext.renderSettings.shadowMappingSettings.newCascadeCalculation);
+        ImGui::Checkbox("Lock shadow to player", &shadowSettings.snapToPlayer);
 
         ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
 
-        ImGui::Checkbox("Cross Up Vec", &renderContext.renderSettings.shadowMappingSettings.crossProductUp);
 
         ImGui::Checkbox("Player Spikes Shadow", &renderContext.imguiData.playerSpikesShadow);
 
         ImGui::Checkbox("Percentage Closer Filtering", &renderContext.imguiData.doPCF);
 
-        ImGui::SliderInt("Number Cascades",
-                         &renderContext.renderSettings.shadowMappingSettings.numberCascades,
-                         1, MAX_CASCADES);
+        ImGui::Indent();
+        if(ImGui::CollapsingHeader("Cascaded Shadow Map Controls")) {
+            ImGui::Checkbox("New Cascade Calculations", &shadowSettings.newCascadeCalculation);
 
-        ImGui::SliderInt("Vis Cascade Index",
-                         &renderContext.renderSettings.shadowMappingSettings.cascadeVisIndex,
-                         0, renderContext.renderSettings.shadowMappingSettings.numberCascades - 1);
+            ImGui::Checkbox("Cross Up Vec", &shadowSettings.crossProductUp);
+
+            ImGui::SliderFloat("Cascade Split Depth blend",
+                               &shadowSettings.cascadeSplitsBlendFactor, 0.0f, 1.0f);
+
+            ImGui::SliderInt("Number Cascades", &shadowSettings.numberCascades, 1, MAX_CASCADES);
+
+            ImGui::SliderInt("Vis Cascade Index", &shadowSettings.cascadeVisIndex,
+                             0, shadowSettings.numberCascades - 1);
+        }
+        ImGui::Unindent();
     }
-
 
     if(ImGui::CollapsingHeader("Depth Controls")) {
         ImGui::SliderFloat("Depth Bias Constant",

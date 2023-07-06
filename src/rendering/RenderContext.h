@@ -149,15 +149,15 @@ typedef struct
     Camera        lightCamera;
     float lightCameraDist = 60;
     bool snapToPlayer = true;
-    bool newCascadeCalculation = false;
-    bool crossProductUp = false;
-
     OrthoSettings projection;
 
     int numberCascades = MAX_CASCADES;
+
     int cascadeVisIndex = 0;
     // controls the blending between logarithmic (1) and linear (0) cascade splits
     float cascadeSplitsBlendFactor = 0.5;
+    bool newCascadeCalculation = true;
+    bool crossProductUp = false;
 } ShadowMappingSettings;
 
 typedef struct

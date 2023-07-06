@@ -14,6 +14,6 @@ layout(location = 0) out vec4 outColor;
 void main() {
     float val = texture(depthSamplers[pushConstant.cascadeIndex], fragTexCoords).x;
     val = 1 - val;
-    // val = pow(val, 2);
+    val = pow(val, 2);
     outColor = vec4(val, val, val, 1);
 }

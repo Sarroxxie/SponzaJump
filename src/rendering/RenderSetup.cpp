@@ -396,8 +396,8 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
 
-    const uint32_t SHADOW_MAP_WIDTH  = 3840;
-    const uint32_t SHADOW_MAP_HEIGHT = 3840;
+    const uint32_t SHADOW_MAP_WIDTH  = 1920;
+    const uint32_t SHADOW_MAP_HEIGHT = 1920;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
