@@ -154,6 +154,9 @@ typedef struct
     int numberCascades = MAX_CASCADES;
 
     int cascadeVisIndex = 0;
+
+    bool visualizeCascades = false;
+
     // controls the blending between logarithmic (1) and linear (0) cascade splits
     float cascadeSplitsBlendFactor = 0.5;
     bool newCascadeCalculation = true;

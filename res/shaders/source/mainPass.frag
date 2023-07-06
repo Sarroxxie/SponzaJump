@@ -4,6 +4,13 @@
 
 #include "../../../src/rendering/host_device.h"
 
+const vec3 cascadeVisColors[MAX_CASCADES] = vec3[](
+    vec3(1, 0, 0),
+    vec3(1, 1, 0),
+    vec3(0, 1, 0),
+    vec3(0, 0, 1)
+);
+
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec4 inTangents;
@@ -159,6 +166,10 @@ float filterPCF(vec4 sc, uint cascadeIndex)
     return shadowFactor / count;
 }
 
+bool getControlFlagValue(uint flags, uint controlBit) {
+    return (flags & controlBit) == controlBit;
+}
+
 void main() {
     uint cascadeIndex = 0;
     for(uint i = 0; i < pushConstant.cascadeCount - 1; ++i) {
@@ -172,7 +183,9 @@ void main() {
     shadowCoord = vec4((shadowCoord.xyz + vec3(1)) / 2, shadowCoord.a);
 
     float shadow = 0;
-    if (pushConstant.doPCF == 1) {
+    bool doPCF = getControlFlagValue(pushConstant.controlFlags, PCF_CONTROL_BIT);
+
+    if (doPCF) {
         shadow = filterPCF(shadowCoord, cascadeIndex);
     } else {
         shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);
@@ -250,19 +263,11 @@ void main() {
 
 
     outColor = vec4(color, 1);
+    bool cascadeVis = getControlFlagValue(pushConstant.controlFlags, CASCADE_VIS_CONTROL_BIT);
+    if (cascadeVis) {
+        vec3 addColor = cascadeVisColors[cascadeIndex];
 
-    vec3 addColor = vec3(0);
-    if (cascadeIndex == 0) {
-        addColor = vec3(1, 0, 0);
-    } else if (cascadeIndex == 1) {
-        addColor = vec3(1, 1, 0);
-    } else if (cascadeIndex == 2) {
-        addColor = vec3(0, 1, 0);
-    } else if (cascadeIndex == 3) {
-        addColor = vec3(0, 0, 1);
+        float factor = 0.2;
+        outColor = vec4(outColor.xyz + factor * addColor, 1);
     }
-
-    float factor = 0.0;
-    outColor = vec4(outColor.xyz + factor * addColor, 1);
-
 }

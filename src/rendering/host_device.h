@@ -45,7 +45,8 @@ END_BINDING();
 
 const uint MAX_CASCADES = 4;
 
-const uint SAMPLE_CONTROL_FLAG = 0x01;
+const uint PCF_CONTROL_BIT          = 0x01;
+const uint CASCADE_VIS_CONTROL_BIT  = 0x02;
 
 // clang-format on
 
@@ -89,7 +90,7 @@ struct PushConstant
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
     ALIGN_AS(4) int cascadeCount;
-    ALIGN_AS(4) int doPCF;
+    ALIGN_AS(4) int controlFlags;
 };
 
 struct ShadowPushConstant

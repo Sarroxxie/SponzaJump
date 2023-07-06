@@ -89,6 +89,8 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
         ImGui::Indent();
         if(ImGui::CollapsingHeader("Cascaded Shadow Map Controls")) {
+            ImGui::Checkbox("Visualize Cascades", &shadowSettings.visualizeCascades);
+
             ImGui::Checkbox("New Cascade Calculations", &shadowSettings.newCascadeCalculation);
 
             ImGui::Checkbox("Cross Up Vec", &shadowSettings.crossProductUp);
