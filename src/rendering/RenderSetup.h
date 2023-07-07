@@ -12,24 +12,27 @@
 
 RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
                                                           RenderContext& renderContext,
-                                                          Scene &scene);
+                                                          Scene& scene);
 // ---
 
 
 void initializeRenderContext(ApplicationVulkanContext& appContext,
                              RenderContext&            renderContext,
                              const RenderSetupDescription& renderSetupDescription,
-                             Scene &scene);
+                             Scene& scene);
 
 // ----- Shadow Pass
+
+
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
-                          RenderContext &renderContext,
+                          RenderContext&                  renderContext,
                           const RenderPassDescription& renderPassDescription);
 
 void initializeShadowDepthBuffer(const ApplicationVulkanContext& appContext,
                                  ShadowPass&                     shadowPass,
                                  uint32_t                        width,
-                                 uint32_t                        height);
+                                 uint32_t                        height,
+                                 uint32_t                        index = 0);
 
 void createShadowPassResources(const ApplicationVulkanContext& appContext,
                                RenderContext&                  renderContext);
@@ -47,7 +50,7 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 // RenderContext &renderContext, const RenderSetupDescription &renderSetupDescription);
 
 
-//TODO
+// TODO
 
 /*
 
@@ -56,7 +59,8 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
   VkResult res = (f);																					\
   if (res != VK_SUCCESS)																				\
   {																									\
-    std::cout << "Fatal : VkResult is \"" << vks::tools::errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << "\n"; \
+    std::cout << "Fatal : VkResult is \"" << vks::tools::errorString(res) << "\"
+in " << __FILE__ << " at line " << __LINE__ << "\n"; \
     assert(res == VK_SUCCESS);																		\
   }																									\
 }
@@ -67,7 +71,7 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
                               const RenderPassDescription& renderPassDescription,
-                              Scene &scene);
+                              Scene& scene);
 
 void createMainRenderPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext);
@@ -77,22 +81,22 @@ void createMainRenderPass2(const ApplicationVulkanContext& appContext,
 
 void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
-                             Scene &scene);
+                             Scene&                          scene);
 
 void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
                            RenderContext&                  renderContext,
-                           Scene &scene);
+                           Scene&                          scene);
 
 void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
-                                        MainPass&                   mainPass,
-                                        Scene &scene);
+                                        MainPass& mainPass,
+                                        Scene&    scene);
 
 void cleanMainPassDescriptorLayouts(const VulkanBaseContext& appContext,
                                     const MainPass&          mainPass);
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext&                  renderContext,
-                                  Scene &scene);
+                                  Scene&                          scene);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 

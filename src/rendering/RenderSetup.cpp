@@ -7,11 +7,11 @@
 
 RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanContext& appContext,
                                                           RenderContext& renderContext,
-                                                          Scene &scene) {
+                                                          Scene& scene) {
     auto& settings                         = renderContext.renderSettings;
     settings.perspectiveSettings.fov       = glm::radians(45.0f);
     settings.perspectiveSettings.nearPlane = 1;
-    settings.perspectiveSettings.farPlane  = 500;
+    settings.perspectiveSettings.farPlane  = 300;
 
     ShadowMappingSettings shadowMappingSettings;
     shadowMappingSettings.lightCamera =
@@ -39,7 +39,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     shadowPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
     shadowPassDescription.pushConstantRanges.push_back(createPushConstantRange(
-        0, sizeof(glm::mat4), getStageFlag(ShaderStage::VERTEX_SHADER)));
+        0, sizeof(ShadowPushConstant), getStageFlag(ShaderStage::VERTEX_SHADER)));
 
     shadowPassDescription.enableDepthBias = true;
 
@@ -86,7 +86,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
 void initializeRenderContext(ApplicationVulkanContext& appContext,
                              RenderContext&            renderContext,
                              const RenderSetupDescription& renderSetupDescription,
-                             Scene &scene) {
+                             Scene& scene) {
 
     createDescriptorPool(appContext.baseContext, renderContext);
 
@@ -114,10 +114,9 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext,
                               const RenderPassDescription& renderPassDescription,
-                              Scene &scene) {
+                              Scene& scene) {
 
-    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass,
-                                       scene);
+    createMainPassDescriptorSetLayouts(appContext, renderContext.renderPasses.mainPass, scene);
 
     createMainRenderPass(appContext, renderContext);
 
@@ -132,7 +131,8 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
         renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
 
     // TODO: skybox should have own descriptor set
-    // same goes for the skybox pipeline (as it uses the descriptor set that contains the textures for now)
+    // same goes for the skybox pipeline (as it uses the descriptor set that
+    // contains the textures for now)
     createSkyboxPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
 
     createMainPassDescriptorSets(appContext, renderContext, scene);
@@ -478,10 +478,7 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
-    VkFormat customDepthFormat = findDepthFormat(appContext.baseContext);
-
     depthAttachment.format  = findDepthFormat(appContext.baseContext);
-    depthAttachment.format  = customDepthFormat;
     depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
@@ -542,44 +539,48 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
 
-
-    const uint32_t SHADOW_MAP_WIDTH  = 3840;
-    const uint32_t SHADOW_MAP_HEIGHT = 3840;
+    const uint32_t SHADOW_MAP_WIDTH  = 1920;
+    const uint32_t SHADOW_MAP_HEIGHT = 1920;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
 
-    // VkFormat depthFormat = findDepthFormat(appContext.baseContext);
-    VkFormat depthFormat = customDepthFormat;
+    VkFormat depthFormat = findDepthFormat(appContext.baseContext);
 
-    createImage(appContext.baseContext, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, 1, 1,
-                VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                shadowPass.depthImage.image, shadowPass.depthImage.memory);
+    for(size_t i = 0; i < MAX_CASCADES; i++) {
+        ImageResources& currentDepthImage = shadowPass.depthImages[i];
 
-    shadowPass.depthImage.imageView =
-        createImageView(appContext.baseContext, shadowPass.depthImage.image,
-                        depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+        createImage(appContext.baseContext, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, 1,
+                    1, VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                    currentDepthImage.image, currentDepthImage.memory);
 
-    initializeShadowDepthBuffer(appContext, shadowPass, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+        currentDepthImage.imageView =
+            createImageView(appContext.baseContext, currentDepthImage.image,
+                            depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+
+        initializeShadowDepthBuffer(appContext, shadowPass, SHADOW_MAP_WIDTH,
+                                    SHADOW_MAP_HEIGHT, i);
+    }
 }
 
 void initializeShadowDepthBuffer(const ApplicationVulkanContext& appContext,
                                  ShadowPass&                     shadowPass,
                                  uint32_t                        width,
-                                 uint32_t                        height) {
+                                 uint32_t                        height,
+                                 uint32_t                        index) {
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass      = shadowPass.renderPassContext.renderPass;
     framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments    = &shadowPass.depthImage.imageView;
+    framebufferInfo.pAttachments    = &shadowPass.depthImages[index].imageView;
     framebufferInfo.width           = width;
     framebufferInfo.height          = height;
     framebufferInfo.layers          = 1;
 
     if(vkCreateFramebuffer(appContext.baseContext.device, &framebufferInfo,
-                           nullptr, &shadowPass.depthFrameBuffer)
+                           nullptr, &shadowPass.depthFrameBuffers[index])
        != VK_SUCCESS) {
         throw std::runtime_error("failed to create framebuffer!");
     }
@@ -642,8 +643,8 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.depthBiasEnable = VK_FALSE;
-    if (renderPassDescription.enableDepthBias) {
+    rasterizer.depthBiasEnable  = VK_FALSE;
+    if(renderPassDescription.enableDepthBias) {
         rasterizer.depthBiasEnable = VK_TRUE;
     }
 
@@ -655,8 +656,8 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
 
     rasterizer.lineWidth = 1.0f;
     // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.cullMode        = VK_CULL_MODE_NONE;
-    rasterizer.frontFace       = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.cullMode  = VK_CULL_MODE_NONE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -700,10 +701,10 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
     colorBlending.blendConstants[2] = 0.0f;  // Optional
     colorBlending.blendConstants[3] = 0.0f;  // Optional
 
-    std::vector<VkDynamicState>      dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
-                                                      VK_DYNAMIC_STATE_SCISSOR};
+    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR};
 
-    if (renderPassDescription.enableDepthBias) {
+    if(renderPassDescription.enableDepthBias) {
         dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
     }
 
@@ -1110,7 +1111,7 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = shadowPass.transformBuffer.buffer;
     bufferInfo.offset = 0;
-    bufferInfo.range  = sizeof(SceneTransform);
+    bufferInfo.range  = MAX_CASCADES * sizeof(glm::mat4);
 
     VkWriteDescriptorSet descriptorWrite;
     descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1132,7 +1133,7 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
 void createShadowPassResources(const ApplicationVulkanContext& appContext,
                                RenderContext&                  renderContext) {
 
-    createBufferResources(appContext, sizeof(SceneTransform),
+    createBufferResources(appContext, MAX_CASCADES * sizeof(glm::mat4),
                           renderContext.renderPasses.shadowPass.transformBuffer);
 }
 
@@ -1145,23 +1146,30 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  shadowPass.transformDescriptorSetLayout, nullptr);
 
-    vkDestroyImageView(baseContext.device, shadowPass.depthImage.imageView, nullptr);
+    for(size_t i = 0; i < MAX_CASCADES; i++) {
+        ImageResources currentDepthImage = shadowPass.depthImages[i];
 
-    vkDestroyImage(baseContext.device, shadowPass.depthImage.image, nullptr);
-    vkFreeMemory(baseContext.device, shadowPass.depthImage.memory, nullptr);
+        vkDestroyImageView(baseContext.device, currentDepthImage.imageView, nullptr);
 
-    vkDestroyFramebuffer(baseContext.device, shadowPass.depthFrameBuffer, nullptr);
+        vkDestroyImage(baseContext.device, currentDepthImage.image, nullptr);
+        vkFreeMemory(baseContext.device, currentDepthImage.memory, nullptr);
+
+        vkDestroyFramebuffer(baseContext.device, shadowPass.depthFrameBuffers[i], nullptr);
+    }
 }
 
 void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
-                             Scene &scene) {
+                             Scene&                          scene) {
 
     createBufferResources(appContext, sizeof(SceneTransform),
                           renderContext.renderPasses.mainPass.transformBuffer);
 
     createBufferResources(appContext, sizeof(LightingInformation),
                           renderContext.renderPasses.mainPass.lightingBuffer);
+
+    createBufferResources(appContext, MAX_CASCADES * sizeof(SplitDummyStruct),
+                          renderContext.renderPasses.mainPass.cascadeSplitsBuffer);
 
     createMaterialsBuffer(appContext, renderContext, scene);
 }
@@ -1198,8 +1206,8 @@ void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& ma
 }
 
 void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appContext,
-                                        MainPass&                   mainPass,
-                                        Scene &scene) {
+                                        MainPass& mainPass,
+                                        Scene&    scene) {
     std::vector<VkDescriptorSetLayoutBinding> transformBindings;
     std::vector<VkDescriptorSetLayoutBinding> materialBindings;
     std::vector<VkDescriptorSetLayoutBinding> depthBindings;
@@ -1221,18 +1229,28 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
         getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
-    materialBindings.push_back(
-        createLayoutBinding(MaterialsBindings::eTextures, scene.getSceneData().textures.size(),
-                            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+    materialBindings.push_back(createLayoutBinding(
+        MaterialsBindings::eTextures, scene.getSceneData().textures.size(),
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     materialBindings.push_back(
-        createLayoutBinding(MaterialsBindings::eSkybox, 1,
+        createLayoutBinding(MaterialsBindings::eSkybox, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    depthBindings.push_back(
+        createLayoutBinding(DepthBindings::eShadowDepthBuffer, MAX_CASCADES,
                             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     depthBindings.push_back(
-        createLayoutBinding(DepthBindings::eShadowDepthBuffer, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        createLayoutBinding(DepthBindings::eCascadeSplits, 1,
+                            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    depthBindings.push_back(
+        createLayoutBinding(DepthBindings::eLightVPs, 1,
+                            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     createDescriptorSetLayout(appContext.baseContext,
@@ -1266,7 +1284,7 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   RenderContext&                  renderContext,
-                                  Scene &scene) {
+                                  Scene&                          scene) {
 
     MainPass& mainPass = renderContext.renderPasses.mainPass;
 
@@ -1304,15 +1322,16 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 
     VkDescriptorBufferInfo lightTransformBufferInfo{};
-    lightTransformBufferInfo.buffer = renderContext.renderPasses.shadowPass.transformBuffer.buffer;
+    lightTransformBufferInfo.buffer =
+        renderContext.renderPasses.shadowPass.transformBuffer.buffer;
     lightTransformBufferInfo.offset = 0;
     lightTransformBufferInfo.range  = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet lightTransformDescriptorWrite;
-    lightTransformDescriptorWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    lightTransformDescriptorWrite.pNext  = nullptr;
-    lightTransformDescriptorWrite.dstSet = mainPass.transformDescriptorSet;
-    lightTransformDescriptorWrite.dstBinding      = SceneBindings::eLight;
+    lightTransformDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    lightTransformDescriptorWrite.pNext      = nullptr;
+    lightTransformDescriptorWrite.dstSet     = mainPass.transformDescriptorSet;
+    lightTransformDescriptorWrite.dstBinding = SceneBindings::eLight;
     lightTransformDescriptorWrite.dstArrayElement = 0;
     lightTransformDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     lightTransformDescriptorWrite.descriptorCount = 1;
@@ -1389,11 +1408,11 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     // Sykbox
     VkWriteDescriptorSet skyboxWrite{};
-    skyboxWrite.sType             = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    skyboxWrite.dstSet            = mainPass.materialDescriptorSet;
-    skyboxWrite.dstBinding        = MaterialsBindings::eSkybox;
-    skyboxWrite.dstArrayElement   = 0;
-    skyboxWrite.descriptorType    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    skyboxWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    skyboxWrite.dstSet          = mainPass.materialDescriptorSet;
+    skyboxWrite.dstBinding      = MaterialsBindings::eSkybox;
+    skyboxWrite.dstArrayElement = 0;
+    skyboxWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     skyboxWrite.descriptorCount = 1;
     skyboxWrite.pImageInfo      = &scene.getSceneData().cubemap.descriptorInfo;
 
@@ -1419,10 +1438,17 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
-    VkDescriptorImageInfo imageInfo;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = renderContext.renderPasses.shadowPass.depthImage.imageView;
-    imageInfo.sampler = renderContext.renderPasses.mainPass.depthSampler;
+    std::array<VkDescriptorImageInfo, MAX_CASCADES> imageInfos{};
+
+    for(size_t i = 0; i < MAX_CASCADES; i++) {
+        VkDescriptorImageInfo imageInfo;
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        imageInfo.imageView =
+            renderContext.renderPasses.shadowPass.depthImages[i].imageView;
+        imageInfo.sampler = renderContext.renderPasses.mainPass.depthSampler;
+
+        imageInfos[i] = imageInfo;
+    }
 
     VkWriteDescriptorSet depthDescriptorWrite;
     depthDescriptorWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1431,10 +1457,47 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     depthDescriptorWrite.dstBinding = DepthBindings::eShadowDepthBuffer;
     depthDescriptorWrite.dstArrayElement = 0;
     depthDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    depthDescriptorWrite.descriptorCount = 1;
-    depthDescriptorWrite.pImageInfo      = &imageInfo;
+    depthDescriptorWrite.descriptorCount = MAX_CASCADES;
+    depthDescriptorWrite.pImageInfo      = imageInfos.data();
 
     descriptorWrites.emplace_back(depthDescriptorWrite);
+
+
+    VkDescriptorBufferInfo cascadeSplitBufferInfo{};
+    cascadeSplitBufferInfo.buffer = mainPass.cascadeSplitsBuffer.buffer;
+    cascadeSplitBufferInfo.offset = 0;
+    cascadeSplitBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet depthCascadeSplitsWrite;
+    depthCascadeSplitsWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    depthCascadeSplitsWrite.pNext  = nullptr;
+    depthCascadeSplitsWrite.dstSet = mainPass.depthDescriptorSet;
+    depthCascadeSplitsWrite.dstBinding      = DepthBindings::eCascadeSplits;
+    depthCascadeSplitsWrite.dstArrayElement = 0;
+    depthCascadeSplitsWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    depthCascadeSplitsWrite.descriptorCount = 1;
+    depthCascadeSplitsWrite.pBufferInfo     = &cascadeSplitBufferInfo;
+
+    descriptorWrites.emplace_back(depthCascadeSplitsWrite);
+
+
+    VkDescriptorBufferInfo inverseLightVPBufferInfo{};
+    inverseLightVPBufferInfo.buffer = renderContext.renderPasses.shadowPass.transformBuffer.buffer;
+    inverseLightVPBufferInfo.offset = 0;
+    inverseLightVPBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet inverseLightVPWrite;
+    inverseLightVPWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    inverseLightVPWrite.pNext  = nullptr;
+    inverseLightVPWrite.dstSet = mainPass.depthDescriptorSet;
+    inverseLightVPWrite.dstBinding      = DepthBindings::eLightVPs;
+    inverseLightVPWrite.dstArrayElement = 0;
+    inverseLightVPWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    inverseLightVPWrite.descriptorCount = 1;
+    inverseLightVPWrite.pBufferInfo     = &inverseLightVPBufferInfo;
+
+    descriptorWrites.emplace_back(inverseLightVPWrite);
+
 
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
@@ -1448,6 +1511,9 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     vkDestroyBuffer(baseContext.device, mainPass.lightingBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.lightingBuffer.bufferMemory, nullptr);
+
+    vkDestroyBuffer(baseContext.device, mainPass.cascadeSplitsBuffer.buffer, nullptr);
+    vkFreeMemory(baseContext.device, mainPass.cascadeSplitsBuffer.bufferMemory, nullptr);
 
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);
@@ -1510,7 +1576,7 @@ void createBufferResources(const ApplicationVulkanContext& appContext,
  */
 void createMaterialsBuffer(const ApplicationVulkanContext& appContext,
                            RenderContext&                  renderContext,
-                           Scene &scene) {
+                           Scene&                          scene) {
     VkDeviceSize bufferSize = sizeof(Material) * scene.getSceneData().materials.size();
 
     VkBuffer       stagingBuffer;
@@ -1585,11 +1651,10 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
 
     auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions   = &bindingDescription;
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.vertexBindingDescriptionCount   = 0;
+    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.pVertexBindingDescriptions      = VK_NULL_HANDLE;
+    vertexInputInfo.pVertexAttributeDescriptions    = VK_NULL_HANDLE;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1667,8 +1732,12 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts    = &mainPass.depthDescriptorSetLayout;
 
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges    = VK_NULL_HANDLE;
+    VkPushConstantRange pushConstantRange;
+    pushConstantRange = createPushConstantRange(0, sizeof(ShadowControlPushConstant),
+                                                getStageFlag(ShaderStage::FRAGMENT_SHADER));
+
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
 
     if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo,
                               nullptr, &mainPass.visualizePipelineLayout)
@@ -1788,8 +1857,8 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable       = VK_TRUE;
-    depthStencil.depthWriteEnable      = VK_FALSE;
+    depthStencil.depthTestEnable  = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_FALSE;
     // in the shader we set the depth of the screen quad to 1.0, so this has to be lesser-equals
     depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
@@ -1838,7 +1907,7 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
     descriptorSetLayouts.push_back(mainPass.materialDescriptorSetLayout);
 
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts    = descriptorSetLayouts.data();
@@ -1864,9 +1933,9 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     pipelineInfo.pMultisampleState   = &multisampling;
     pipelineInfo.pDepthStencilState  = nullptr;  // Optional
     // TODO: see if it still works with this line commented out
-    pipelineInfo.pColorBlendState    = &colorBlending;
-    pipelineInfo.pDynamicState       = &dynamicState;
-    pipelineInfo.pDepthStencilState  = &depthStencil;
+    pipelineInfo.pColorBlendState   = &colorBlending;
+    pipelineInfo.pDynamicState      = &dynamicState;
+    pipelineInfo.pDepthStencilState = &depthStencil;
 
     pipelineInfo.layout = mainPass.skyboxPipelineLayout;
 

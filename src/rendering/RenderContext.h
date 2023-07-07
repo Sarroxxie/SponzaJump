@@ -7,6 +7,7 @@
 #include "Shader.h"
 #include "RenderSetupDescription.h"
 #include "scene/Camera.h"
+#include "host_device.h"
 
 typedef struct
 {
@@ -56,8 +57,8 @@ typedef struct
 
 typedef struct
 {
-    ImageResources depthImage;
-    VkFramebuffer  depthFrameBuffer;
+    ImageResources depthImages[MAX_CASCADES];
+    VkFramebuffer  depthFrameBuffers[MAX_CASCADES];
 
     BufferResources transformBuffer;
 
@@ -79,6 +80,7 @@ typedef struct
     BufferResources transformBuffer;
     BufferResources lightingBuffer;
     BufferResources materialBuffer;
+    BufferResources cascadeSplitsBuffer;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;
@@ -168,8 +170,18 @@ typedef struct
     Camera        lightCamera;
     float lightCameraDist = 60;
     bool snapToPlayer = true;
-
     OrthoSettings projection;
+
+    int numberCascades = MAX_CASCADES;
+
+    int cascadeVisIndex = 0;
+
+    bool visualizeCascades = false;
+
+    // controls the blending between logarithmic (1) and linear (0) cascade splits
+    float cascadeSplitsBlendFactor = 0.5;
+    bool newCascadeCalculation = true;
+    bool crossProductUp = false;
 } ShadowMappingSettings;
 
 typedef struct

@@ -5,11 +5,11 @@
  */
 
 #ifdef __cplusplus
-    #pragma once
-    #include "glm/glm.hpp"
-    using vec3 = glm::vec3;
-    using mat4 = glm::mat4;
-    using uint = unsigned int;
+#pragma once
+#include "glm/glm.hpp"
+using vec3 = glm::vec3;
+using mat4 = glm::mat4;
+using uint = unsigned int;
 #endif
 
 // clang-format off
@@ -38,8 +38,15 @@ START_BINDING(MaterialsBindings)
 END_BINDING();
 
 START_BINDING(DepthBindings)
-    eShadowDepthBuffer = 0
+    eShadowDepthBuffer = 0,
+    eCascadeSplits = 1,
+    eLightVPs = 2
 END_BINDING();
+
+const uint MAX_CASCADES = 4;
+
+const uint PCF_CONTROL_BIT          = 0x01;
+const uint CASCADE_VIS_CONTROL_BIT  = 0x02;
 
 // clang-format on
 
@@ -68,12 +75,33 @@ struct CameraUniform
     ALIGN_AS(16) mat4 projInverse;
 };
 
+// For some reason, if I bind it as float array it has Byteoffset of 16, since
+// this will always be small anyways, I just use this dummy struct
+struct SplitDummyStruct
+{
+    ALIGN_AS(16) float splitVal;
+};
+
 struct PushConstant
 {
     // transformation matrix of the current instance
     ALIGN_AS(16) mat4 transformation;
+    ALIGN_AS(16) vec3 worldCamPosition;
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
+    ALIGN_AS(4) int cascadeCount;
+    ALIGN_AS(4) int controlFlags;
+};
+
+struct ShadowPushConstant
+{
+    ALIGN_AS(16) mat4 transform;
+    ALIGN_AS(4) int cascadeIndex;
+};
+
+struct ShadowControlPushConstant
+{
+    ALIGN_AS(4) int cascadeIndex;
 };
 
 struct LightingInformation
