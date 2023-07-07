@@ -44,7 +44,7 @@ private:
 
     void recordMainRenderPass(Scene &scene, uint32_t imageIndex);
 
-    void recordGeometryPass(Scene& scene, uint32_t imageIndex);
+    void recordGeometryPass(Scene& scene);
 
     void recordLightingPass(Scene& scene, uint32_t imageIndex);
 

@@ -139,6 +139,8 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
 
     recordMainRenderPass(scene, imageIndex);
 
+    //recordGeometryPass(scene);
+
     if(vkEndCommandBuffer(m_Context.commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
@@ -471,7 +473,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
 
-void VulkanRenderer::recordGeometryPass(Scene& scene, uint32_t imageIndex) {
+void VulkanRenderer::recordGeometryPass(Scene& scene) {
     // geometry pass
     RenderPassContext& mainRenderPass = m_RenderContext.renderPasses.mainPass.renderPassContext;
 
@@ -688,14 +690,24 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
 
 
     vkDeviceWaitIdle(m_Context.baseContext.device);
+    // rebuild shadow map visualization pipeline
     cleanVisualizationPipeline(m_Context.baseContext,
                                m_RenderContext.renderPasses.mainPass);
     createVisualizationPipeline(m_Context, m_RenderContext,
                                 m_RenderContext.renderPasses.mainPass);
 
+    // rebuild skybox pipeline
     cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
     createSkyboxPipeline(m_Context, m_RenderContext,
                          m_RenderContext.renderPasses.mainPass);
+
+    // rebuild geometry pass pipeline
+    cleanGeometryPassPipeline(m_Context.baseContext,
+                              m_RenderContext.renderPasses.mainPass);
+    createGeometryPassPipeline(
+        m_Context, m_RenderContext,
+        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+        m_RenderContext.renderPasses.mainPass);
 }
 
 void VulkanRenderer::swapToSecondaryPipeline() {
