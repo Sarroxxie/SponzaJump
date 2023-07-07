@@ -407,15 +407,15 @@ void createMainRenderPass2(const ApplicationVulkanContext& appContext,
     dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     // create render pass
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType        = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.pAttachments = attachmentDescs.data();
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
-    renderPassInfo.subpassCount    = 1;
-    renderPassInfo.pSubpasses      = &subpass;
-    renderPassInfo.dependencyCount = 2;
-    renderPassInfo.pDependencies   = dependencies.data();
-    vkCreateRenderPass(appContext.baseContext.device, &renderPassInfo, nullptr,
+    VkRenderPassCreateInfo renderPassCreateInfo = {};
+    renderPassCreateInfo.sType        = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.pAttachments = attachmentDescs.data();
+    renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
+    renderPassCreateInfo.subpassCount    = 1;
+    renderPassCreateInfo.pSubpasses      = &subpass;
+    renderPassCreateInfo.dependencyCount = 2;
+    renderPassCreateInfo.pDependencies   = dependencies.data();
+    vkCreateRenderPass(appContext.baseContext.device, &renderPassCreateInfo, nullptr,
                        &mainPass.renderPassContext.renderPass);
 
     // create framebuffer (gBuffer)
@@ -426,32 +426,32 @@ void createMainRenderPass2(const ApplicationVulkanContext& appContext,
     attachments[3] = mainPass.aoRoughnessMetallicAttachment.imageView;
     attachments[4] = mainPass.depthAttachment.imageView;
 
-    VkFramebufferCreateInfo fbufCreateInfo = {};
-    fbufCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    fbufCreateInfo.pNext           = NULL;
-    fbufCreateInfo.renderPass      = mainPass.renderPassContext.renderPass;
-    fbufCreateInfo.pAttachments    = attachments.data();
-    fbufCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    fbufCreateInfo.width  = appContext.swapchainContext.swapChainExtent.width;
-    fbufCreateInfo.height = appContext.swapchainContext.swapChainExtent.height;
-    fbufCreateInfo.layers = 1;
-    vkCreateFramebuffer(appContext.baseContext.device, &fbufCreateInfo, nullptr,
+    VkFramebufferCreateInfo framebufferCreateInfo = {};
+    framebufferCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferCreateInfo.pNext           = NULL;
+    framebufferCreateInfo.renderPass      = mainPass.renderPassContext.renderPass;
+    framebufferCreateInfo.pAttachments    = attachments.data();
+    framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferCreateInfo.width  = appContext.swapchainContext.swapChainExtent.width;
+    framebufferCreateInfo.height = appContext.swapchainContext.swapChainExtent.height;
+    framebufferCreateInfo.layers = 1;
+    vkCreateFramebuffer(appContext.baseContext.device, &framebufferCreateInfo, nullptr,
                         &mainPass.gBuffer);
 
     // create sampler to sample from the color attachments
-    VkSamplerCreateInfo sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-    sampler.magFilter     = VK_FILTER_NEAREST;
-    sampler.minFilter     = VK_FILTER_NEAREST;
-    sampler.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler.addressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler.addressModeV  = sampler.addressModeU;
-    sampler.addressModeW  = sampler.addressModeU;
-    sampler.mipLodBias    = 0.0f;
-    sampler.maxAnisotropy = 1.0f;
-    sampler.minLod        = 0.0f;
-    sampler.maxLod        = 1.0f;
-    sampler.borderColor   = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    vkCreateSampler(appContext.baseContext.device, &sampler, nullptr,
+    VkSamplerCreateInfo samplerCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    samplerCreateInfo.magFilter     = VK_FILTER_NEAREST;
+    samplerCreateInfo.minFilter     = VK_FILTER_NEAREST;
+    samplerCreateInfo.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerCreateInfo.addressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeV  = samplerCreateInfo.addressModeU;
+    samplerCreateInfo.addressModeW  = samplerCreateInfo.addressModeU;
+    samplerCreateInfo.mipLodBias    = 0.0f;
+    samplerCreateInfo.maxAnisotropy = 1.0f;
+    samplerCreateInfo.minLod        = 0.0f;
+    samplerCreateInfo.maxLod        = 1.0f;
+    samplerCreateInfo.borderColor   = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    vkCreateSampler(appContext.baseContext.device, &samplerCreateInfo, nullptr,
                     &mainPass.framebufferAttachmentSampler);
 }
 
