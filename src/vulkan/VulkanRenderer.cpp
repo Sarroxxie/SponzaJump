@@ -172,8 +172,8 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
     int numberCascades = m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
-    glm::mat4        VPMats[numberCascades];
-    SplitDummyStruct splitDepths[numberCascades];
+    std::vector<glm::mat4>        VPMats(numberCascades);
+    std::vector<SplitDummyStruct> splitDepths(numberCascades);
 
 
     glm::mat4 invViewProj = glm::inverse(
@@ -190,10 +190,10 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
 
     memcpy(m_RenderContext.renderPasses.mainPass.cascadeSplitsBuffer.bufferMemoryMapping,
-           splitDepths, numberCascades * sizeof(SplitDummyStruct));
+           splitDepths.data(), numberCascades * sizeof(SplitDummyStruct));
 
     memcpy(m_RenderContext.renderPasses.shadowPass.transformBuffer.bufferMemoryMapping,
-           VPMats, numberCascades * sizeof(glm::mat4));
+           VPMats.data(), numberCascades * sizeof(glm::mat4));
 
 
     for(size_t i = 0; i < MAX_CASCADES; i++) {

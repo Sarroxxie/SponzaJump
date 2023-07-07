@@ -8,27 +8,27 @@ void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
                              glm::mat4             inverseViewProjection,
                              ShadowMappingSettings shadowSettings,
                              glm::vec3             viewDir,
-                             glm::mat4*            VPMats,
-                             SplitDummyStruct*     splitDepths);
+                             std::vector<glm::mat4>& VPMats,
+                             std::vector<SplitDummyStruct>& splitDepths);
 
 void calculateCascadeSplitDepths(PerspectiveSettings perspectiveSettings,
                                  int                 numberCascades,
-                                 float               cascadeSplits[],
+                                 std::vector<float>& cascadeSplits,
                                  float               splitsBlendFactor = 0.5);
 
 void calculateVPMatsSashaWillems(PerspectiveSettings   perspectiveSettings,
                                  glm::mat4             inverseViewProjection,
                                  ShadowMappingSettings shadowSettings,
-                                 const float           cascadeSplits[],
-                                 glm::mat4*            VPMats,
-                                 SplitDummyStruct*     splitDepths);
+                                 std::vector<float>&   cascadeSplits,
+                                 std::vector<glm::mat4>& VPMats,
+                                 std::vector<SplitDummyStruct>& splitDepths);
 
 void calculateVPMatsNew(PerspectiveSettings   perspectiveSettings,
                         glm::mat4             inverseViewProjection,
                         ShadowMappingSettings shadowSettings,
-                        const float           cascadeSplits[],
+                        std::vector<float>&   cascadeSplits,
                         glm::vec3             viewDir,
-                        glm::mat4*            VPMats,
-                        SplitDummyStruct*     splitDepths);
+                        std::vector<glm::mat4>&        VPMats,
+                        std::vector<SplitDummyStruct>& splitDepths);
 
 #endif  // GRAPHICSPRAKTIKUM_CSMUTILS_H

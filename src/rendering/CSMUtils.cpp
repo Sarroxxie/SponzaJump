@@ -5,15 +5,15 @@
 // https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-10-parallel-split-shadow-maps-programmable-gpus
 
 
-void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
-                             glm::mat4             inverseViewProjection,
-                             ShadowMappingSettings shadowSettings,
-                             glm::vec3             viewDir,
-                             glm::mat4*            VPMats,
-                             SplitDummyStruct*     splitDepths) {
+void calculateShadowCascades(PerspectiveSettings     perspectiveSettings,
+                             glm::mat4               inverseViewProjection,
+                             ShadowMappingSettings   shadowSettings,
+                             glm::vec3               viewDir,
+                             std::vector<glm::mat4>& VPMats,
+                             std::vector<SplitDummyStruct>& splitDepths) {
 
-    int   numberCascades = shadowSettings.numberCascades;
-    float cascadeSplits[numberCascades];
+    int                numberCascades = shadowSettings.numberCascades;
+    std::vector<float> cascadeSplits(numberCascades);
 
     calculateCascadeSplitDepths(perspectiveSettings, numberCascades, cascadeSplits,
                                 shadowSettings.cascadeSplitsBlendFactor);
@@ -32,7 +32,7 @@ void calculateShadowCascades(PerspectiveSettings   perspectiveSettings,
  */
 void calculateCascadeSplitDepths(PerspectiveSettings perspectiveSettings,
                                  int                 numberCascades,
-                                 float*              cascadeSplits,
+                                 std::vector<float>& cascadeSplits,
                                  float               splitsBlendFactor) {
 
     float near      = perspectiveSettings.nearPlane;
@@ -56,9 +56,9 @@ void calculateCascadeSplitDepths(PerspectiveSettings perspectiveSettings,
 void calculateVPMatsSashaWillems(PerspectiveSettings   perspectiveSettings,
                                  glm::mat4             inverseViewProjection,
                                  ShadowMappingSettings shadowSettings,
-                                 const float*          cascadeSplits,
-                                 glm::mat4*            VPMats,
-                                 SplitDummyStruct*     splitDepths) {
+                                 std::vector<float>&   cascadeSplits,
+                                 std::vector<glm::mat4>& VPMats,
+                                 std::vector<SplitDummyStruct>& splitDepths) {
     float near      = perspectiveSettings.nearPlane;
     float far       = perspectiveSettings.farPlane;
     float clipRange = far - near;
@@ -129,10 +129,10 @@ void calculateVPMatsSashaWillems(PerspectiveSettings   perspectiveSettings,
 void calculateVPMatsNew(PerspectiveSettings   perspectiveSettings,
                         glm::mat4             inverseViewProjection,
                         ShadowMappingSettings shadowSettings,
-                        const float*          cascadeSplits,
+                        std::vector<float>&   cascadeSplits,
                         glm::vec3             viewDir,
-                        glm::mat4*            VPMats,
-                        SplitDummyStruct*     splitDepths) {
+                        std::vector<glm::mat4>&        VPMats,
+                        std::vector<SplitDummyStruct>& splitDepths) {
     int numberCascades = shadowSettings.numberCascades;
 
     float near      = perspectiveSettings.nearPlane;
@@ -161,10 +161,10 @@ void calculateVPMatsNew(PerspectiveSettings   perspectiveSettings,
     if(shadowSettings.crossProductUp)
         upVec = glm::cross(viewDir, lightDir);
 
-    glm::vec3 frustumCenters[numberCascades];
+    std::vector<glm::vec3> frustumCenters(numberCascades);
 
-    glm::vec3 minExtents[numberCascades];
-    glm::vec3 maxExtents[numberCascades];
+    std::vector<glm::vec3> minExtents(numberCascades);
+    std::vector<glm::vec3> maxExtents(numberCascades);
 
     float maxDistAlongLightDir = -INFINITY;
 
