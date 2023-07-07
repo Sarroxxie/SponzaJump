@@ -683,6 +683,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
 }
 
 void VulkanRenderer::recompileToSecondaryPipeline() {
+    std::cout << "\nRecompiling Shaders...\n";
     buildSecondaryGraphicsPipeline(m_Context,
                                    m_RenderContext.renderPasses.mainPass.renderPassContext);
     buildSecondaryGraphicsPipeline(m_Context,
