@@ -25,15 +25,11 @@ layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec4 outTangents;
 layout(location = 4) out vec2 outTexCoords;
 
-layout(location = 5) out vec3 outViewPos;
-
 void main() {
     vec4 worldPosition = pushConstant.transformation * vec4(inPosition, 1);
     outPosition = worldPosition.xyz / worldPosition.w;
     
     gl_Position = sceneTransform.proj * sceneTransform.view * worldPosition;
-    // outShadowCoords = lightTransform.proj * lightTransform.view * worldPosition;
-    outViewPos = (sceneTransform.view * vec4(outPosition, 1)).xyz;
 
     // prepare data for normal mapping
     mat3 normalTransformation = transpose(inverse(mat3(pushConstant.transformation)));
