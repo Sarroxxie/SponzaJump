@@ -471,6 +471,155 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
 
+void VulkanRenderer::recordGeometryPass(Scene& scene, uint32_t imageIndex) {
+    // geometry pass
+    RenderPassContext& mainRenderPass = m_RenderContext.renderPasses.mainPass.renderPassContext;
+
+    MainPass mainPass = m_RenderContext.renderPasses.mainPass;
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType      = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = mainPass.geometryPass;
+    renderPassInfo.framebuffer = mainPass.gBuffer;
+
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = m_Context.swapchainContext.swapChainExtent;
+
+    std::array<VkClearValue, 5> clearValues{};
+    clearValues[0].color        = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    clearValues[1].color        = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    clearValues[2].color        = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    clearValues[3].color        = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    clearValues[4].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues    = clearValues.data();
+
+    vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
+                         &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width =
+        static_cast<float>(m_Context.swapchainContext.swapChainExtent.width);
+    viewport.height =
+        static_cast<float>(m_Context.swapchainContext.swapChainExtent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(m_Context.commandContext.commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = m_Context.swapchainContext.swapChainExtent;
+    vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
+
+    // render meshes
+    // TODO: pipeline is not yet created
+    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      mainPass.geometryPassPipeline);
+
+    // bind DescriptorSet 0 (Camera Transformations)
+    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipelineLayout,
+                            0, 1, &mainPass.transformDescriptorSet, 0, nullptr);
+
+    // TODO: from my understanding, this descriptor set only has to be bound
+    //       once, but I got errors when doing so
+    //        -> should make it possible for performance reasons
+    //        -> use separate command buffer that is only updated when the graphics pipeline is changed
+
+    // bind DescriptorSet 1 (Materials)
+    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipelineLayout,
+                            1, 1, &mainPass.materialDescriptorSet, 0, nullptr);
+
+    // bind DescriptorSet 2 (Shadows)
+    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipelineLayout,
+                            2, 1, &mainPass.depthDescriptorSet, 0, nullptr);
+
+
+    // create PushConstant object and initialize with default values
+    PushConstant pushConstant;
+    pushConstant.transformation   = glm::mat4(1);
+    pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
+    pushConstant.materialIndex    = 0;
+    pushConstant.cascadeCount =
+        m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
+
+    pushConstant.controlFlags = 0;
+    if(m_RenderContext.imguiData.doPCF)
+        pushConstant.controlFlags |= PCF_CONTROL_BIT;
+    if(m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
+        pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
+
+    for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
+        auto* modelComponent     = scene.getComponent<ModelComponent>(id);
+        auto* transformComponent = scene.getComponent<Transformation>(id);
+
+        Model& model = scene.getSceneData().models[modelComponent->modelIndex];
+
+        pushConstant.transformation = transformComponent->getMatrix();
+
+        for(auto& meshPartIndex : model.meshPartIndices) {
+            MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
+            Mesh     mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
+            VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+            VkDeviceSize offsets[]   = {0};
+
+            pushConstant.materialIndex = meshPart.materialIndex;
+
+            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+                                   vertexBuffers, offsets);
+
+            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+            glm::mat4 transform = transformComponent->getMatrix();
+
+            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                               mainPass.geometryPassPipelineLayout,
+                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                               0,  // offset
+                               sizeof(PushConstant), &pushConstant);
+
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                             mesh.indicesCount, 1, 0, 0, 0);
+        }
+
+        // TODO: this has to be done after the lighting pass
+        // render skybpx
+        /*vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                               VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          m_RenderContext.renderPasses.mainPass.skyboxPipeline);
+
+        // bind DescriptorSet 0 (Camera Transformations)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0, 1,
+            &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+
+        // bind DescriptorSet 1 (Materials)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
+            &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
+
+        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);*/
+    }
+    // TODO:this has to be done after the lighting pass
+    /*if(m_RenderContext.usesImgui) {
+        // @IMGUI
+        ImGui::Render();
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
+                                        m_Context.commandContext.commandBuffer);
+    }*/
+
+    vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
+}
+
 
 void VulkanRenderer::createSyncObjects(VulkanBaseContext& baseContext) {
     /*

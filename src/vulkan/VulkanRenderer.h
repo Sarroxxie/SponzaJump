@@ -44,6 +44,10 @@ private:
 
     void recordMainRenderPass(Scene &scene, uint32_t imageIndex);
 
+    void recordGeometryPass(Scene& scene, uint32_t imageIndex);
+
+    void recordLightingPass(Scene& scene, uint32_t imageIndex);
+
     void createSyncObjects(VulkanBaseContext &baseContext);
 
     void updateUniformBuffer(Scene &scene);

@@ -114,6 +114,8 @@ typedef struct
     ImageResources aoRoughnessMetallicAttachment;
     ImageResources depthAttachment;
     VkSampler      framebufferAttachmentSampler;
+    // TODO: needs to be destroyed
+    VkRenderPass   geometryPass;
 
     VkSampler depthSampler;
 

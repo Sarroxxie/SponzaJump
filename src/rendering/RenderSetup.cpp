@@ -120,6 +120,8 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 
     createMainRenderPass(appContext, renderContext);
 
+    createGeometryRenderPass(appContext, renderContext);
+
     createDepthSampler(appContext, renderContext.renderPasses.mainPass);
     createMainPassResources(appContext, renderContext, scene);
 
@@ -165,6 +167,8 @@ void cleanupRenderContext(const VulkanBaseContext& baseContext, RenderContext& r
     if(renderContext.usesImgui) {
         cleanupImGuiContext(baseContext, renderContext);
     }
+
+    cleanDeferredPass(baseContext, renderContext.renderPasses.mainPass);
 
     cleanMainPass(baseContext, renderContext.renderPasses.mainPass);
 
@@ -311,34 +315,35 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
         throw std::runtime_error("failed to create render pass!");
     }
 }
-// TODO: rename this funciton into "createMainRenderPass" once it is up and running
+
 /*
  * Inspired by SashaWillems sample on deferred rendering
  * (https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferred/deferred.cpp)
  * and adjusted to fit our needs.
  */
-void createMainRenderPass2(const ApplicationVulkanContext& appContext,
-                          RenderContext&                  renderContext) {
-    MainPass mainPass = renderContext.renderPasses.mainPass;
+void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
+                              RenderContext&                  renderContext) {
     // create attachments
     // World Space Position
-    createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                             mainPass.positionAttachment);
+    createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT,
+                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                             renderContext.renderPasses.mainPass.positionAttachment);
     // World Space Normals
     createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT,
                              VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                             mainPass.normalAttachment);
+                             renderContext.renderPasses.mainPass.normalAttachment);
     // Albedo
     createDeferredAttachment(appContext, VK_FORMAT_R8G8B8A8_UNORM,
-                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, mainPass.albedoAttachment);
+                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                             renderContext.renderPasses.mainPass.albedoAttachment);
     // AO - Roughness - Metallic
     createDeferredAttachment(appContext, VK_FORMAT_R8G8B8A8_UNORM,
                              VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                             mainPass.aoRoughnessMetallicAttachment);
+                             renderContext.renderPasses.mainPass.aoRoughnessMetallicAttachment);
     // Depth
     VkFormat depthFormat = findDepthFormat(appContext.baseContext);
     createDeferredAttachment(appContext, depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                             mainPass.depthAttachment);
+                             renderContext.renderPasses.mainPass.depthAttachment);
 
     // set up separate renderpass with references to the color and depth attachments
     std::array<VkAttachmentDescription, 5> attachmentDescs = {};
@@ -361,11 +366,16 @@ void createMainRenderPass2(const ApplicationVulkanContext& appContext,
     }
 
     // formats
-    attachmentDescs[0].format = mainPass.positionAttachment.imageFormat;
-    attachmentDescs[1].format = mainPass.normalAttachment.imageFormat;
-    attachmentDescs[2].format = mainPass.albedoAttachment.imageFormat;
-    attachmentDescs[3].format = mainPass.aoRoughnessMetallicAttachment.imageFormat;
-    attachmentDescs[4].format = mainPass.depthAttachment.imageFormat;
+    attachmentDescs[0].format =
+        renderContext.renderPasses.mainPass.positionAttachment.imageFormat;
+    attachmentDescs[1].format =
+        renderContext.renderPasses.mainPass.normalAttachment.imageFormat;
+    attachmentDescs[2].format =
+        renderContext.renderPasses.mainPass.albedoAttachment.imageFormat;
+    attachmentDescs[3].format =
+        renderContext.renderPasses.mainPass.aoRoughnessMetallicAttachment.imageFormat;
+    attachmentDescs[4].format =
+        renderContext.renderPasses.mainPass.depthAttachment.imageFormat;
 
     // attachment references
     std::vector<VkAttachmentReference> colorReferences;
@@ -408,35 +418,39 @@ void createMainRenderPass2(const ApplicationVulkanContext& appContext,
 
     // create render pass
     VkRenderPassCreateInfo renderPassCreateInfo = {};
-    renderPassCreateInfo.sType        = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreateInfo.pAttachments = attachmentDescs.data();
     renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
     renderPassCreateInfo.subpassCount    = 1;
     renderPassCreateInfo.pSubpasses      = &subpass;
     renderPassCreateInfo.dependencyCount = 2;
     renderPassCreateInfo.pDependencies   = dependencies.data();
-    vkCreateRenderPass(appContext.baseContext.device, &renderPassCreateInfo, nullptr,
-                       &mainPass.renderPassContext.renderPass);
+    if(vkCreateRenderPass(appContext.baseContext.device, &renderPassCreateInfo,
+                          nullptr, &renderContext.renderPasses.mainPass.geometryPass)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
 
     // create framebuffer (gBuffer)
     std::array<VkImageView, 5> attachments;
-    attachments[0] = mainPass.positionAttachment.imageView;
-    attachments[1] = mainPass.normalAttachment.imageView;
-    attachments[2] = mainPass.albedoAttachment.imageView;
-    attachments[3] = mainPass.aoRoughnessMetallicAttachment.imageView;
-    attachments[4] = mainPass.depthAttachment.imageView;
+    attachments[0] = renderContext.renderPasses.mainPass.positionAttachment.imageView;
+    attachments[1] = renderContext.renderPasses.mainPass.normalAttachment.imageView;
+    attachments[2] = renderContext.renderPasses.mainPass.albedoAttachment.imageView;
+    attachments[3] =
+        renderContext.renderPasses.mainPass.aoRoughnessMetallicAttachment.imageView;
+    attachments[4] = renderContext.renderPasses.mainPass.depthAttachment.imageView;
 
     VkFramebufferCreateInfo framebufferCreateInfo = {};
-    framebufferCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferCreateInfo.pNext           = NULL;
-    framebufferCreateInfo.renderPass      = mainPass.renderPassContext.renderPass;
-    framebufferCreateInfo.pAttachments    = attachments.data();
+    framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferCreateInfo.pNext = NULL;
+    framebufferCreateInfo.renderPass = renderContext.renderPasses.mainPass.geometryPass;
+    framebufferCreateInfo.pAttachments = attachments.data();
     framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebufferCreateInfo.width  = appContext.swapchainContext.swapChainExtent.width;
+    framebufferCreateInfo.width = appContext.swapchainContext.swapChainExtent.width;
     framebufferCreateInfo.height = appContext.swapchainContext.swapChainExtent.height;
     framebufferCreateInfo.layers = 1;
-    vkCreateFramebuffer(appContext.baseContext.device, &framebufferCreateInfo, nullptr,
-                        &mainPass.gBuffer);
+    vkCreateFramebuffer(appContext.baseContext.device, &framebufferCreateInfo,
+                        nullptr, &renderContext.renderPasses.mainPass.gBuffer);
 
     // create sampler to sample from the color attachments
     VkSamplerCreateInfo samplerCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
@@ -452,7 +466,7 @@ void createMainRenderPass2(const ApplicationVulkanContext& appContext,
     samplerCreateInfo.maxLod        = 1.0f;
     samplerCreateInfo.borderColor   = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     vkCreateSampler(appContext.baseContext.device, &samplerCreateInfo, nullptr,
-                    &mainPass.framebufferAttachmentSampler);
+                    &renderContext.renderPasses.mainPass.framebufferAttachmentSampler);
 }
 
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
@@ -1518,9 +1532,21 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
     vkDestroyBuffer(baseContext.device, mainPass.materialBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, mainPass.materialBuffer.bufferMemory, nullptr);
 
-    // destroy resources used for deferred rendering
+    // destroy pipelines
+    cleanVisualizationPipeline(baseContext, mainPass);
+
+    cleanSkyboxPipeline(baseContext, mainPass);
+
+    cleanupRenderPassContext(baseContext, mainPass.renderPassContext);
+
+    cleanMainPassDescriptorLayouts(baseContext, mainPass);
+}
+
+void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
+    // attachment sampler
     vkDestroySampler(baseContext.device, mainPass.framebufferAttachmentSampler, nullptr);
 
+    // framebuffer attachments
     vkDestroyImageView(baseContext.device, mainPass.positionAttachment.imageView, nullptr);
     vkDestroyImage(baseContext.device, mainPass.positionAttachment.image, nullptr);
     vkFreeMemory(baseContext.device, mainPass.positionAttachment.memory, nullptr);
@@ -1542,24 +1568,20 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
     vkDestroyImage(baseContext.device, mainPass.depthAttachment.image, nullptr);
     vkFreeMemory(baseContext.device, mainPass.depthAttachment.memory, nullptr);
 
+    // framebuffer
     vkDestroyFramebuffer(baseContext.device, mainPass.gBuffer, nullptr);
 
-    // destroy pipelines
-    cleanVisualizationPipeline(baseContext, mainPass);
+    // pipelines
+    //vkDestroyPipeline(baseContext.device, mainPass.geometryPassPipeline, nullptr);
+    //vkDestroyPipelineLayout(baseContext.device, mainPass.geometryPassPipelineLayout, nullptr);
 
-    cleanSkyboxPipeline(baseContext, mainPass);
+    //vkDestroyPipeline(baseContext.device, mainPass.lightingPassPipeline, nullptr);
+    //vkDestroyPipelineLayout(baseContext.device, mainPass.lightingPassPipelineLayout, nullptr);
 
-    // deferred pipelines
-    vkDestroyPipeline(baseContext.device, mainPass.geometryPassPipeline, nullptr);
-    vkDestroyPipelineLayout(baseContext.device, mainPass.geometryPassPipelineLayout, nullptr);
-
-    vkDestroyPipeline(baseContext.device, mainPass.lightingPassPipeline, nullptr);
-    vkDestroyPipelineLayout(baseContext.device, mainPass.lightingPassPipelineLayout, nullptr);
-
-    cleanupRenderPassContext(baseContext, mainPass.renderPassContext);
-
-    cleanMainPassDescriptorLayouts(baseContext, mainPass);
+    // render pass
+    vkDestroyRenderPass(baseContext.device, mainPass.geometryPass, nullptr);
 }
+
 void createBufferResources(const ApplicationVulkanContext& appContext,
                            VkDeviceSize                    bufferSize,
                            BufferResources&                bufferResources) {

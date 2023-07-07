@@ -76,7 +76,7 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 void createMainRenderPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext);
 
-void createMainRenderPass2(const ApplicationVulkanContext& appContext,
+void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
                            RenderContext&                  renderContext);
 
 void createMainPassResources(const ApplicationVulkanContext& appContext,
@@ -99,6 +99,8 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                   Scene&                          scene);
 
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
+
+void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
 void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass);
 
