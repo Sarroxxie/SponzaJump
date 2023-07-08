@@ -102,6 +102,8 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
 void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
+void cleanDeferredFramebuffer(const VulkanBaseContext& baseContext, const MainPass& mainPass);
+
 void createDepthSampler(const ApplicationVulkanContext& appContext, MainPass& mainPass);
 
 void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
@@ -122,6 +124,9 @@ void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
                                 MainPass&                       mainPass);
 
 void cleanGeometryPassPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
+
+void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
+                              RenderContext&                  renderContext);
 
 // -----
 

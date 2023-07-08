@@ -1468,7 +1468,7 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(skyboxWrite);
 
-    // gBuffer
+    // create gBuffer descriptor set
     VkDescriptorSetAllocateInfo gBufferAllocInfo{};
     gBufferAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     gBufferAllocInfo.descriptorPool     = renderContext.descriptorPool;
@@ -1482,82 +1482,8 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     if(gBufferAllocateRes != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
-    // TODO: need descriptor info for each of the attachments
-
-    std::vector<VkDescriptorImageInfo> gBufferDescriptorImageInfos(5);
-    for(int i = 0; i < 5; i++) {
-        gBufferDescriptorImageInfos[i].sampler = mainPass.framebufferAttachmentSampler;
-        gBufferDescriptorImageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    gBufferDescriptorImageInfos[0].imageView = mainPass.positionAttachment.imageView;
-    gBufferDescriptorImageInfos[1].imageView = mainPass.normalAttachment.imageView;
-    gBufferDescriptorImageInfos[2].imageView = mainPass.albedoAttachment.imageView;
-    gBufferDescriptorImageInfos[3].imageView =
-        mainPass.aoRoughnessMetallicAttachment.imageView;
-    gBufferDescriptorImageInfos[4].imageView = mainPass.depthAttachment.imageView;
-    // depth needs special treatment
-    gBufferDescriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-    // Position
-    VkWriteDescriptorSet gBufferPositionWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    gBufferPositionWrite.dstSet          = mainPass.gBufferDescriptorSet;
-    gBufferPositionWrite.dstBinding      = GBufferBindings::ePosition;
-    gBufferPositionWrite.dstArrayElement = 0;
-    gBufferPositionWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    gBufferPositionWrite.descriptorCount = 1;
-    gBufferPositionWrite.pImageInfo      = &gBufferDescriptorImageInfos[0];
-
-    descriptorWrites.emplace_back(gBufferPositionWrite);
-
-    // Normal
-    VkWriteDescriptorSet gBufferNormalWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    gBufferNormalWrite.dstSet          = mainPass.gBufferDescriptorSet;
-    gBufferNormalWrite.dstBinding      = GBufferBindings::eNormal;
-    gBufferNormalWrite.dstArrayElement = 0;
-    gBufferNormalWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    gBufferNormalWrite.descriptorCount = 1;
-    gBufferNormalWrite.pImageInfo      = &gBufferDescriptorImageInfos[1];
-
-    descriptorWrites.emplace_back(gBufferNormalWrite);
-
-    // Albedo
-    VkWriteDescriptorSet gBufferAlbedoWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    gBufferAlbedoWrite.dstSet          = mainPass.gBufferDescriptorSet;
-    gBufferAlbedoWrite.dstBinding      = GBufferBindings::eAlbedo;
-    gBufferAlbedoWrite.dstArrayElement = 0;
-    gBufferAlbedoWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    gBufferAlbedoWrite.descriptorCount = 1;
-    gBufferAlbedoWrite.pImageInfo      = &gBufferDescriptorImageInfos[2];
-
-    descriptorWrites.emplace_back(gBufferAlbedoWrite);
-
-    // AO Roughness Metallic
-    VkWriteDescriptorSet gBufferPBRWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    gBufferPBRWrite.dstSet          = mainPass.gBufferDescriptorSet;
-    gBufferPBRWrite.dstBinding      = GBufferBindings::ePBR;
-    gBufferPBRWrite.dstArrayElement = 0;
-    gBufferPBRWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    gBufferPBRWrite.descriptorCount = 1;
-    gBufferPBRWrite.pImageInfo      = &gBufferDescriptorImageInfos[3];
-
-    descriptorWrites.emplace_back(gBufferPBRWrite);
-
-    // Depth
-    VkWriteDescriptorSet gBufferDepthWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    gBufferDepthWrite.dstSet          = mainPass.gBufferDescriptorSet;
-    gBufferDepthWrite.dstBinding      = GBufferBindings::eDepth;
-    gBufferDepthWrite.dstArrayElement = 0;
-    gBufferDepthWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    gBufferDepthWrite.descriptorCount = 1;
-    gBufferDepthWrite.pImageInfo      = &gBufferDescriptorImageInfos[4];
-
-    descriptorWrites.emplace_back(gBufferDepthWrite);
-
-    /*
-    vkUpdateDescriptorSets(appContext.baseContext.device,
-                           static_cast<uint32_t>(descriptorWrites.size()),
-                           descriptorWrites.data(), 0, nullptr);
-    */
+    // fill content of gBuffer descriptor set
+    updateGBufferDescriptor(appContext, renderContext);
 
     VkDescriptorSetAllocateInfo depthAllocInfo{};
     depthAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1638,6 +1564,90 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
 }
+
+/*
+ * Needs to be called on resize to assure that the descriptor has the updated image extents.
+ */
+void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
+                             RenderContext&                  renderContext) {
+    MainPass& mainPass = renderContext.renderPasses.mainPass;
+    std::vector<VkWriteDescriptorSet> descriptorWrites;
+
+    std::vector<VkDescriptorImageInfo> gBufferDescriptorImageInfos(5);
+    for(int i = 0; i < 5; i++) {
+        gBufferDescriptorImageInfos[i].sampler = mainPass.framebufferAttachmentSampler;
+        gBufferDescriptorImageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    gBufferDescriptorImageInfos[0].imageView = mainPass.positionAttachment.imageView;
+    gBufferDescriptorImageInfos[1].imageView = mainPass.normalAttachment.imageView;
+    gBufferDescriptorImageInfos[2].imageView = mainPass.albedoAttachment.imageView;
+    gBufferDescriptorImageInfos[3].imageView =
+        mainPass.aoRoughnessMetallicAttachment.imageView;
+    gBufferDescriptorImageInfos[4].imageView = mainPass.depthAttachment.imageView;
+    // depth needs special treatment
+    gBufferDescriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    // Position
+    VkWriteDescriptorSet gBufferPositionWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferPositionWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferPositionWrite.dstBinding      = GBufferBindings::ePosition;
+    gBufferPositionWrite.dstArrayElement = 0;
+    gBufferPositionWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferPositionWrite.descriptorCount = 1;
+    gBufferPositionWrite.pImageInfo      = &gBufferDescriptorImageInfos[0];
+
+    descriptorWrites.emplace_back(gBufferPositionWrite);
+
+    // Normal
+    VkWriteDescriptorSet gBufferNormalWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferNormalWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferNormalWrite.dstBinding      = GBufferBindings::eNormal;
+    gBufferNormalWrite.dstArrayElement = 0;
+    gBufferNormalWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferNormalWrite.descriptorCount = 1;
+    gBufferNormalWrite.pImageInfo      = &gBufferDescriptorImageInfos[1];
+
+    descriptorWrites.emplace_back(gBufferNormalWrite);
+
+    // Albedo
+    VkWriteDescriptorSet gBufferAlbedoWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferAlbedoWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferAlbedoWrite.dstBinding      = GBufferBindings::eAlbedo;
+    gBufferAlbedoWrite.dstArrayElement = 0;
+    gBufferAlbedoWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferAlbedoWrite.descriptorCount = 1;
+    gBufferAlbedoWrite.pImageInfo      = &gBufferDescriptorImageInfos[2];
+
+    descriptorWrites.emplace_back(gBufferAlbedoWrite);
+
+    // AO Roughness Metallic
+    VkWriteDescriptorSet gBufferPBRWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferPBRWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferPBRWrite.dstBinding      = GBufferBindings::ePBR;
+    gBufferPBRWrite.dstArrayElement = 0;
+    gBufferPBRWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferPBRWrite.descriptorCount = 1;
+    gBufferPBRWrite.pImageInfo      = &gBufferDescriptorImageInfos[3];
+
+    descriptorWrites.emplace_back(gBufferPBRWrite);
+
+    // Depth
+    VkWriteDescriptorSet gBufferDepthWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferDepthWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferDepthWrite.dstBinding      = GBufferBindings::eDepth;
+    gBufferDepthWrite.dstArrayElement = 0;
+    gBufferDepthWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferDepthWrite.descriptorCount = 1;
+    gBufferDepthWrite.pImageInfo      = &gBufferDescriptorImageInfos[4];
+
+    descriptorWrites.emplace_back(gBufferDepthWrite);
+
+    vkUpdateDescriptorSets(appContext.baseContext.device,
+                           static_cast<uint32_t>(descriptorWrites.size()),
+                           descriptorWrites.data(), 0, nullptr);
+}
+
+
 void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
     vkDestroySampler(baseContext.device, mainPass.depthSampler, nullptr);
 
@@ -1664,6 +1674,14 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 }
 
 void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
+    cleanDeferredFramebuffer(baseContext, mainPass);
+
+    // pipelines
+    cleanGeometryPassPipeline(baseContext, mainPass);
+}
+
+void cleanDeferredFramebuffer(const VulkanBaseContext& baseContext,
+                              const MainPass&          mainPass) {
     // attachment sampler
     vkDestroySampler(baseContext.device, mainPass.framebufferAttachmentSampler, nullptr);
 
@@ -1691,10 +1709,6 @@ void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mai
 
     // framebuffer
     vkDestroyFramebuffer(baseContext.device, mainPass.gBuffer, nullptr);
-
-    // TODO: un-comment these line once the pipeline creation is done
-    // pipelines
-    cleanGeometryPassPipeline(baseContext, mainPass);
 
     // render pass
     vkDestroyRenderPass(baseContext.device, mainPass.geometryPass, nullptr);

@@ -341,17 +341,20 @@ void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &rend
     vkDeviceWaitIdle(appContext.baseContext.device);
 
     cleanupSwapChain(appContext.baseContext, appContext.swapchainContext);
+    cleanDeferredFramebuffer(appContext.baseContext, renderContext.renderPasses.mainPass);
 
     createSwapChain(appContext.baseContext, appContext.swapchainContext, appContext.window);
     createImageViews(appContext.baseContext, appContext.swapchainContext);
 
-    std::cout << appContext.swapchainContext.swapChainExtent.width << "\n";
+    createGeometryRenderPass(appContext, renderContext);
 
     // TODO don't need to create ColorRessources if multisampling is turned off
     createColorResources(appContext.baseContext, appContext.swapchainContext, appContext.graphicSettings);
     createDepthResources(appContext.baseContext, appContext.swapchainContext, appContext.graphicSettings);
 
     createFrameBuffers(appContext, renderContext);
+
+    updateGBufferDescriptor(appContext, renderContext);
 }
 
 void cleanupSwapChain(VulkanBaseContext &baseContext, SwapchainContext &swapchainContext) {
