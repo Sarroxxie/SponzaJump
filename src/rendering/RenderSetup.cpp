@@ -1010,7 +1010,7 @@ void createDeferredAttachment(const ApplicationVulkanContext& context,
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format    = format;
     imageCreateInfo.extent.width = context.swapchainContext.swapChainExtent.width;
-    imageCreateInfo.extent.height = context.swapchainContext.swapChainExtent.width;
+    imageCreateInfo.extent.height = context.swapchainContext.swapChainExtent.height;
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels    = 1;
     imageCreateInfo.arrayLayers  = 1;
