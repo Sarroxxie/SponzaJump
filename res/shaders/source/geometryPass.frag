@@ -32,6 +32,7 @@ void main() {
         // allow alpha masking
         if (albedoTexture.a == 0)
             discard;
+        albedo = albedoTexture.rgb;
     }
 
     vec3 normal = inNormal;

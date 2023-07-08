@@ -43,6 +43,14 @@ START_BINDING(DepthBindings)
     eLightVPs = 2
 END_BINDING();
 
+START_BINDING(GBufferBindings)
+    ePosition = 0,
+    eNormal = 1,
+    eAlbedo = 2,
+    ePBR = 3,
+    eDepth = 4
+END_BINDING();
+
 const uint MAX_CASCADES = 4;
 
 const uint PCF_CONTROL_BIT          = 0x01;

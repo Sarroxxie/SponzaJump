@@ -88,6 +88,9 @@ typedef struct
     VkDescriptorSetLayout depthDescriptorSetLayout;
     VkDescriptorSet       depthDescriptorSet;
 
+    VkDescriptorSetLayout gBufferDescriptorSetLayout;
+    VkDescriptorSet       gBufferDescriptorSet;
+
     // pipelines
     VkPipelineLayout visualizePipelineLayout;
     VkPipeline       visualizePipeline;
@@ -99,11 +102,6 @@ typedef struct
     // deferred rendering
     VkPipelineLayout geometryPassPipelineLayout;
     VkPipeline       geometryPassPipeline;
-    uint32_t         geometryPassSubpassID = 0;
-
-    VkPipelineLayout lightingPassPipelineLayout;
-    VkPipeline       lightingPassPipeline;
-    uint32_t         lightingPassSubpassID = 0;
 
     // deferred framebuffer attachments
     VkFramebuffer  gBuffer;

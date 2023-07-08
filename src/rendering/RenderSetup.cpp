@@ -360,7 +360,8 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
         // need special case for depth attachment
         if(i == 4) {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            //attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         } else {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -795,11 +796,15 @@ void createFrameBuffers(ApplicationVulkanContext& appContext, RenderContext& ren
 
         if(appContext.graphicSettings.useMsaa) {
             attachments.push_back(appContext.swapchainContext.colorImage.imageView);
-            attachments.push_back(appContext.swapchainContext.depthImage.imageView);
+            //attachments.push_back(appContext.swapchainContext.depthImage.imageView);
+            attachments.push_back(
+                renderContext.renderPasses.mainPass.depthAttachment.imageView);
             attachments.push_back(appContext.swapchainContext.swapChainImageViews[i]);
         } else {
             attachments.push_back(appContext.swapchainContext.swapChainImageViews[i]);
-            attachments.push_back(appContext.swapchainContext.depthImage.imageView);
+            // attachments.push_back(appContext.swapchainContext.depthImage.imageView);
+            attachments.push_back(
+                renderContext.renderPasses.mainPass.depthAttachment.imageView);
         }
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -1227,6 +1232,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     std::vector<VkDescriptorSetLayoutBinding> transformBindings;
     std::vector<VkDescriptorSetLayoutBinding> materialBindings;
     std::vector<VkDescriptorSetLayoutBinding> depthBindings;
+    std::vector<VkDescriptorSetLayoutBinding> gBufferBindings;
 
 
     transformBindings.push_back(
@@ -1269,6 +1275,27 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
                             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
+    // samplers for accessing gBuffer
+    gBufferBindings.push_back(
+        createLayoutBinding(GBufferBindings::ePosition, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    gBufferBindings.push_back(
+        createLayoutBinding(GBufferBindings::eNormal, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    gBufferBindings.push_back(
+        createLayoutBinding(GBufferBindings::eAlbedo, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    gBufferBindings.push_back(
+        createLayoutBinding(GBufferBindings::ePBR, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    gBufferBindings.push_back(
+        createLayoutBinding(GBufferBindings::eDepth, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
     createDescriptorSetLayout(appContext.baseContext,
                               mainPass.transformDescriptorSetLayout, transformBindings);
 
@@ -1278,12 +1305,16 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     createDescriptorSetLayout(appContext.baseContext,
                               mainPass.depthDescriptorSetLayout, depthBindings);
 
+    createDescriptorSetLayout(appContext.baseContext,
+                              mainPass.gBufferDescriptorSetLayout, gBufferBindings);
+
     auto& mainPassLayouts = mainPass.renderPassContext.descriptorSetLayouts;
     mainPassLayouts.clear();
 
     mainPassLayouts.push_back(mainPass.transformDescriptorSetLayout);
     mainPassLayouts.push_back(mainPass.materialDescriptorSetLayout);
     mainPassLayouts.push_back(mainPass.depthDescriptorSetLayout);
+    mainPassLayouts.push_back(mainPass.gBufferDescriptorSetLayout);
 }
 
 void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
@@ -1296,6 +1327,9 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
 
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  mainPass.depthDescriptorSetLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 mainPass.gBufferDescriptorSetLayout, nullptr);
 }
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
@@ -1433,6 +1467,91 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     skyboxWrite.pImageInfo      = &scene.getSceneData().cubemap.descriptorInfo;
 
     descriptorWrites.emplace_back(skyboxWrite);
+
+    // gBuffer
+    VkDescriptorSetAllocateInfo gBufferAllocInfo{};
+    gBufferAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    gBufferAllocInfo.descriptorPool     = renderContext.descriptorPool;
+    gBufferAllocInfo.descriptorSetCount = 1;
+    gBufferAllocInfo.pSetLayouts        = &mainPass.gBufferDescriptorSetLayout;
+
+    VkResult gBufferAllocateRes =
+        vkAllocateDescriptorSets(appContext.baseContext.device, &gBufferAllocInfo,
+                                 &mainPass.gBufferDescriptorSet);
+
+    if(gBufferAllocateRes != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+    // TODO: need descriptor info for each of the attachments
+
+    std::vector<VkDescriptorImageInfo> gBufferDescriptorImageInfos(5);
+    for(int i = 0; i < 5; i++) {
+        gBufferDescriptorImageInfos[i].sampler = mainPass.framebufferAttachmentSampler;
+        gBufferDescriptorImageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    gBufferDescriptorImageInfos[0].imageView = mainPass.positionAttachment.imageView;
+    gBufferDescriptorImageInfos[1].imageView = mainPass.normalAttachment.imageView;
+    gBufferDescriptorImageInfos[2].imageView = mainPass.albedoAttachment.imageView;
+    gBufferDescriptorImageInfos[3].imageView =
+        mainPass.aoRoughnessMetallicAttachment.imageView;
+    gBufferDescriptorImageInfos[4].imageView = mainPass.depthAttachment.imageView;
+    // depth needs special treatment
+    gBufferDescriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    // Position
+    VkWriteDescriptorSet gBufferPositionWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferPositionWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferPositionWrite.dstBinding      = GBufferBindings::ePosition;
+    gBufferPositionWrite.dstArrayElement = 0;
+    gBufferPositionWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferPositionWrite.descriptorCount = 1;
+    gBufferPositionWrite.pImageInfo      = &gBufferDescriptorImageInfos[0];
+
+    descriptorWrites.emplace_back(gBufferPositionWrite);
+
+    // Normal
+    VkWriteDescriptorSet gBufferNormalWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferNormalWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferNormalWrite.dstBinding      = GBufferBindings::eNormal;
+    gBufferNormalWrite.dstArrayElement = 0;
+    gBufferNormalWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferNormalWrite.descriptorCount = 1;
+    gBufferNormalWrite.pImageInfo      = &gBufferDescriptorImageInfos[1];
+
+    descriptorWrites.emplace_back(gBufferNormalWrite);
+
+    // Albedo
+    VkWriteDescriptorSet gBufferAlbedoWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferAlbedoWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferAlbedoWrite.dstBinding      = GBufferBindings::eAlbedo;
+    gBufferAlbedoWrite.dstArrayElement = 0;
+    gBufferAlbedoWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferAlbedoWrite.descriptorCount = 1;
+    gBufferAlbedoWrite.pImageInfo      = &gBufferDescriptorImageInfos[2];
+
+    descriptorWrites.emplace_back(gBufferAlbedoWrite);
+
+    // AO Roughness Metallic
+    VkWriteDescriptorSet gBufferPBRWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferPBRWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferPBRWrite.dstBinding      = GBufferBindings::ePBR;
+    gBufferPBRWrite.dstArrayElement = 0;
+    gBufferPBRWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferPBRWrite.descriptorCount = 1;
+    gBufferPBRWrite.pImageInfo      = &gBufferDescriptorImageInfos[3];
+
+    descriptorWrites.emplace_back(gBufferPBRWrite);
+
+    // Depth
+    VkWriteDescriptorSet gBufferDepthWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    gBufferDepthWrite.dstSet          = mainPass.gBufferDescriptorSet;
+    gBufferDepthWrite.dstBinding      = GBufferBindings::eDepth;
+    gBufferDepthWrite.dstArrayElement = 0;
+    gBufferDepthWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    gBufferDepthWrite.descriptorCount = 1;
+    gBufferDepthWrite.pImageInfo      = &gBufferDescriptorImageInfos[4];
+
+    descriptorWrites.emplace_back(gBufferDepthWrite);
 
     /*
     vkUpdateDescriptorSets(appContext.baseContext.device,
@@ -1576,7 +1695,6 @@ void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mai
     // TODO: un-comment these line once the pipeline creation is done
     // pipelines
     cleanGeometryPassPipeline(baseContext, mainPass);
-    //cleanLightingPassPipeline(baseContext, mainPass);
 
     // render pass
     vkDestroyRenderPass(baseContext.device, mainPass.geometryPass, nullptr);
@@ -2158,16 +2276,4 @@ void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
 void cleanGeometryPassPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
     vkDestroyPipeline(baseContext.device, mainPass.geometryPassPipeline, nullptr);
     vkDestroyPipelineLayout(baseContext.device, mainPass.geometryPassPipelineLayout, nullptr);
-}
-
-void createLightingPassPipeline(const ApplicationVulkanContext& appContext,
-                                const RenderContext&            renderContext,
-                                MainPass&                       mainPass) {
-    // TODO: implement this
-}
-
-void cleanLightingPassPipeline(const VulkanBaseContext& baseContext,
-                               const MainPass&          mainPass) {
-    vkDestroyPipeline(baseContext.device, mainPass.lightingPassPipeline, nullptr);
-    vkDestroyPipelineLayout(baseContext.device, mainPass.lightingPassPipelineLayout, nullptr);
 }

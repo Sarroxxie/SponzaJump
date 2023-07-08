@@ -41,6 +41,13 @@ layout (set = 2, binding = eLightVPs) uniform _LightVPs {
     mat4 mats[MAX_CASCADES];
 } LightVPs;
 
+// gBuffer
+layout (set = 3, binding = ePosition) uniform sampler2D gBufferPosition;
+layout (set = 3, binding = eNormal) uniform sampler2D gBufferNormal;
+layout (set = 3, binding = eAlbedo) uniform sampler2D gBufferAlbedo;
+layout (set = 3, binding = ePBR) uniform sampler2D gBufferPBR;
+layout (set = 3, binding = eDepth) uniform sampler2D gBufferDepth;
+
 layout (push_constant) uniform _PushConstant { PushConstant pushConstant; };
 
 // TODO: these light sources only serve as debug and will be replaced when deferred rendering is implemented
@@ -270,4 +277,10 @@ void main() {
         float factor = 0.2;
         outColor = vec4(outColor.xyz + factor * addColor, 1);
     }
+
+
+    // gBuffer
+    ivec2 intCoords = ivec2(gl_FragCoord.xy - 0.5);
+    color = texelFetch(gBufferAlbedo, intCoords, 0).rgb;
+    outColor = vec4(color, 1);
 }

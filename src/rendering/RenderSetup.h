@@ -123,12 +123,6 @@ void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
 
 void cleanGeometryPassPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
-void createLightingPassPipeline(const ApplicationVulkanContext& appContext,
-                                const RenderContext&            renderContext,
-                                MainPass&                       mainPass);
-
-void cleanLightingPassPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
-
 // -----
 
 

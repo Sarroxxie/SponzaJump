@@ -137,9 +137,20 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
                          VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1,
                          &memoryBarrier, 0, VK_NULL_HANDLE, 0, VK_NULL_HANDLE);
 
-    recordMainRenderPass(scene, imageIndex);
+    recordGeometryPass(scene);
 
-    //recordGeometryPass(scene);
+    VkMemoryBarrier memoryBarrier2;
+    memoryBarrier2.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    memoryBarrier2.pNext         = VK_NULL_HANDLE;
+    memoryBarrier2.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+    memoryBarrier2.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+    vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1,
+                         &memoryBarrier2, 0, VK_NULL_HANDLE, 0, VK_NULL_HANDLE);
+
+    recordMainRenderPass(scene, imageIndex);
 
     if(vkEndCommandBuffer(m_Context.commandContext.commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
@@ -392,6 +403,10 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 2,
             1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
 
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 3,
+            1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet, 0, nullptr);
 
         // create PushConstant object and initialize with default values
         PushConstant pushConstant;
@@ -590,35 +605,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
             vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                              mesh.indicesCount, 1, 0, 0, 0);
         }
-
-        // TODO: this has to be done after the lighting pass
-        // render skybpx
-        /*vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
-                               VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          m_RenderContext.renderPasses.mainPass.skyboxPipeline);
-
-        // bind DescriptorSet 0 (Camera Transformations)
-        vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0, 1,
-            &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
-
-        // bind DescriptorSet 1 (Materials)
-        vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
-            &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
-
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);*/
     }
-    // TODO:this has to be done after the lighting pass
-    /*if(m_RenderContext.usesImgui) {
-        // @IMGUI
-        ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
-                                        m_Context.commandContext.commandBuffer);
-    }*/
-
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
 

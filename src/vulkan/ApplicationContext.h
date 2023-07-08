@@ -33,6 +33,7 @@ typedef struct {
     std::vector<VkFramebuffer> swapChainFramebuffers;
 
     BufferImage colorImage;
+    // TODO: this resource should not be needed anymore when deferred rendering is working
     BufferImage depthImage;
 } SwapchainContext;
 
