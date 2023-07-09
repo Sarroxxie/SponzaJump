@@ -382,12 +382,12 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 0,
             1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
-
+        // bind DescriptorSet 1 (Shadow)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 1,
             1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
-
+        // bind DescriptorSet 2 (gBuffer)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 2,
@@ -397,6 +397,9 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         PushConstant pushConstant;
         pushConstant.transformation   = glm::mat4(1);
         pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
+        pushConstant.resolution =
+            glm::ivec2(m_Context.swapchainContext.swapChainExtent.width,
+                       m_Context.swapchainContext.swapChainExtent.height);
         pushConstant.materialIndex    = 0;
         pushConstant.cascadeCount =
             m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;

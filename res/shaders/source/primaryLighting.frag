@@ -97,7 +97,7 @@ void main() {
 
     // reconstruct position from depth
     float depth = texelFetch(gBufferDepth, intCoords, 0).r;
-    vec2 screenCoords = gl_FragCoord.xy / vec2(1920, 1080) * 2.0 - 1.0;
+    vec2 screenCoords = gl_FragCoord.xy / pushConstant.resolution * 2.0 - 1.0;
     vec4 tmp = cameraUniform.projInverse * vec4(screenCoords, depth, 1);
     tmp = cameraUniform.viewInverse * (tmp / tmp.w);
     position = tmp.xyz;

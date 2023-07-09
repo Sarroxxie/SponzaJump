@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 #pragma once
 #include "glm/glm.hpp"
+using ivec2 = glm::ivec2;
 using vec3 = glm::vec3;
 using mat4 = glm::mat4;
 using uint = unsigned int;
@@ -100,6 +101,7 @@ struct PushConstant
     ALIGN_AS(4) int materialIndex;
     ALIGN_AS(4) int cascadeCount;
     ALIGN_AS(4) int controlFlags;
+    ALIGN_AS(8) ivec2 resolution;
 };
 
 struct ShadowPushConstant
