@@ -620,7 +620,6 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
         m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDir();
     lightingInformation.lightIntensity =
         m_RenderContext.renderSettings.lightingSetting.sunColor;
-    lightingInformation.doPCF = m_RenderContext.imguiData.doPCF;
 
     memcpy(m_RenderContext.renderPasses.mainPass.lightingBuffer.bufferMemoryMapping,
            &lightingInformation, sizeof(LightingInformation));
