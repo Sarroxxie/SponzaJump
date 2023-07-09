@@ -45,11 +45,10 @@ START_BINDING(DepthBindings)
 END_BINDING();
 
 START_BINDING(GBufferBindings)
-    ePosition = 0,
-    eNormal = 1,
-    eAlbedo = 2,
-    ePBR = 3,
-    eDepth = 4
+    eNormal = 0,
+    eAlbedo = 1,
+    ePBR = 2,
+    eDepth = 3
 END_BINDING();
 
 const uint MAX_CASCADES = 4;

@@ -43,7 +43,6 @@ layout (set = 2, binding = eLightVPs) uniform _LightVPs {
 } LightVPs;
 
 // gBuffer
-layout (set = 3, binding = ePosition) uniform sampler2D gBufferPosition;
 layout (set = 3, binding = eNormal) uniform sampler2D gBufferNormal;
 layout (set = 3, binding = eAlbedo) uniform sampler2D gBufferAlbedo;
 layout (set = 3, binding = ePBR) uniform sampler2D gBufferPBR;

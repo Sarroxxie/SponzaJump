@@ -13,11 +13,6 @@ const vec3 cascadeVisColors[MAX_CASCADES] = vec3[](
 
 layout(location = 0) out vec4 outColor;
 
-/*layout(set = 0, binding = eCamera) uniform SceneTransform {
-    mat4 proj;
-    mat4 view;
-} sceneTransform;*/
-
 layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraUniform; };
 
 // primarily used for the camera position
@@ -35,7 +30,6 @@ layout (set = 1, binding = eLightVPs) uniform _LightVPs {
 } LightVPs;
 
 // gBuffer
-layout (set = 2, binding = ePosition) uniform sampler2D gBufferPosition;
 layout (set = 2, binding = eNormal) uniform sampler2D gBufferNormal;
 layout (set = 2, binding = eAlbedo) uniform sampler2D gBufferAlbedo;
 layout (set = 2, binding = ePBR) uniform sampler2D gBufferPBR;
@@ -89,18 +83,16 @@ bool getControlFlagValue(uint flags, uint controlBit) {
 void main() {
     // pixel coordinates (ranging from (0,0) to (width, height)) for sampling from gBuffer
     ivec2 intCoords = ivec2(gl_FragCoord.xy - 0.5);
-    vec3 position = texelFetch(gBufferPosition, intCoords, 0).rgb;
     vec3 normal = normalize(texelFetch(gBufferNormal, intCoords, 0).rgb);
-    // convert albedo to linear space
     vec3 albedo = texelFetch(gBufferAlbedo, intCoords, 0).rgb;
     vec3 aoRoughnessMetallic = texelFetch(gBufferPBR, intCoords, 0).rgb;
+    float depth = texelFetch(gBufferDepth, intCoords, 0).r;
 
     // reconstruct position from depth
-    float depth = texelFetch(gBufferDepth, intCoords, 0).r;
     vec2 screenCoords = gl_FragCoord.xy / pushConstant.resolution * 2.0 - 1.0;
     vec4 tmp = cameraUniform.projInverse * vec4(screenCoords, depth, 1);
     tmp = cameraUniform.viewInverse * (tmp / tmp.w);
-    position = tmp.xyz;
+    vec3 position = tmp.xyz;
 
     // depth in view space used for cascade evaluation
     float viewSpaceDepth = (cameraUniform.view * vec4(position, 1)).z;
@@ -153,4 +145,5 @@ void main() {
         float factor = 0.2;
         outColor = vec4(outColor.xyz + factor * addColor, 1);
     }
+    //outColor = vec4(1,0,0,1);
 }

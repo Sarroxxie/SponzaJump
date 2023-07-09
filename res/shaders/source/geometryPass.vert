@@ -8,11 +8,6 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec4 inTangents;
 layout(location = 3) in vec2 inTexCoords;
 
-/*layout(set = 0, binding = eCamera) uniform SceneTransform {
-    mat4 proj;
-    mat4 view;
-} sceneTransform;*/
-
 layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraUniform; };
 
 layout(set = 0, binding = eLight) uniform LightTransform {
@@ -22,14 +17,12 @@ layout(set = 0, binding = eLight) uniform LightTransform {
 
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
-layout(location = 0) out vec3 outPosition;
-layout(location = 1) out vec3 outNormal;
-layout(location = 2) out vec4 outTangents;
-layout(location = 4) out vec2 outTexCoords;
+layout(location = 0) out vec3 outNormal;
+layout(location = 1) out vec4 outTangents;
+layout(location = 2) out vec2 outTexCoords;
 
 void main() {
     vec4 worldPosition = pushConstant.transformation * vec4(inPosition, 1);
-    outPosition = worldPosition.xyz / worldPosition.w;
     
     gl_Position = cameraUniform.proj * cameraUniform.view * worldPosition;
 

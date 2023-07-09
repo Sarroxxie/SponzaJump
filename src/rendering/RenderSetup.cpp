@@ -329,10 +329,6 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
 void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
                               RenderContext&                  renderContext) {
     // create attachments
-    // World Space Position
-    createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT,
-                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                             renderContext.renderPasses.mainPass.positionAttachment);
     // World Space Normals
     createDeferredAttachment(appContext, VK_FORMAT_R16G16B16A16_SFLOAT,
                              VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -351,17 +347,17 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
                              renderContext.renderPasses.mainPass.depthAttachment);
 
     // set up separate renderpass with references to the color and depth attachments
-    std::array<VkAttachmentDescription, 5> attachmentDescs = {};
+    std::array<VkAttachmentDescription, 4> attachmentDescs = {};
 
     // init attachment properties
-    for(uint32_t i = 0; i < 5; ++i) {
+    for(uint32_t i = 0; i < 4; ++i) {
         attachmentDescs[i].samples        = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescs[i].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachmentDescs[i].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescs[i].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         // need special case for depth attachment
-        if(i == 4) {
+        if(i == 3) {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             //attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
@@ -373,14 +369,12 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
 
     // formats
     attachmentDescs[0].format =
-        renderContext.renderPasses.mainPass.positionAttachment.imageFormat;
-    attachmentDescs[1].format =
         renderContext.renderPasses.mainPass.normalAttachment.imageFormat;
-    attachmentDescs[2].format =
+    attachmentDescs[1].format =
         renderContext.renderPasses.mainPass.albedoAttachment.imageFormat;
-    attachmentDescs[3].format =
+    attachmentDescs[2].format =
         renderContext.renderPasses.mainPass.aoRoughnessMetallicAttachment.imageFormat;
-    attachmentDescs[4].format =
+    attachmentDescs[3].format =
         renderContext.renderPasses.mainPass.depthAttachment.imageFormat;
 
     // attachment references
@@ -388,10 +382,9 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
     colorReferences.push_back({0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     colorReferences.push_back({1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     colorReferences.push_back({2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
-    colorReferences.push_back({3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
 
     VkAttachmentReference depthReference = {};
-    depthReference.attachment            = 4;
+    depthReference.attachment            = 3;
     depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     VkSubpassDescription subpass = {};
@@ -438,13 +431,12 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
     }
 
     // create framebuffer (gBuffer)
-    std::array<VkImageView, 5> attachments;
-    attachments[0] = renderContext.renderPasses.mainPass.positionAttachment.imageView;
-    attachments[1] = renderContext.renderPasses.mainPass.normalAttachment.imageView;
-    attachments[2] = renderContext.renderPasses.mainPass.albedoAttachment.imageView;
-    attachments[3] =
+    std::array<VkImageView, 4> attachments;
+    attachments[0] = renderContext.renderPasses.mainPass.normalAttachment.imageView;
+    attachments[1] = renderContext.renderPasses.mainPass.albedoAttachment.imageView;
+    attachments[2] =
         renderContext.renderPasses.mainPass.aoRoughnessMetallicAttachment.imageView;
-    attachments[4] = renderContext.renderPasses.mainPass.depthAttachment.imageView;
+    attachments[3] = renderContext.renderPasses.mainPass.depthAttachment.imageView;
 
     VkFramebufferCreateInfo framebufferCreateInfo = {};
     framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1280,10 +1272,6 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
 
     // samplers for accessing gBuffer
     gBufferBindings.push_back(
-        createLayoutBinding(GBufferBindings::ePosition, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
-
-    gBufferBindings.push_back(
         createLayoutBinding(GBufferBindings::eNormal, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
@@ -1576,29 +1564,17 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
     std::vector<VkWriteDescriptorSet> descriptorWrites;
 
     std::vector<VkDescriptorImageInfo> gBufferDescriptorImageInfos(5);
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 4; i++) {
         gBufferDescriptorImageInfos[i].sampler = mainPass.framebufferAttachmentSampler;
         gBufferDescriptorImageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
-    gBufferDescriptorImageInfos[0].imageView = mainPass.positionAttachment.imageView;
-    gBufferDescriptorImageInfos[1].imageView = mainPass.normalAttachment.imageView;
-    gBufferDescriptorImageInfos[2].imageView = mainPass.albedoAttachment.imageView;
-    gBufferDescriptorImageInfos[3].imageView =
+    gBufferDescriptorImageInfos[0].imageView = mainPass.normalAttachment.imageView;
+    gBufferDescriptorImageInfos[1].imageView = mainPass.albedoAttachment.imageView;
+    gBufferDescriptorImageInfos[2].imageView =
         mainPass.aoRoughnessMetallicAttachment.imageView;
-    gBufferDescriptorImageInfos[4].imageView = mainPass.depthAttachment.imageView;
+    gBufferDescriptorImageInfos[3].imageView = mainPass.depthAttachment.imageView;
     // depth needs special treatment
-    gBufferDescriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-    // Position
-    VkWriteDescriptorSet gBufferPositionWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    gBufferPositionWrite.dstSet          = mainPass.gBufferDescriptorSet;
-    gBufferPositionWrite.dstBinding      = GBufferBindings::ePosition;
-    gBufferPositionWrite.dstArrayElement = 0;
-    gBufferPositionWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    gBufferPositionWrite.descriptorCount = 1;
-    gBufferPositionWrite.pImageInfo      = &gBufferDescriptorImageInfos[0];
-
-    descriptorWrites.emplace_back(gBufferPositionWrite);
+    gBufferDescriptorImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     // Normal
     VkWriteDescriptorSet gBufferNormalWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
@@ -1607,7 +1583,7 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
     gBufferNormalWrite.dstArrayElement = 0;
     gBufferNormalWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     gBufferNormalWrite.descriptorCount = 1;
-    gBufferNormalWrite.pImageInfo      = &gBufferDescriptorImageInfos[1];
+    gBufferNormalWrite.pImageInfo      = &gBufferDescriptorImageInfos[0];
 
     descriptorWrites.emplace_back(gBufferNormalWrite);
 
@@ -1618,7 +1594,7 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
     gBufferAlbedoWrite.dstArrayElement = 0;
     gBufferAlbedoWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     gBufferAlbedoWrite.descriptorCount = 1;
-    gBufferAlbedoWrite.pImageInfo      = &gBufferDescriptorImageInfos[2];
+    gBufferAlbedoWrite.pImageInfo      = &gBufferDescriptorImageInfos[1];
 
     descriptorWrites.emplace_back(gBufferAlbedoWrite);
 
@@ -1629,7 +1605,7 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
     gBufferPBRWrite.dstArrayElement = 0;
     gBufferPBRWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     gBufferPBRWrite.descriptorCount = 1;
-    gBufferPBRWrite.pImageInfo      = &gBufferDescriptorImageInfos[3];
+    gBufferPBRWrite.pImageInfo      = &gBufferDescriptorImageInfos[2];
 
     descriptorWrites.emplace_back(gBufferPBRWrite);
 
@@ -1640,7 +1616,7 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
     gBufferDepthWrite.dstArrayElement = 0;
     gBufferDepthWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     gBufferDepthWrite.descriptorCount = 1;
-    gBufferDepthWrite.pImageInfo      = &gBufferDescriptorImageInfos[4];
+    gBufferDepthWrite.pImageInfo      = &gBufferDescriptorImageInfos[3];
 
     descriptorWrites.emplace_back(gBufferDepthWrite);
 
@@ -1688,11 +1664,6 @@ void cleanDeferredFramebuffer(const VulkanBaseContext& baseContext,
                               const MainPass&          mainPass) {
     // attachment sampler
     vkDestroySampler(baseContext.device, mainPass.framebufferAttachmentSampler, nullptr);
-
-    // framebuffer attachments
-    vkDestroyImageView(baseContext.device, mainPass.positionAttachment.imageView, nullptr);
-    vkDestroyImage(baseContext.device, mainPass.positionAttachment.image, nullptr);
-    vkFreeMemory(baseContext.device, mainPass.positionAttachment.memory, nullptr);
 
     vkDestroyImageView(baseContext.device, mainPass.normalAttachment.imageView, nullptr);
     vkDestroyImage(baseContext.device, mainPass.normalAttachment.image, nullptr);
@@ -2384,8 +2355,8 @@ void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
     multisampling.minSampleShading     = .2f;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    std::array<VkPipelineColorBlendAttachmentState, 4> colorBlendAttachments{};
-    for(int i = 0; i < 4; i++) {
+    std::array<VkPipelineColorBlendAttachmentState, 3> colorBlendAttachments{};
+    for(int i = 0; i < 3; i++) {
         VkPipelineColorBlendAttachmentState colorBlendAttachment;
         colorBlendAttachment.colorWriteMask =
             VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT

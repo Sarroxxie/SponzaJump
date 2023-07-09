@@ -112,7 +112,6 @@ typedef struct
     // deferred framebuffer attachments
     VkFramebuffer  gBuffer;
     // TODO: position could be calculated from depth but this may be harder to implement
-    ImageResources positionAttachment;
     ImageResources normalAttachment;
     ImageResources albedoAttachment;
     ImageResources aoRoughnessMetallicAttachment;

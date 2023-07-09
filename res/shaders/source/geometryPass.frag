@@ -4,16 +4,14 @@
 
 #include "../../../src/rendering/host_device.h"
 
-layout (location = 0) in vec3 inPosition;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec4 inTangents;
-layout (location = 4) in vec2 inTexCoords;
+layout (location = 0) in vec3 inNormal;
+layout (location = 1) in vec4 inTangents;
+layout (location = 2) in vec2 inTexCoords;
 
 // gBuffer
-layout(location = 0) out vec4 outPosition;
-layout(location = 1) out vec4 outNormal;
-layout(location = 2) out vec4 outAlbedo;
-layout(location = 3) out vec4 outAoRoughnessMetallic;
+layout(location = eNormal) out vec4 outNormal;
+layout(location = eAlbedo) out vec4 outAlbedo;
+layout(location = ePBR) out vec4 outAoRoughnessMetallic;
 
 // materials array
 layout (std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
@@ -56,7 +54,6 @@ void main() {
         metallic = aoRoughnessMetallic.b;
     }
 
-    outPosition = vec4(inPosition,1);
     outNormal = vec4(normal,0);
     outAlbedo = vec4(albedo,0);
     outAoRoughnessMetallic = vec4(ao,roughness,metallic,0);

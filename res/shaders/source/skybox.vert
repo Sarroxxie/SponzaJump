@@ -17,11 +17,6 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec4 inTangents;
 layout(location = 3) in vec2 texCoords;
 
-/*layout(set = 0, binding = eCamera) uniform SceneTransform {
-    mat4 proj;
-    mat4 view;
-} sceneTransform;*/
-
 layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraUniform; };
 
 layout(location = 0) out vec3 outPosition;
