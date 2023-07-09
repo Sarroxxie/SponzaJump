@@ -11,10 +11,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     // compile shaders
     if(key == GLFW_KEY_C && action == GLFW_PRESS) {
         callbackData->renderer->recompileToSecondaryPipeline();
-    }
-    // swap graphics pipelines
-    else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-        callbackData->renderer->swapToSecondaryPipeline();
     } else {
         callbackData->inputController->handleKeyEvent(key, action);
     }

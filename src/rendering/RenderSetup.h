@@ -189,13 +189,6 @@ void cleanupImGuiContext(const VulkanBaseContext& baseContext, RenderContext& re
 
 void createFrameBuffers(ApplicationVulkanContext& appContext, RenderContext& renderContext);
 
-// ----- pipeline rebuild
-void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext& appContext,
-                                    RenderPassContext&              renderPass,
-                                    bool useFragShader = true);
-
-bool swapGraphicsPipeline(const ApplicationVulkanContext& appContext,
-                          RenderPassContext&              renderPass);
 // ---
 
 

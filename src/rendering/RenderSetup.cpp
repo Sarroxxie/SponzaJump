@@ -43,29 +43,16 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
 
     shadowPassDescription.enableDepthBias = true;
 
-    renderSetupDescription.shadowPassDescription = shadowPassDescription;
-
-    // --- Main Render Pass
+    // -- Main Pass 
     RenderPassDescription mainRenderPassDescription;
-
-    mainRenderPassDescription.vertexShader.shaderStage = ShaderStage::VERTEX_SHADER;
-    mainRenderPassDescription.vertexShader.shaderSourceName = "mainPass.vert";
-    mainRenderPassDescription.vertexShader.sourceDirectory = "res/shaders/source/";
-    mainRenderPassDescription.vertexShader.spvDirectory = "res/shaders/spv/";
-
-    renderSetupDescription.mainRenderPassDescription.pushConstantRanges.push_back(
-        createPushConstantRange(0, sizeof(PushConstant),
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
-
-    mainRenderPassDescription.fragmentShader.shaderStage = ShaderStage::FRAGMENT_SHADER;
-    mainRenderPassDescription.fragmentShader.shaderSourceName = "mainPass.frag";
-    mainRenderPassDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
-    mainRenderPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
     mainRenderPassDescription.pushConstantRanges.push_back(
         createPushConstantRange(0, sizeof(PushConstant),
                                 getStageFlag(ShaderStage::VERTEX_SHADER)
                                     | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    renderSetupDescription.shadowPassDescription = shadowPassDescription;
+    renderSetupDescription.mainRenderPassDescription = mainRenderPassDescription;
 
     /*
     VkPushConstantRange pushConstantRange;
@@ -76,8 +63,6 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     // this push constant range is accessible in the vertex and fragment shader
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     */
-
-    renderSetupDescription.mainRenderPassDescription = mainRenderPassDescription;
 
     initializeRenderContext(appContext, renderContext, renderSetupDescription, scene);
     return renderSetupDescription;
@@ -124,13 +109,6 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
 
     createDepthSampler(appContext, renderContext.renderPasses.mainPass);
     createMainPassResources(appContext, renderContext, scene);
-
-    createGraphicsPipeline(
-        appContext, renderContext.renderPasses.mainPass.renderPassContext,
-        renderContext.renderPasses.mainPass.renderPassContext.pipelineLayouts[0],
-        renderContext.renderPasses.mainPass.renderPassContext.graphicsPipelines[0],
-        renderPassDescription,
-        renderContext.renderPasses.mainPass.renderPassContext.descriptorSetLayouts);
 
     // TODO: skybox should have own descriptor set
     // same goes for the skybox pipeline (as it uses the descriptor set that
@@ -184,15 +162,13 @@ void cleanupRenderContext(const VulkanBaseContext& baseContext, RenderContext& r
 void cleanupRenderPassContext(const VulkanBaseContext& baseContext,
                               const RenderPassContext& renderPassContext) {
     // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
-    vkDestroyPipeline(baseContext.device, renderPassContext.graphicsPipelines[0], nullptr);
-    vkDestroyPipelineLayout(baseContext.device,
-                            renderPassContext.pipelineLayouts[0], nullptr);
-
-    if(renderPassContext.graphicsPipelines[1] != VK_NULL_HANDLE) {
-        vkDestroyPipeline(baseContext.device,
-                          renderPassContext.graphicsPipelines[1], nullptr);
-        vkDestroyPipelineLayout(baseContext.device,
-                                renderPassContext.pipelineLayouts[1], nullptr);
+    for(int i = 0; i < 2; i++) {
+        if(renderPassContext.graphicsPipelines[i] != VK_NULL_HANDLE) {
+            vkDestroyPipeline(baseContext.device,
+                              renderPassContext.graphicsPipelines[i], nullptr);
+            vkDestroyPipelineLayout(baseContext.device,
+                                    renderPassContext.pipelineLayouts[i], nullptr);
+        }
     }
 
     vkDestroyRenderPass(baseContext.device, renderPassContext.renderPass, nullptr);
@@ -820,40 +796,6 @@ void createFrameBuffers(ApplicationVulkanContext& appContext, RenderContext& ren
     }
 }
 
-// Builds a graphics pipeline and stores it in the secondary slot
-void buildSecondaryGraphicsPipeline(const ApplicationVulkanContext& appContext,
-                                    RenderPassContext&              renderPass,
-                                    bool useFragShader) {
-    compileShader(renderPass.renderPassDescription.vertexShader,
-                  appContext.baseContext.maxSupportedMinorVersion);
-    compileShader(renderPass.renderPassDescription.fragmentShader,
-                  appContext.baseContext.maxSupportedMinorVersion);
-    if(renderPass.graphicsPipelines[!renderPass.activePipelineIndex] != VK_NULL_HANDLE) {
-        vkDestroyPipeline(appContext.baseContext.device,
-                          renderPass.graphicsPipelines[!renderPass.activePipelineIndex],
-                          nullptr);
-        vkDestroyPipelineLayout(appContext.baseContext.device,
-                                renderPass.pipelineLayouts[!renderPass.activePipelineIndex],
-                                nullptr);
-    }
-
-    createGraphicsPipeline(appContext, renderPass,
-                           renderPass.pipelineLayouts[!renderPass.activePipelineIndex],
-                           renderPass.graphicsPipelines[!renderPass.activePipelineIndex],
-                           renderPass.renderPassDescription,
-                           renderPass.descriptorSetLayouts, useFragShader);
-}
-
-// Swaps to the secondary graphics pipeline if it is valid
-bool swapGraphicsPipeline(const ApplicationVulkanContext& appContext,
-                          RenderPassContext&              renderPass) {
-    if(renderPass.graphicsPipelines[!renderPass.activePipelineIndex] != VK_NULL_HANDLE) {
-        renderPass.activePipelineIndex = !renderPass.activePipelineIndex;
-        return true;
-    } else {
-        return false;
-    }
-}
 VkDescriptorSetLayoutBinding createLayoutBinding(uint32_t binding,
                                                  uint32_t descriptorCount,
                                                  VkDescriptorType descriptorType,
@@ -1271,6 +1213,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     // samplers for accessing gBuffer
+
     gBufferBindings.push_back(
         createLayoutBinding(GBufferBindings::eNormal, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));

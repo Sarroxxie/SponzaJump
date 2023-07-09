@@ -59,9 +59,6 @@ void VulkanRenderer::render(Scene& scene) {
         if(ImGui::Button("Recompile Shaders")) {
             recompileToSecondaryPipeline();
         }
-        if(ImGui::Button("Swap Pipeline")) {
-            swapToSecondaryPipeline();
-        }
         ImGui::End();
     }
 
@@ -630,11 +627,6 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
 
 void VulkanRenderer::recompileToSecondaryPipeline() {
     std::cout << "\nRecompiling Shaders...\n";
-    buildSecondaryGraphicsPipeline(m_Context,
-                                   m_RenderContext.renderPasses.mainPass.renderPassContext);
-    buildSecondaryGraphicsPipeline(m_Context,
-                                   m_RenderContext.renderPasses.shadowPass.renderPassContext);
-
 
     vkDeviceWaitIdle(m_Context.baseContext.device);
     // rebuild shadow map visualization pipeline
@@ -663,11 +655,6 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
         m_Context, m_RenderContext,
         m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         m_RenderContext.renderPasses.mainPass);
-}
-
-void VulkanRenderer::swapToSecondaryPipeline() {
-    swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.mainPass.renderPassContext);
-    // swapGraphicsPipeline(m_Context, m_RenderContext.renderPasses.shadowPass.renderPassContext);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;

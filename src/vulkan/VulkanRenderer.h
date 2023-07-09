@@ -33,7 +33,6 @@ public:
     void setRenderContext(RenderContext &renderContext);
 
     void recompileToSecondaryPipeline();
-    void swapToSecondaryPipeline();
 
     ApplicationVulkanContext getContext();
 
@@ -45,8 +44,6 @@ private:
     void recordMainRenderPass(Scene &scene, uint32_t imageIndex);
 
     void recordGeometryPass(Scene& scene);
-
-    void recordLightingPass(Scene& scene, uint32_t imageIndex);
 
     void createSyncObjects(VulkanBaseContext &baseContext);
 
