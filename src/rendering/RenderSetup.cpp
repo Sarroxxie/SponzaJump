@@ -137,7 +137,7 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
     // contains the textures for now)
     createGeometryPassPipeline(appContext, renderContext, renderPassDescription,
                                renderContext.renderPasses.mainPass);
-    createPrimaryLightingPipeline(appContext, renderContext,
+    createPrimaryLightingPipeline(appContext, renderContext, renderPassDescription,
                                   renderContext.renderPasses.mainPass);
     createSkyboxPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
 
@@ -1240,7 +1240,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
 
     transformBindings.push_back(
         createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                            getStageFlag(ShaderStage::VERTEX_SHADER)));
+                            getStageFlag(ShaderStage::VERTEX_SHADER) | VK_SHADER_STAGE_FRAGMENT_BIT));
 
     transformBindings.push_back(
         createLayoutBinding(SceneBindings::eLight, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -2117,6 +2117,7 @@ void cleanSkyboxPipeline(const VulkanBaseContext& baseContext, const MainPass& m
 // TODO: adjust this
 void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
                                    const RenderContext& renderContext,
+                                   const RenderPassDescription& renderPassDescription,
                                    MainPass&            mainPass) {
     Shader vertexShader;
     vertexShader.shaderStage      = ShaderStage::VERTEX_SHADER;
@@ -2243,8 +2244,10 @@ void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts    = descriptorSetLayouts.data();
 
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges    = VK_NULL_HANDLE;
+    pipelineLayoutInfo.pushConstantRangeCount =
+        renderPassDescription.pushConstantRanges.size();
+    pipelineLayoutInfo.pPushConstantRanges =
+        renderPassDescription.pushConstantRanges.data();
 
     if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo,
                               nullptr, &mainPass.primaryLightingPipelineLayout)

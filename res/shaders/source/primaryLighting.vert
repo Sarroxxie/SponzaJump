@@ -22,12 +22,7 @@ layout(set = 0, binding = eCamera) uniform SceneTransform {
     mat4 view;
 } sceneTransform;
 
-layout(location = 0) out vec3 outPosition;
-
 void main() {
     // set depth to maximum amount -> depth_compare_op is set to "GREATER", so this should render every pixel except the ones with maximum depth (aka where no objects are)
     gl_Position = vec4(positions[gl_VertexIndex], 1.0, 1.0);
-    // revert projection and view transformation to get world space coordinates of the quad
-    vec4 projected = inverse(sceneTransform.view) * inverse(sceneTransform.proj) * vec4(positions[gl_VertexIndex], 0.0, 1.0);
-    outPosition = projected.xyz / projected.w;
 }

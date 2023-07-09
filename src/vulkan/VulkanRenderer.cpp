@@ -373,39 +373,24 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
     } else {
-        // render meshes
+        // render screen quad for primary light source
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          mainRenderPass.graphicsPipelines[mainRenderPass.activePipelineIndex]);
-
-
-        // Without Index Buffer
-        // vkCmdDraw(commandBuffer, vertices.size(), 1, 0, 0);
+                          m_RenderContext.renderPasses.mainPass.primaryLightingPipeline);
 
         // bind DescriptorSet 0 (Camera Transformations)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 0,
+            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 0,
             1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
 
-        // TODO: from my understanding, this descriptor set only has to be bound
-        //       once, but I got errors when doing so
-        //        -> should make it possible for performance reasons
-        //        -> use separate command buffer that is only updated when the graphics pipeline is changed
-
-        // bind DescriptorSet 1 (Materials)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 1,
-            1, &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
-
-        vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 2,
+            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 1,
             1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
 
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            mainRenderPass.pipelineLayouts[mainRenderPass.activePipelineIndex], 3,
+            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 2,
             1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet, 0, nullptr);
 
         // create PushConstant object and initialize with default values
@@ -422,43 +407,14 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         if (m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
             pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
 
-        for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
-            auto* modelComponent     = scene.getComponent<ModelComponent>(id);
-            auto* transformComponent = scene.getComponent<Transformation>(id);
+        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                           m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0,  // offset
+                           sizeof(PushConstant), &pushConstant);
 
-            Model& model = scene.getSceneData().models[modelComponent->modelIndex];
+        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
-            pushConstant.transformation = transformComponent->getMatrix();
-
-            for(auto& meshPartIndex : model.meshPartIndices) {
-                MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
-                Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
-                VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
-                VkDeviceSize offsets[]   = {0};
-
-                pushConstant.materialIndex = meshPart.materialIndex;
-
-                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
-                                       0, 1, vertexBuffers, offsets);
-
-                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-                glm::mat4 transform = transformComponent->getMatrix();
-
-                vkCmdPushConstants(
-                    m_Context.commandContext.commandBuffer,
-                    m_RenderContext.renderPasses.mainPass.renderPassContext
-                        .pipelineLayouts[m_RenderContext.renderPasses.mainPass
-                                             .renderPassContext.activePipelineIndex],
-                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                    0,  // offset
-                    sizeof(PushConstant), &pushConstant);
-
-                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                                 mesh.indicesCount, 1, 0, 0, 0);
-            }
-        }
 
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -701,8 +657,10 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
     // rebuild primary lighting pipeline
     cleanPrimaryLightingPipeline(m_Context.baseContext,
                                  m_RenderContext.renderPasses.mainPass);
-    createPrimaryLightingPipeline(m_Context, m_RenderContext,
-                                  m_RenderContext.renderPasses.mainPass);
+    createPrimaryLightingPipeline(
+        m_Context, m_RenderContext,
+        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+        m_RenderContext.renderPasses.mainPass);
 }
 
 void VulkanRenderer::swapToSecondaryPipeline() {

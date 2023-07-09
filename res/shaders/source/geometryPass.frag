@@ -12,7 +12,6 @@ layout (location = 4) in vec2 inTexCoords;
 // gBuffer
 layout(location = 0) out vec4 outPosition;
 layout(location = 1) out vec4 outNormal;
-// albedo is still in sRGB -> has to be converted to linear color space in lighting pass shader
 layout(location = 2) out vec4 outAlbedo;
 layout(location = 3) out vec4 outAoRoughnessMetallic;
 
@@ -33,6 +32,7 @@ void main() {
         if (albedoTexture.a == 0)
             discard;
         albedo = albedoTexture.rgb;
+        albedo = pow(albedoTexture.rgb, vec3(2.2, 2.2, 2.2)); // convert color into linear space
     }
 
     vec3 normal = inNormal;
