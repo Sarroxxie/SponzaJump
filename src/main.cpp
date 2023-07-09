@@ -7,8 +7,8 @@
 #include "scene/RenderableObject.h"
 #include "rendering/RenderSetup.h"
 
-#define DEFAULT_APPLICATION_WIDTH 800
-#define DEFAULT_APPLICATION_HEIGHT 600
+#define DEFAULT_APPLICATION_WIDTH 1920
+#define DEFAULT_APPLICATION_HEIGHT 1080
 #define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
 
 #define CURRENT_MILLIS                                                         \

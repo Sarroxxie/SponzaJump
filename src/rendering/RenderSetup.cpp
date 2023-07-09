@@ -224,16 +224,17 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
 
     // Depth Attachment
     VkAttachmentDescription depthAttachment{};
-    createBlankAttachment(appContext, depthAttachment, sampleCount, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    createBlankAttachment(appContext, depthAttachment, sampleCount,
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
     depthAttachment.format = findDepthFormat(appContext.baseContext);
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.storeOp =
         VK_ATTACHMENT_STORE_OP_STORE;  // TODO this will probably need to change for shadow mapping ?
 
     VkAttachmentReference depthAttachmentRef{};
     depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
 
     VkSubpassDescription subpass{};

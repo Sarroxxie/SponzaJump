@@ -281,6 +281,6 @@ void main() {
 
     // gBuffer
     ivec2 intCoords = ivec2(gl_FragCoord.xy - 0.5);
-    color = texelFetch(gBufferAlbedo, intCoords, 0).rgb;
+    color = texelFetch(gBufferDepth, intCoords, 0).rrr;
     outColor = vec4(color, 1);
 }
