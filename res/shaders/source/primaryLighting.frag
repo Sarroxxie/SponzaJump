@@ -13,10 +13,12 @@ const vec3 cascadeVisColors[MAX_CASCADES] = vec3[](
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 0, binding = eCamera) uniform SceneTransform {
+/*layout(set = 0, binding = eCamera) uniform SceneTransform {
     mat4 proj;
     mat4 view;
-} sceneTransform;
+} sceneTransform;*/
+
+layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraUniform; };
 
 // primarily used for the camera position
 layout(set = 0, binding = eLighting) uniform _LightingInformation {LightingInformation lightingInformation; };
@@ -96,12 +98,12 @@ void main() {
     // reconstruct position from depth
     float depth = texelFetch(gBufferDepth, intCoords, 0).r;
     vec2 screenCoords = gl_FragCoord.xy / vec2(1920, 1080) * 2.0 - 1.0;
-    vec4 tmp = inverse(sceneTransform.proj) * vec4(screenCoords, depth, 1);
-    tmp = inverse(sceneTransform.view) * (tmp / tmp.w);
+    vec4 tmp = cameraUniform.projInverse * vec4(screenCoords, depth, 1);
+    tmp = cameraUniform.viewInverse * (tmp / tmp.w);
     position = tmp.xyz;
 
     // depth in view space used for cascade evaluation
-    float viewSpaceDepth = (sceneTransform.view * vec4(position, 1)).z;
+    float viewSpaceDepth = (cameraUniform.view * vec4(position, 1)).z;
 
     // shadow stuff
     uint cascadeIndex = 0;

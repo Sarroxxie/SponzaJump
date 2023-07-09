@@ -21,15 +21,6 @@ vec2 tex_coords[6] = vec2[](
     vec2(0.0, 1.0)
 );
 
-vec3 colors[6] = vec3[](
-    vec3(1.0, 1.0, 1.0),
-    vec3(1.0, 1.0, 1.0),
-    vec3(1.0, 1.0, 1.0),
-    vec3(1.0, 1.0, 1.0),
-    vec3(1.0, 1.0, 1.0),
-    vec3(1.0, 1.0, 1.0)
-);
-
 
 layout(location = 0) out vec2 fragTexCoords;
 

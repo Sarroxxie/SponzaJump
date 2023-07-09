@@ -78,7 +78,8 @@ struct PointLight
 // used per camera
 struct CameraUniform
 {
-    ALIGN_AS(16) mat4 viewProj;
+    ALIGN_AS(16) mat4 view;
+    ALIGN_AS(16) mat4 proj;
     ALIGN_AS(16) mat4 viewInverse;
     ALIGN_AS(16) mat4 projInverse;
 };

@@ -1186,7 +1186,7 @@ void createMainPassResources(const ApplicationVulkanContext& appContext,
                              RenderContext&                  renderContext,
                              Scene&                          scene) {
 
-    createBufferResources(appContext, sizeof(SceneTransform),
+    createBufferResources(appContext, sizeof(CameraUniform),
                           renderContext.renderPasses.mainPass.transformBuffer);
 
     createBufferResources(appContext, sizeof(LightingInformation),

@@ -8,10 +8,12 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec4 inTangents;
 layout(location = 3) in vec2 inTexCoords;
 
-layout(set = 0, binding = eCamera) uniform SceneTransform {
+/*layout(set = 0, binding = eCamera) uniform SceneTransform {
     mat4 proj;
     mat4 view;
-} sceneTransform;
+} sceneTransform;*/
+
+layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraUniform; };
 
 layout(set = 0, binding = eLight) uniform LightTransform {
     mat4 proj;
@@ -29,7 +31,7 @@ void main() {
     vec4 worldPosition = pushConstant.transformation * vec4(inPosition, 1);
     outPosition = worldPosition.xyz / worldPosition.w;
     
-    gl_Position = sceneTransform.proj * sceneTransform.view * worldPosition;
+    gl_Position = cameraUniform.proj * cameraUniform.view * worldPosition;
 
     // prepare data for normal mapping
     mat3 normalTransformation = transpose(inverse(mat3(pushConstant.transformation)));

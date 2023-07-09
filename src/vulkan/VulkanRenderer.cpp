@@ -595,23 +595,24 @@ void VulkanRenderer::createSyncObjects(VulkanBaseContext& baseContext) {
 }
 
 void VulkanRenderer::updateUniformBuffer(Scene& scene) {
-    SceneTransform sceneTransform;
-
-    sceneTransform.perspectiveTransform =
+    glm::mat4     projection =
         getPerspectiveMatrix(m_RenderContext.renderSettings.perspectiveSettings,
                              m_Context.swapchainContext.swapChainExtent.width,
                              m_Context.swapchainContext.swapChainExtent.height);
-
     // one tutorial says openGL has different convention for Y coordinates in
     // clip space than vulkan, need to flip it
-    sceneTransform.perspectiveTransform[1][1] *= -1;
+    projection[1][1] *= -1;
 
-    sceneTransform.cameraTransform = scene.getCameraRef().getCameraMatrix();
+    CameraUniform cameraUniform;
+    cameraUniform.view = scene.getCameraRef().getCameraMatrix();
+    cameraUniform.proj = projection;
+    cameraUniform.viewInverse = glm::inverse(scene.getCameraRef().getCameraMatrix());
+    cameraUniform.projInverse = glm::inverse(projection);
 
     // PushConstants would be more efficient for often changing small data buffers
 
     memcpy(m_RenderContext.renderPasses.mainPass.transformBuffer.bufferMemoryMapping,
-           &sceneTransform, sizeof(SceneTransform));
+           &cameraUniform, sizeof(CameraUniform));
 
     LightingInformation lightingInformation;
     lightingInformation.cameraPosition = scene.getCameraRef().getWorldPos();
