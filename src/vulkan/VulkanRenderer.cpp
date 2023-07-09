@@ -459,6 +459,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                                  mesh.indicesCount, 1, 0, 0, 0);
             }
         }
+
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.skyboxPipeline);
@@ -696,6 +697,12 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
         m_Context, m_RenderContext,
         m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         m_RenderContext.renderPasses.mainPass);
+
+    // rebuild primary lighting pipeline
+    cleanPrimaryLightingPipeline(m_Context.baseContext,
+                                 m_RenderContext.renderPasses.mainPass);
+    createPrimaryLightingPipeline(m_Context, m_RenderContext,
+                                  m_RenderContext.renderPasses.mainPass);
 }
 
 void VulkanRenderer::swapToSecondaryPipeline() {

@@ -118,6 +118,13 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
 
 void cleanSkyboxPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass);
 
+void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
+                          const RenderContext&            renderContext,
+                          MainPass&                       mainPass);
+
+void cleanPrimaryLightingPipeline(const VulkanBaseContext& baseContext,
+                                  const MainPass&          mainPass);
+
 void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
                                 const RenderContext&            renderContext,
                                 const RenderPassDescription& renderPassDescription,

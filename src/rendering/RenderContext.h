@@ -92,16 +92,22 @@ typedef struct
     VkDescriptorSet       gBufferDescriptorSet;
 
     // pipelines
+    // visualize shadow map
     VkPipelineLayout visualizePipelineLayout;
     VkPipeline       visualizePipeline;
 
+    // render skybox
     VkPipelineLayout skyboxPipelineLayout;
     VkPipeline       skyboxPipeline;
     uint32_t         skyboxSubpassID = 0;
 
-    // deferred rendering
+    // filling gBuffer
     VkPipelineLayout geometryPassPipelineLayout;
     VkPipeline       geometryPassPipeline;
+
+    // rendering full screen quad for directional light (and later IBL)
+    VkPipelineLayout primaryLightingPipelineLayout;
+    VkPipeline       primaryLightingPipeline;
 
     // deferred framebuffer attachments
     VkFramebuffer  gBuffer;
