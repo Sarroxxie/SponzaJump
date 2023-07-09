@@ -93,6 +93,13 @@ void main() {
     vec3 albedo = texelFetch(gBufferAlbedo, intCoords, 0).rgb;
     vec3 aoRoughnessMetallic = texelFetch(gBufferPBR, intCoords, 0).rgb;
 
+    // reconstruct position from depth
+    float depth = texelFetch(gBufferDepth, intCoords, 0).r;
+    vec2 screenCoords = gl_FragCoord.xy / vec2(1920, 1080) * 2.0 - 1.0;
+    vec4 tmp = inverse(sceneTransform.proj) * vec4(screenCoords, depth, 1);
+    tmp = inverse(sceneTransform.view) * (tmp / tmp.w);
+    position = tmp.xyz;
+
     // depth in view space used for cascade evaluation
     float viewSpaceDepth = (sceneTransform.view * vec4(position, 1)).z;
 
