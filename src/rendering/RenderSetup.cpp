@@ -2111,7 +2111,8 @@ void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable  = VK_TRUE;
     depthStencil.depthWriteEnable = VK_FALSE;
-    // in the shader we set the depth of the screen quad to 1.0, so this has to be lesser-equals
+    // in the shader we set the depth of the screen quad to 1.0, so all pixels
+    // expect the ones for the skybox are drawn
     depthStencil.depthCompareOp        = VK_COMPARE_OP_GREATER;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable     = VK_FALSE;
@@ -2286,7 +2287,8 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 
     rasterizer.lineWidth = 1.0f;
-    // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    // TODO: this will need to change in the future for correct lighting
+    //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.cullMode        = VK_CULL_MODE_NONE;
     rasterizer.frontFace       = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -2295,8 +2297,8 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable  = VK_TRUE;
     depthStencil.depthWriteEnable = VK_FALSE;
-    // in the shader we set the depth of the screen quad to 1.0, so this has to be lesser-equals
-    depthStencil.depthCompareOp        = VK_COMPARE_OP_GREATER;
+    // TODO: do some research on when to render here
+    depthStencil.depthCompareOp   = VK_COMPARE_OP_ALWAYS;//VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable     = VK_FALSE;
 
@@ -2313,10 +2315,10 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
         | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
     colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -2339,7 +2341,6 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
-    descriptorSetLayouts.push_back(mainPass.depthDescriptorSetLayout);
     descriptorSetLayouts.push_back(mainPass.gBufferDescriptorSetLayout);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -2347,10 +2348,13 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts    = descriptorSetLayouts.data();
 
-    pipelineLayoutInfo.pushConstantRangeCount =
-        renderPassDescription.pushConstantRanges.size();
-    pipelineLayoutInfo.pPushConstantRanges =
-        renderPassDescription.pushConstantRanges.data();
+    // the used pushconstant will be only the struct "PointLightPushConstant"
+    VkPushConstantRange pushConstantRange =
+        createPushConstantRange(0, sizeof(PointLightPushConstant),
+                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
 
     if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo,
                               nullptr, &mainPass.pointLightsPipelineLayout)

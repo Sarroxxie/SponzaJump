@@ -23,6 +23,10 @@ void Scene::cleanup() {
         texture.cleanup(m_Context.baseContext);
     }
 
+    if(sceneData.pointLightMesh.vertexBuffer != VK_NULL_HANDLE) {
+        sceneData.pointLightMesh.cleanup(m_Context.baseContext);
+    }
+
     sceneData.cubemap.cleanup(m_Context.baseContext);
 }
 

@@ -134,10 +134,6 @@ void main() {
     vec3 ambient = vec3(0.002) * albedo * aoRoughnessMetallic.r;
     color += ambient;
 
-    // TODO: gamma correction has to be done in an extra pipeline after all point lights have been applied
-    // gamma correct
-    //color = pow(color, vec3(1.0 / 2.2));
-
     outColor = vec4(color, 1);
     bool cascadeVis = getControlFlagValue(pushConstant.controlFlags, CASCADE_VIS_CONTROL_BIT);
     if (cascadeVis) {

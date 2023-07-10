@@ -27,17 +27,25 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
         addToScene(scene, loader, contactListener);
     }
 
-    /*{
+    {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/sponza/sponza.gltf",
+        loader.loadModel("res/assets/models/sponza/sponza_lights.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
         addToScene(scene, loader, contactListener);
-    }*/
-}
+    }
 
+    // set point light model
+    {
+        ModelLoader loader;
+        loader.loadModel("res/assets/models/pointlight_model/pointlight_model.gltf",
+                         scene.getModelLoadingOffsets(), context.baseContext,
+                         context.commandContext);
+        scene.getSceneData().pointLightMesh = loader.meshes[0];
+    }
+}
 
 void addToScene(Scene&                          scene,
                 ModelLoader&                    loader,

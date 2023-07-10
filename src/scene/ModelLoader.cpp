@@ -322,9 +322,12 @@ bool ModelLoader::nodeToLight(tinygltf::Model& gltfModel, tinygltf::Node& node, 
         if(entry.first == extensionName) {
             int lightID = entry.second.Get("light").GetNumberAsInt();
             tinygltf::Light light = gltfModel.lights[lightID];
-            pointLight.intensity  = glm::vec3(light.color[0] * light.intensity,
-                                              light.color[1] * light.intensity,
-                                              light.color[2] * light.intensity);
+            // TODO: need to convert from blenders "Watt" to something that is internally usable
+            pointLight.intensity  = glm::vec3(light.color[0] * light.intensity * 0.1,
+                                             light.color[1] * light.intensity * 0.1,
+                                             light.color[2] * light.intensity * 0.1);
+            // TODO: find a good way to calculate radius from intensity
+            pointLight.radius = light.intensity * 0.05;
             if(node.translation.size() == 3) {
                 pointLight.position = glm::vec3(node.translation[0], node.translation[1],
                                                 node.translation[2]);

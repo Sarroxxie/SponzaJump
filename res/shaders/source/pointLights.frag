@@ -12,16 +12,12 @@ layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraU
 layout(set = 0, binding = eLighting) uniform _LightingInformation {LightingInformation lightingInformation; };
 
 // gBuffer
-layout (set = 2, binding = eNormal) uniform sampler2D gBufferNormal;
-layout (set = 2, binding = eAlbedo) uniform sampler2D gBufferAlbedo;
-layout (set = 2, binding = ePBR) uniform sampler2D gBufferPBR;
-layout (set = 2, binding = eDepth) uniform sampler2D gBufferDepth;
+layout (set = 1, binding = eNormal) uniform sampler2D gBufferNormal;
+layout (set = 1, binding = eAlbedo) uniform sampler2D gBufferAlbedo;
+layout (set = 1, binding = ePBR) uniform sampler2D gBufferPBR;
+layout (set = 1, binding = eDepth) uniform sampler2D gBufferDepth;
 
-layout (push_constant) uniform _PushConstant { PushConstant pushConstant; };
-
-// TODO: these should be provided via pushconstant
-const vec3 LIGHT_POSITION = vec3(1.0, 2.0, 1.0);
-const vec3 LIGHT_INTENSITY = vec3(8, 10, 10);
+layout (push_constant) uniform _PointLightPushConstant { PointLightPushConstant pushConstant; };
 
 void main() {
     // pixel coordinates (ranging from (0,0) to (width, height)) for sampling from gBuffer
@@ -47,8 +43,18 @@ void main() {
 
     // lighting calculation
     vec3 V = normalize(lightingInformation.cameraPosition - position);
-    vec3 L = normalize(LIGHT_POSITION - position);
-    vec3 color = BRDF(L, V, normal, LIGHT_INTENSITY, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g);
+    vec3 L = normalize(pushConstant.position - position);
+
+    // calculate attenuation function, so that attenuation is 0 outside the radius
+    float lightDistance = length(pushConstant.position - position);
+    float t = lightDistance / pushConstant.radius;
+    // the higher the exponent here, the later the light influence fades to 0
+    t = -pow(t, 6) + 1.0;
+    float physicalAttenuation = 1 / (lightDistance * lightDistance);
+    float attenuation = t * physicalAttenuation;
+
+    vec3 radiance = attenuation * pushConstant.intensity;
+    vec3 color = BRDF(L, V, normal, radiance, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g);
 
     outColor = vec4(color, 1);
 }
