@@ -68,13 +68,6 @@ struct MaterialDescription
     ALIGN_AS(4) int aoRoughnessMetallicTextureID;
 };
 
-struct PointLight
-{
-    ALIGN_AS(16) vec3 position;
-    ALIGN_AS(16) vec3 intensity;
-    ALIGN_AS(4) float radius;
-};
-
 // used per camera
 struct CameraUniform
 {
@@ -100,6 +93,17 @@ struct PushConstant
     ALIGN_AS(4) int materialIndex;
     ALIGN_AS(4) int cascadeCount;
     ALIGN_AS(4) int controlFlags;
+    ALIGN_AS(8) ivec2 resolution;
+};
+
+// used in the point light pipeline
+struct PointLightPushConstant
+{
+    ALIGN_AS(16) mat4 transformation;
+    ALIGN_AS(16) vec3 worldCamPosition;
+    ALIGN_AS(4) float radius;
+    ALIGN_AS(16) vec3 position;
+    ALIGN_AS(16) vec3 intensity;
     ALIGN_AS(8) ivec2 resolution;
 };
 

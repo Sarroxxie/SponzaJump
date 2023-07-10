@@ -70,6 +70,13 @@ struct CubeMap
     }
 };
 
+struct PointLight
+{
+    glm::vec3 position;
+    glm::vec3 intensity;
+    float radius = 0;
+};
+
 struct Mesh
 {
     uint32_t verticesCount;
@@ -77,11 +84,11 @@ struct Mesh
     // radius of the bounding sphere around the Mesh -> will be used for frustum culling
     float radius;
 
-    VkBuffer       vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
+    VkBuffer       vertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
 
-    VkBuffer       indexBuffer;
-    VkDeviceMemory indexBufferMemory;
+    VkBuffer       indexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
 
     void cleanup(VulkanBaseContext& baseContext) {
         vkDestroyBuffer(baseContext.device, indexBuffer, nullptr);

@@ -14,6 +14,7 @@ typedef struct {
     std::vector<PointLight>    lights;
 
     CubeMap cubemap;
+    Mesh    pointLightMesh;
 } SceneData;
 
 #endif  // GRAPHICSPRAKTIKUM_SCENEDATA_H

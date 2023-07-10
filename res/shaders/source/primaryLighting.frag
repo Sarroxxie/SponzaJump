@@ -88,7 +88,7 @@ void main() {
     vec3 aoRoughnessMetallic = texelFetch(gBufferPBR, intCoords, 0).rgb;
     float depth = texelFetch(gBufferDepth, intCoords, 0).r;
 
-    // reconstruct position from depth
+    // reconstruct world position from depth
     vec2 screenCoords = gl_FragCoord.xy / pushConstant.resolution * 2.0 - 1.0;
     vec4 tmp = cameraUniform.projInverse * vec4(screenCoords, depth, 1);
     tmp = cameraUniform.viewInverse * (tmp / tmp.w);
@@ -118,24 +118,21 @@ void main() {
         shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);
     }
 
-    vec3 color = vec3(0,0,0);
-    vec3 V = normalize(lightingInformation.cameraPosition - position);
-
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, albedo, aoRoughnessMetallic.b);
 
-    // directional light source
+    // lighting calculation for directional light source
+    vec3 color = vec3(0,0,0);
+    vec3 V = normalize(lightingInformation.cameraPosition - position);
     if (shadow > 0) {
         vec3 L = normalize(-lightingInformation.lightDirection);
-        color += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g) * shadow;
+        color += BRDF(L, V, normal, lightingInformation.lightIntensity * 5, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g) * shadow;
     }
-    vec3 ambient = vec3(0.0002) * albedo;// * aoRoughnessMetallic.r;
+    // add ambient lighting
+    vec3 ambient = vec3(0.002) * albedo * aoRoughnessMetallic.r;
     color += ambient;
-
-    // gamma correct
-    color = pow(color, vec3(1.0 / 2.2));
 
     outColor = vec4(color, 1);
     bool cascadeVis = getControlFlagValue(pushConstant.controlFlags, CASCADE_VIS_CONTROL_BIT);
@@ -145,5 +142,4 @@ void main() {
         float factor = 0.2;
         outColor = vec4(outColor.xyz + factor * addColor, 1);
     }
-    //outColor = vec4(1,0,0,1);
 }

@@ -96,11 +96,6 @@ typedef struct
     VkPipelineLayout visualizePipelineLayout;
     VkPipeline       visualizePipeline;
 
-    // render skybox
-    VkPipelineLayout skyboxPipelineLayout;
-    VkPipeline       skyboxPipeline;
-    uint32_t         skyboxSubpassID = 0;
-
     // filling gBuffer
     VkPipelineLayout geometryPassPipelineLayout;
     VkPipeline       geometryPassPipeline;
@@ -108,6 +103,15 @@ typedef struct
     // rendering full screen quad for directional light (and later IBL)
     VkPipelineLayout primaryLightingPipelineLayout;
     VkPipeline       primaryLightingPipeline;
+
+    // render point lights
+    VkPipelineLayout pointLightsPipelineLayout;
+    VkPipeline       pointLightsPipeline;
+    
+    // render skybox
+    VkPipelineLayout skyboxPipelineLayout;
+    VkPipeline       skyboxPipeline;
+    uint32_t         skyboxSubpassID = 0;
 
     // deferred framebuffer attachments
     VkFramebuffer gBuffer;

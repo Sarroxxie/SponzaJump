@@ -414,7 +414,60 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                            sizeof(PushConstant), &pushConstant);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
+        
 
+        // render point lights
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          m_RenderContext.renderPasses.mainPass.pointLightsPipeline);
+
+        // bind DescriptorSet 0 (Camera Transformations)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout, 0, 1,
+            &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+
+        // bind DescriptorSet 1 (gBuffer)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout, 1,
+            1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet, 0, nullptr);
+
+        // bind point light mesh (it will remain the same for each light source
+        Mesh         pointLightMesh            = scene.getSceneData().pointLightMesh;
+        VkBuffer     vertexBuffers[] = {pointLightMesh.vertexBuffer};
+        VkDeviceSize offsets[]       = {0};
+        vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+                               vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                             pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        PointLightPushConstant pointLightPushConstant;
+        pointLightPushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
+        pointLightPushConstant.resolution =
+            glm::ivec2(m_Context.swapchainContext.swapChainExtent.width,
+                       m_Context.swapchainContext.swapChainExtent.height);
+
+        // draw icosphere per point light
+        for(PointLight& pointLight : scene.getSceneData().lights) {
+            // build transformation matrix for vertex shader
+            glm::mat4 scaleMat = glm::scale(glm::mat4(1), glm::vec3(pointLight.radius));
+            glm::mat4 translateMat = glm::translate(glm::mat4(1), pointLight.position);
+
+            pointLightPushConstant.transformation = translateMat * scaleMat;
+            pointLightPushConstant.position       = pointLight.position;
+            pointLightPushConstant.intensity      = pointLight.intensity;
+            pointLightPushConstant.radius         = pointLight.radius;
+
+            // sending push constant to GPU
+            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                               m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
+                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                               0,  // offset
+                               sizeof(PointLightPushConstant), &pointLightPushConstant);
+
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                             pointLightMesh.indicesCount, 1, 0, 0, 0);
+        }
 
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -635,11 +688,6 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
     createVisualizationPipeline(m_Context, m_RenderContext,
                                 m_RenderContext.renderPasses.mainPass);
 
-    // rebuild skybox pipeline
-    cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
-    createSkyboxPipeline(m_Context, m_RenderContext,
-                         m_RenderContext.renderPasses.mainPass);
-
     // rebuild geometry pass pipeline
     cleanGeometryPassPipeline(m_Context.baseContext,
                               m_RenderContext.renderPasses.mainPass);
@@ -655,6 +703,18 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
         m_Context, m_RenderContext,
         m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         m_RenderContext.renderPasses.mainPass);
+
+    // rebuild point lights pipeline
+    cleanPointLightsPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    createPointLightsPipeline(
+        m_Context, m_RenderContext,
+        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+        m_RenderContext.renderPasses.mainPass);
+
+    // rebuild skybox pipeline
+    cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    createSkyboxPipeline(m_Context, m_RenderContext,
+                         m_RenderContext.renderPasses.mainPass);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;

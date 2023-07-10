@@ -10,11 +10,6 @@ layout(location = 3) in vec2 inTexCoords;
 
 layout(set = 0, binding = eCamera) uniform _CameraUniform {CameraUniform cameraUniform; };
 
-layout(set = 0, binding = eLight) uniform LightTransform {
-    mat4 proj;
-    mat4 view;
-} lightTransform;
-
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
 
 layout(location = 0) out vec3 outNormal;
