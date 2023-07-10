@@ -63,22 +63,29 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
         ImGui::SliderFloat3("Camera Pos",
                             glm::value_ptr(m_Camera.getWorldPosRef()), 0, 500);
 
-        ImGui::SliderFloat3("Camera Dir", glm::value_ptr(m_Camera.getViewDirRef()),
-                            -1, 1);
+        ImGui::SliderFloat3("Camera Dir", glm::value_ptr(m_Camera.getViewDirRef()), -1, 1);
 
         ImGui::SliderFloat("Y Lookat Offset", &cameraOffsetY, 0.0f, 10.0f);
 
         ImGui::Checkbox("Lock Camera to Player", &renderContext.imguiData.lockCamera);
+    }
+    if(ImGui::CollapsingHeader("Perspective Controls")) {
+        PerspectiveSettings& perspectiveSettings =
+            renderContext.renderSettings.perspectiveSettings;
+
+        ImGui::SliderFloat("Near plane", &perspectiveSettings.nearPlane, 0.1, 500);
+        ImGui::SliderFloat("Far plane", &perspectiveSettings.farPlane, 0.1, 500);
+        ImGui::SliderFloat("FOV", &perspectiveSettings.fov, 0, glm::pi<float>());
     }
     if(ImGui::CollapsingHeader("Shadow Controls")) {
 
         ShadowMappingSettings& shadowSettings = renderContext.renderSettings.shadowMappingSettings;
 
         ImGui::SliderFloat3("Light Camera Dir",
-                            glm::value_ptr(shadowSettings.lightDirection),
-                            -1, 1);
+                            glm::value_ptr(shadowSettings.lightDirection), -1, 1);
 
-        ImGui::SliderFloat("light camera Z offset", &shadowSettings.lightCameraZOffset, 0, 500);
+        ImGui::SliderFloat("light camera Z offset",
+                           &shadowSettings.lightCameraZOffset, 0, 500);
 
         ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
 

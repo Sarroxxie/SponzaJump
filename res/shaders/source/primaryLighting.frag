@@ -131,7 +131,7 @@ void main() {
         vec3 L = normalize(-lightingInformation.lightDirection);
         color += BRDF(L, V, normal, lightingInformation.lightIntensity, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g) * shadow;
     }
-    vec3 ambient = vec3(0.0002) * albedo * aoRoughnessMetallic.r;
+    vec3 ambient = vec3(0.0002) * albedo;// * aoRoughnessMetallic.r;
     color += ambient;
 
     // gamma correct
