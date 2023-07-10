@@ -110,7 +110,7 @@ typedef struct
     VkPipeline       primaryLightingPipeline;
 
     // deferred framebuffer attachments
-    VkFramebuffer  gBuffer;
+    VkFramebuffer gBuffer;
     // TODO: position could be calculated from depth but this may be harder to implement
     ImageResources normalAttachment;
     ImageResources albedoAttachment;
@@ -118,7 +118,7 @@ typedef struct
     ImageResources depthAttachment;
     VkSampler      framebufferAttachmentSampler;
     // TODO: needs to be destroyed
-    VkRenderPass   geometryPass;
+    VkRenderPass geometryPass;
 
     VkSampler depthSampler;
 
@@ -141,7 +141,7 @@ typedef struct
     bool doPCF                 = true;
 
     float depthBiasConstant = 0.0f;
-    float depthBiasSlope = 2.0f;
+    float depthBiasSlope    = 2.0f;
 } ImguiData;
 
 typedef struct
@@ -172,9 +172,7 @@ typedef struct
 
 typedef struct
 {
-    Camera        lightCamera;
-    float lightCameraDist = 60;
-    bool snapToPlayer = true;
+    glm::vec3     lightDirection;
     OrthoSettings projection;
 
     int numberCascades = MAX_CASCADES;
@@ -183,10 +181,14 @@ typedef struct
 
     bool visualizeCascades = false;
 
+    // Extra offset for distance of the light camera to account for objects
+    // outside of the view frustum along the light direction
+    float lightCameraZOffset = 0;
+
     // controls the blending between logarithmic (1) and linear (0) cascade splits
     float cascadeSplitsBlendFactor = 0.5;
-    bool newCascadeCalculation = true;
-    bool crossProductUp = false;
+    bool  newCascadeCalculation    = true;
+    bool  crossProductUp           = false;
 } ShadowMappingSettings;
 
 typedef struct

@@ -397,14 +397,14 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         pushConstant.resolution =
             glm::ivec2(m_Context.swapchainContext.swapChainExtent.width,
                        m_Context.swapchainContext.swapChainExtent.height);
-        pushConstant.materialIndex    = 0;
+        pushConstant.materialIndex = 0;
         pushConstant.cascadeCount =
             m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
         pushConstant.controlFlags = 0;
-        if (m_RenderContext.imguiData.doPCF)
+        if(m_RenderContext.imguiData.doPCF)
             pushConstant.controlFlags |= PCF_CONTROL_BIT;
-        if (m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
+        if(m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
             pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
 
         vkCmdPushConstants(m_Context.commandContext.commandBuffer,
@@ -452,8 +452,8 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
     MainPass mainPass = m_RenderContext.renderPasses.mainPass;
 
     VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType      = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = mainPass.geometryPass;
+    renderPassInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass  = mainPass.geometryPass;
     renderPassInfo.framebuffer = mainPass.gBuffer;
 
     renderPassInfo.renderArea.offset = {0, 0};
@@ -490,8 +490,8 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
     // render meshes
     // TODO: pipeline is not yet created
-    vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      mainPass.geometryPassPipeline);
+    vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                      VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipeline);
 
     // bind DescriptorSet 0 (Camera Transformations)
     vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
@@ -594,7 +594,7 @@ void VulkanRenderer::createSyncObjects(VulkanBaseContext& baseContext) {
 }
 
 void VulkanRenderer::updateUniformBuffer(Scene& scene) {
-    glm::mat4     projection =
+    glm::mat4 projection =
         getPerspectiveMatrix(m_RenderContext.renderSettings.perspectiveSettings,
                              m_Context.swapchainContext.swapChainExtent.width,
                              m_Context.swapchainContext.swapChainExtent.height);
@@ -616,7 +616,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     LightingInformation lightingInformation;
     lightingInformation.cameraPosition = scene.getCameraRef().getWorldPos();
     lightingInformation.lightDirection =
-        m_RenderContext.renderSettings.shadowMappingSettings.lightCamera.getViewDir();
+        glm::normalize(m_RenderContext.renderSettings.shadowMappingSettings.lightDirection);
     lightingInformation.lightIntensity =
         m_RenderContext.renderSettings.lightingSetting.sunColor;
 

@@ -14,8 +14,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     settings.perspectiveSettings.farPlane  = 300;
 
     ShadowMappingSettings shadowMappingSettings;
-    shadowMappingSettings.lightCamera =
-        Camera(glm::vec3(50, 50, 20), glm::normalize(glm::vec3(-50, -50, -20)));
+    shadowMappingSettings.lightDirection = glm::normalize(glm::vec3(-50, -50, -20));
     shadowMappingSettings.projection.widthHeightDim = 50;
     shadowMappingSettings.projection.zNear          = 1;
     shadowMappingSettings.projection.zFar           = 100;
@@ -43,7 +42,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
 
     shadowPassDescription.enableDepthBias = true;
 
-    // -- Main Pass 
+    // -- Main Pass
     RenderPassDescription mainRenderPassDescription;
 
     mainRenderPassDescription.pushConstantRanges.push_back(
@@ -335,7 +334,7 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
         // need special case for depth attachment
         if(i == 3) {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            //attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            // attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         } else {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -767,7 +766,7 @@ void createFrameBuffers(ApplicationVulkanContext& appContext, RenderContext& ren
 
         if(appContext.graphicSettings.useMsaa) {
             attachments.push_back(appContext.swapchainContext.colorImage.imageView);
-            //attachments.push_back(appContext.swapchainContext.depthImage.imageView);
+            // attachments.push_back(appContext.swapchainContext.depthImage.imageView);
             attachments.push_back(
                 renderContext.renderPasses.mainPass.depthAttachment.imageView);
             attachments.push_back(appContext.swapchainContext.swapChainImageViews[i]);
@@ -917,9 +916,10 @@ void createBlankAttachment(const ApplicationVulkanContext& context,
 }
 
 /*
-* Used to create framebuffer attachments for deferred rendering. Code inspired by SashaWillems sample.
-* (https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferred/deferred.cpp)
-*/
+ * Used to create framebuffer attachments for deferred rendering. Code inspired
+ * by SashaWillems sample.
+ * (https://github.com/SaschaWillems/Vulkan/blob/master/examples/deferred/deferred.cpp)
+ */
 void createDeferredAttachment(const ApplicationVulkanContext& context,
                               VkFormat                        format,
                               VkImageUsageFlagBits            usage,
@@ -1172,9 +1172,9 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     std::vector<VkDescriptorSetLayoutBinding> gBufferBindings;
 
 
-    transformBindings.push_back(
-        createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                            getStageFlag(ShaderStage::VERTEX_SHADER) | VK_SHADER_STAGE_FRAGMENT_BIT));
+    transformBindings.push_back(createLayoutBinding(
+        SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        getStageFlag(ShaderStage::VERTEX_SHADER) | VK_SHADER_STAGE_FRAGMENT_BIT));
 
     transformBindings.push_back(
         createLayoutBinding(SceneBindings::eLight, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -1203,13 +1203,11 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     depthBindings.push_back(
-        createLayoutBinding(DepthBindings::eCascadeSplits, 1,
-                            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        createLayoutBinding(DepthBindings::eCascadeSplits, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     depthBindings.push_back(
-        createLayoutBinding(DepthBindings::eLightVPs, 1,
-                            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        createLayoutBinding(DepthBindings::eLightVPs, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     // samplers for accessing gBuffer
@@ -1463,12 +1461,12 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     cascadeSplitBufferInfo.range  = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet depthCascadeSplitsWrite;
-    depthCascadeSplitsWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    depthCascadeSplitsWrite.pNext  = nullptr;
-    depthCascadeSplitsWrite.dstSet = mainPass.depthDescriptorSet;
-    depthCascadeSplitsWrite.dstBinding      = DepthBindings::eCascadeSplits;
+    depthCascadeSplitsWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    depthCascadeSplitsWrite.pNext      = nullptr;
+    depthCascadeSplitsWrite.dstSet     = mainPass.depthDescriptorSet;
+    depthCascadeSplitsWrite.dstBinding = DepthBindings::eCascadeSplits;
     depthCascadeSplitsWrite.dstArrayElement = 0;
-    depthCascadeSplitsWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    depthCascadeSplitsWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     depthCascadeSplitsWrite.descriptorCount = 1;
     depthCascadeSplitsWrite.pBufferInfo     = &cascadeSplitBufferInfo;
 
@@ -1476,17 +1474,18 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 
     VkDescriptorBufferInfo inverseLightVPBufferInfo{};
-    inverseLightVPBufferInfo.buffer = renderContext.renderPasses.shadowPass.transformBuffer.buffer;
+    inverseLightVPBufferInfo.buffer =
+        renderContext.renderPasses.shadowPass.transformBuffer.buffer;
     inverseLightVPBufferInfo.offset = 0;
     inverseLightVPBufferInfo.range  = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet inverseLightVPWrite;
-    inverseLightVPWrite.sType  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    inverseLightVPWrite.pNext  = nullptr;
-    inverseLightVPWrite.dstSet = mainPass.depthDescriptorSet;
-    inverseLightVPWrite.dstBinding      = DepthBindings::eLightVPs;
+    inverseLightVPWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    inverseLightVPWrite.pNext      = nullptr;
+    inverseLightVPWrite.dstSet     = mainPass.depthDescriptorSet;
+    inverseLightVPWrite.dstBinding = DepthBindings::eLightVPs;
     inverseLightVPWrite.dstArrayElement = 0;
-    inverseLightVPWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    inverseLightVPWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     inverseLightVPWrite.descriptorCount = 1;
     inverseLightVPWrite.pBufferInfo     = &inverseLightVPBufferInfo;
 
@@ -1603,8 +1602,7 @@ void cleanDeferredPass(const VulkanBaseContext& baseContext, const MainPass& mai
     cleanGeometryPassPipeline(baseContext, mainPass);
 }
 
-void cleanDeferredFramebuffer(const VulkanBaseContext& baseContext,
-                              const MainPass&          mainPass) {
+void cleanDeferredFramebuffer(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
     // attachment sampler
     vkDestroySampler(baseContext.device, mainPass.framebufferAttachmentSampler, nullptr);
 
@@ -1805,8 +1803,9 @@ void createVisualizationPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.pSetLayouts    = &mainPass.depthDescriptorSetLayout;
 
     VkPushConstantRange pushConstantRange;
-    pushConstantRange = createPushConstantRange(0, sizeof(ShadowControlPushConstant),
-                                                getStageFlag(ShaderStage::FRAGMENT_SHADER));
+    pushConstantRange =
+        createPushConstantRange(0, sizeof(ShadowControlPushConstant),
+                                getStageFlag(ShaderStage::FRAGMENT_SHADER));
 
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
@@ -1976,7 +1975,7 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
     descriptorSetLayouts.push_back(mainPass.materialDescriptorSetLayout);
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts    = descriptorSetLayouts.data();
@@ -2001,9 +2000,9 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState   = &multisampling;
     pipelineInfo.pDepthStencilState  = nullptr;  // Optional
-    pipelineInfo.pColorBlendState   = &colorBlending;
-    pipelineInfo.pDynamicState      = &dynamicState;
-    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState    = &colorBlending;
+    pipelineInfo.pDynamicState       = &dynamicState;
+    pipelineInfo.pDepthStencilState  = &depthStencil;
 
     pipelineInfo.layout = mainPass.skyboxPipelineLayout;
 
@@ -2032,7 +2031,7 @@ void cleanSkyboxPipeline(const VulkanBaseContext& baseContext, const MainPass& m
 void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
                                    const RenderContext& renderContext,
                                    const RenderPassDescription& renderPassDescription,
-                                   MainPass&            mainPass) {
+                                   MainPass& mainPass) {
     Shader vertexShader;
     vertexShader.shaderStage      = ShaderStage::VERTEX_SHADER;
     vertexShader.shaderSourceName = "primaryLighting.vert";
@@ -2280,14 +2279,14 @@ void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
     // Enable Wireframe rendering here, requires GPU feature to be enabled
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 
-    rasterizer.lineWidth       = 1.0f;
-    rasterizer.cullMode        = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace       = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode  = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable  = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthTestEnable       = VK_TRUE;
+    depthStencil.depthWriteEnable      = VK_TRUE;
     depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable     = VK_FALSE;
@@ -2304,14 +2303,14 @@ void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
         colorBlendAttachment.colorWriteMask =
             VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
             | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+        colorBlendAttachment.blendEnable         = VK_FALSE;
         colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
         colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
-        colorBlendAttachments[i] = colorBlendAttachment;
+        colorBlendAttachments[i]                 = colorBlendAttachment;
     }
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};

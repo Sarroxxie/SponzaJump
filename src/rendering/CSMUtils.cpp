@@ -106,8 +106,8 @@ void calculateVPMatsSashaWillems(PerspectiveSettings   perspectiveSettings,
         glm::vec3 maxExtents = glm::vec3(radius);
         glm::vec3 minExtents = -maxExtents;
 
-        shadowSettings.lightCamera.normalizeViewDir();
-        glm::vec3 lightDir = shadowSettings.lightCamera.getViewDir();
+        glm::vec3 lightDir = shadowSettings.lightDirection;
+        lightDir = glm::normalize(lightDir);
 
         // Store split distance and matrix in cascade
         splitDepths[i].splitVal = (near + splitDist * clipRange) * -1.0f;
@@ -153,8 +153,8 @@ void calculateVPMatsNew(PerspectiveSettings   perspectiveSettings,
         frustumCorners[i] = glm::vec3(frustumCornerHom / frustumCornerHom.w);
     }
 
-    shadowSettings.lightCamera.normalizeViewDir();
-    glm::vec3 lightDir = shadowSettings.lightCamera.getViewDir();
+    glm::vec3 lightDir = shadowSettings.lightDirection;
+    lightDir = glm::normalize(lightDir);
 
     glm::vec3 upVec = glm::vec3(0, 1, 0);
 
@@ -246,7 +246,7 @@ void calculateVPMatsNew(PerspectiveSettings   perspectiveSettings,
         glm::vec3 cascadeDiff = frustumCenters[i] - refPoint;
         float     dist        = glm::dot(cascadeDiff, lightDir);
 
-        glm::vec3 eye = frustumCenters[i] - (lightDir * dist + nearPlaneOffset);
+        glm::vec3 eye = frustumCenters[i] - (lightDir * (dist + nearPlaneOffset + shadowSettings.lightCameraZOffset));
 
         // using slightly different light transformation matrix doesn't matter
         // here, because we only change the camera distance and the projection is orthographic
@@ -255,7 +255,7 @@ void calculateVPMatsNew(PerspectiveSettings   perspectiveSettings,
         // view direction is in negative z direction, so we use minExtents for
         // far plane. Since minExtents are calculated in different light space
         // (differing by distance of eye along light dir), need to offset it here
-        float farPlane = glm::abs(minExtents[i].z) - 1 + dist + nearPlaneOffset;
+        float farPlane = glm::abs(minExtents[i].z) - 1 + dist + nearPlaneOffset + shadowSettings.lightCameraZOffset;
 
         glm::mat4 projection =
             glm::ortho(minExtents[i].x, maxExtents[i].x, minExtents[i].y,

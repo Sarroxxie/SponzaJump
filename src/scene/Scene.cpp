@@ -61,10 +61,10 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
     if(ImGui::CollapsingHeader("Camera Controls")) {
         ImGui::SliderFloat3("Camera Pos",
-                            glm::value_ptr(m_Camera.getWorldPosRef()), 0, 100);
+                            glm::value_ptr(m_Camera.getWorldPosRef()), 0, 500);
 
         ImGui::SliderFloat3("Camera Dir", glm::value_ptr(m_Camera.getViewDirRef()),
-                            -glm::pi<float>(), glm::pi<float>());
+                            -1, 1);
 
         ImGui::SliderFloat("Y Lookat Offset", &cameraOffsetY, 0.0f, 10.0f);
 
@@ -75,13 +75,12 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
         ShadowMappingSettings& shadowSettings = renderContext.renderSettings.shadowMappingSettings;
 
         ImGui::SliderFloat3("Light Camera Dir",
-                            glm::value_ptr(shadowSettings.lightCamera.getViewDirRef()),
+                            glm::value_ptr(shadowSettings.lightDirection),
                             -1, 1);
 
-        ImGui::Checkbox("Lock shadow to player", &shadowSettings.snapToPlayer);
+        ImGui::SliderFloat("light camera Z offset", &shadowSettings.lightCameraZOffset, 0, 500);
 
         ImGui::Checkbox("Visualize Shadow Buffer", &renderContext.imguiData.visualizeShadowBuffer);
-
 
         ImGui::Checkbox("Player Spikes Shadow", &renderContext.imguiData.playerSpikesShadow);
 
@@ -250,18 +249,6 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
                                            prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
                                          transformation->translation.y + cameraOffsetY, 0));
-        }
-
-        if(renderContext.renderSettings.shadowMappingSettings.snapToPlayer) {
-            Camera& lightCamera =
-                renderContext.renderSettings.shadowMappingSettings.lightCamera;
-
-            lightCamera.normalizeViewDir();
-
-            lightCamera.setPosition(
-                transformation->translation
-                - lightCamera.getViewDir()
-                      * renderContext.renderSettings.shadowMappingSettings.lightCameraDist);
         }
     }
 }

@@ -20,7 +20,9 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/scene2/playable.gltf",
+
+        //loader.loadModel("res/assets/models/scene2/playable.gltf",
+        loader.loadModel("res/assets/models/sponza/sponza.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
