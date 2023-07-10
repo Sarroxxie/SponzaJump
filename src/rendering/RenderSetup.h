@@ -126,6 +126,14 @@ void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
 void cleanPrimaryLightingPipeline(const VulkanBaseContext& baseContext,
                                   const MainPass&          mainPass);
 
+void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
+                                   const RenderContext& renderContext,
+                                   const RenderPassDescription& renderPassDescription,
+                                   MainPass& mainPass);
+
+void cleanPointLightsPipeline(const VulkanBaseContext& baseContext,
+                                  const MainPass&          mainPass);
+
 void createGeometryPassPipeline(const ApplicationVulkanContext& appContext,
                                 const RenderContext&            renderContext,
                                 const RenderPassDescription& renderPassDescription,

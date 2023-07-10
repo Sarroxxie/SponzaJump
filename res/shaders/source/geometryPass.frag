@@ -27,10 +27,9 @@ void main() {
     if(material.albedoTextureID != -1) {
         vec4 albedoTexture = texture(samplers[material.albedoTextureID], inTexCoords);
         // allow alpha masking
-        if (albedoTexture.a == 0)
+        if (albedoTexture.a < 1.0)
             discard;
         albedo = albedoTexture.rgb;
-        albedo = pow(albedoTexture.rgb, vec3(2.2, 2.2, 2.2)); // convert color into linear space
     }
 
     vec3 normal = inNormal;
@@ -49,12 +48,14 @@ void main() {
     float metallic = material.aoRoughnessMetallic.b;
     if (material.aoRoughnessMetallicTextureID != -1) {
         vec3 aoRoughnessMetallic = texture(samplers[material.aoRoughnessMetallicTextureID], inTexCoords).rgb;
-        ao = aoRoughnessMetallic.r;
+        // For some reason, the blender glTF exporter sets AO to 0 if no texture is provided. However we want a default value of 1.0
+        ao = aoRoughnessMetallic.r > 0.0 ? aoRoughnessMetallic.r : 1.0;
         roughness = aoRoughnessMetallic.g;
         metallic = aoRoughnessMetallic.b;
     }
 
     outNormal = vec4(normal,0);
     outAlbedo = vec4(albedo,0);
-    outAoRoughnessMetallic = vec4(ao,roughness,metallic,0);
+    // the alpha channel of this value can be used to determine whether there is geometry at a certain pixel
+    outAoRoughnessMetallic = vec4(ao,roughness,metallic,1);
 }

@@ -635,11 +635,6 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
     createVisualizationPipeline(m_Context, m_RenderContext,
                                 m_RenderContext.renderPasses.mainPass);
 
-    // rebuild skybox pipeline
-    cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
-    createSkyboxPipeline(m_Context, m_RenderContext,
-                         m_RenderContext.renderPasses.mainPass);
-
     // rebuild geometry pass pipeline
     cleanGeometryPassPipeline(m_Context.baseContext,
                               m_RenderContext.renderPasses.mainPass);
@@ -655,6 +650,18 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
         m_Context, m_RenderContext,
         m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         m_RenderContext.renderPasses.mainPass);
+
+    // rebuild point lights pipeline
+    cleanPointLightsPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    createPointLightsPipeline(
+        m_Context, m_RenderContext,
+        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+        m_RenderContext.renderPasses.mainPass);
+
+    // rebuild skybox pipeline
+    cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    createSkyboxPipeline(m_Context, m_RenderContext,
+                         m_RenderContext.renderPasses.mainPass);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;
