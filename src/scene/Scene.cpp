@@ -124,6 +124,10 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
                            &renderContext.imguiData.depthBiasSlope, -5, 5);
     }
 
+    if(ImGui::CollapsingHeader("Lighting Controls")) {
+        ImGui::Checkbox("Point Lights", &renderContext.imguiData.pointLights);
+    }
+
     if(ImGui::CollapsingHeader("Gameplay Controls")) {
         ImGui::Checkbox("Disable Death", &levelData.disableDeath);
 

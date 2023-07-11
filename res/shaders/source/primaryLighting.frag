@@ -118,11 +118,6 @@ void main() {
         shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);
     }
 
-    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0
-    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, aoRoughnessMetallic.b);
-
     // lighting calculation for directional light source
     vec3 color = vec3(0,0,0);
     vec3 V = normalize(lightingInformation.cameraPosition - position);
@@ -131,7 +126,7 @@ void main() {
         color += BRDF(L, V, normal, lightingInformation.lightIntensity * 5, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g) * shadow;
     }
     // add ambient lighting
-    vec3 ambient = vec3(0.002) * albedo * aoRoughnessMetallic.r;
+    vec3 ambient = vec3(0.01) * albedo * aoRoughnessMetallic.r;
     color += ambient;
 
     outColor = vec4(color, 1);

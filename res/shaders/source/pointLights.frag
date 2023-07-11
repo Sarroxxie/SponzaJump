@@ -36,25 +36,21 @@ void main() {
     tmp = cameraUniform.viewInverse * (tmp / tmp.w);
     vec3 position = tmp.xyz;
 
-    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0
-    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, aoRoughnessMetallic.b);
-
     // lighting calculation
     vec3 V = normalize(lightingInformation.cameraPosition - position);
     vec3 L = normalize(pushConstant.position - position);
 
     // calculate attenuation function, so that attenuation is 0 outside the radius
     float lightDistance = length(pushConstant.position - position);
+    // t is a function ranging from 1 at the lightsource to 0 at the radius distance
     float t = lightDistance / pushConstant.radius;
     // the higher the exponent here, the later the light influence fades to 0
-    t = -pow(t, 6) + 1.0;
+    t = -pow(t, 2) + 1.0;
     float physicalAttenuation = 1 / (lightDistance * lightDistance);
     float attenuation = t * physicalAttenuation;
 
     vec3 radiance = attenuation * pushConstant.intensity;
     vec3 color = BRDF(L, V, normal, radiance, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g);
-
+    
     outColor = vec4(color, 1);
 }

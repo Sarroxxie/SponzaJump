@@ -316,18 +316,24 @@ Model ModelLoader::createModelFromMesh(tinygltf::Model&  gltfModel,
  */
 bool ModelLoader::nodeToLight(tinygltf::Model& gltfModel, tinygltf::Node& node, PointLight& pointLight) {
     const std::string extensionName = "KHR_lights_punctual";
+    // TODO: find exact conversion factor
+    //       I tried to match the look of the light to its blender equivalent and this factor seemed to be ok
+    const float INTENSITY_FACTOR = 1.0 / 5500.0;
 
     for(auto entry : node.extensions) {
         // if the node contains the "KHR_lights_punctual"-extension, it is considered a light source
         if(entry.first == extensionName) {
-            int lightID = entry.second.Get("light").GetNumberAsInt();
+            int lightID           = entry.second.Get("light").GetNumberAsInt();
             tinygltf::Light light = gltfModel.lights[lightID];
-            // TODO: need to convert from blenders "Watt" to something that is internally usable
-            pointLight.intensity  = glm::vec3(light.color[0] * light.intensity * 0.1,
-                                             light.color[1] * light.intensity * 0.1,
-                                             light.color[2] * light.intensity * 0.1);
+            // converting to something usable by the shader
+            float intensity = light.intensity * INTENSITY_FACTOR;
+            pointLight.intensity =
+                glm::vec3(light.color[0] * intensity,
+                          light.color[1] * intensity,
+                          light.color[2] * intensity);
             // TODO: find a good way to calculate radius from intensity
-            pointLight.radius = light.intensity * 0.05;
+            //        -> this calculation seems to yield pretty acceptable results
+            pointLight.radius = glm::sqrt(intensity) * 2.3;
             if(node.translation.size() == 3) {
                 pointLight.position = glm::vec3(node.translation[0], node.translation[1],
                                                 node.translation[2]);

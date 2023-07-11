@@ -143,6 +143,7 @@ typedef struct
     bool visualizeShadowBuffer = false;
     bool playerSpikesShadow    = false;
     bool doPCF                 = true;
+    bool pointLights           = true;
 
     float depthBiasConstant = 0.0f;
     float depthBiasSlope    = 2.0f;
