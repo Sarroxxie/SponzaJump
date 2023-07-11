@@ -525,7 +525,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                 }
             }
         }
-        /*
+        
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.skyboxPipeline);
@@ -542,7 +542,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
             &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
 
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);*/
+        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
     }
 
     if(m_RenderContext.usesImgui) {
