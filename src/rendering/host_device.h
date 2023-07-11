@@ -96,6 +96,12 @@ struct PushConstant
     ALIGN_AS(8) ivec2 resolution;
 };
 
+struct StencilPushConstant
+{
+    ALIGN_AS(16) mat4 transformation;
+    ALIGN_AS(16) mat4 projView;
+};
+
 // used in the point light pipeline
 struct PointLightPushConstant
 {

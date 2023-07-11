@@ -104,6 +104,10 @@ typedef struct
     VkPipelineLayout primaryLightingPipelineLayout;
     VkPipeline       primaryLightingPipeline;
 
+    // stencil shadow volumes (see https://ogldev.org/www/tutorial37/tutorial37.html)
+    VkPipelineLayout stencilPipelineLayout;
+    VkPipeline       stencilPipeline;
+
     // render point lights
     VkPipelineLayout pointLightsPipelineLayout;
     VkPipeline       pointLightsPipeline;

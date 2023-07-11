@@ -116,6 +116,8 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
                                renderContext.renderPasses.mainPass);
     createPrimaryLightingPipeline(appContext, renderContext, renderPassDescription,
                                   renderContext.renderPasses.mainPass);
+    createStencilPipeline(appContext, renderContext, renderPassDescription,
+                          renderContext.renderPasses.mainPass);
     createPointLightsPipeline(appContext, renderContext, renderPassDescription,
                               renderContext.renderPasses.mainPass);
     createSkyboxPipeline(appContext, renderContext, renderContext.renderPasses.mainPass);
@@ -204,16 +206,18 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
     // Depth Attachment
     VkAttachmentDescription depthAttachment{};
     createBlankAttachment(appContext, depthAttachment, sampleCount,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-    depthAttachment.format = findDepthFormat(appContext.baseContext);
+                          VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+                          VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+    depthAttachment.format = VK_FORMAT_D24_UNORM_S8_UINT;  // findDepthFormat(appContext.baseContext);
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.storeOp =
         VK_ATTACHMENT_STORE_OP_STORE;  // TODO this will probably need to change for shadow mapping ?
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 
     VkAttachmentReference depthAttachmentRef{};
     depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
 
 
     VkSubpassDescription subpass{};
@@ -320,6 +324,7 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
                              renderContext.renderPasses.mainPass.aoRoughnessMetallicAttachment);
     // Depth
     VkFormat depthFormat = findDepthFormat(appContext.baseContext);
+    depthFormat          = VK_FORMAT_D24_UNORM_S8_UINT;
     createDeferredAttachment(appContext, depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                              renderContext.renderPasses.mainPass.depthAttachment);
 
@@ -337,7 +342,11 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
         if(i == 3) {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             // attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            attachmentDescs[i].finalLayout =
+                VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+            // stencil buffer should be conserved within a frame
+            attachmentDescs[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
         } else {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -370,8 +379,6 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
     subpass.colorAttachmentCount = static_cast<uint32_t>(colorReferences.size());
     subpass.pDepthStencilAttachment = &depthReference;
 
-    // TODO: need to integrate ImGUI somewhere here
-    // use subpass dependencies for attachment layout transitions
     std::array<VkSubpassDependency, 2> dependencies;
 
     dependencies[0].srcSubpass   = VK_SUBPASS_EXTERNAL;
@@ -938,8 +945,8 @@ void createDeferredAttachment(const ApplicationVulkanContext& context,
     }
     if(usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if(format >= VK_FORMAT_D16_UNORM_S8_UINT)
-            aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        /* if(format >= VK_FORMAT_D16_UNORM_S8_UINT)
+            aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;*/
         imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
 
@@ -1518,7 +1525,7 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
         mainPass.aoRoughnessMetallicAttachment.imageView;
     gBufferDescriptorImageInfos[3].imageView = mainPass.depthAttachment.imageView;
     // depth needs special treatment
-    gBufferDescriptorImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    gBufferDescriptorImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
 
     // Normal
     VkWriteDescriptorSet gBufferNormalWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
@@ -1589,6 +1596,8 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
     cleanVisualizationPipeline(baseContext, mainPass);
 
     cleanPrimaryLightingPipeline(baseContext, mainPass);
+
+    cleanStencilPipeline(baseContext, mainPass);
 
     cleanPointLightsPipeline(baseContext, mainPass);
 
@@ -2185,7 +2194,6 @@ void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState   = &multisampling;
     pipelineInfo.pDepthStencilState  = nullptr;  // Optional
-    // TODO: see if it still works with this line commented out
     pipelineInfo.pColorBlendState   = &colorBlending;
     pipelineInfo.pDynamicState      = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
@@ -2216,12 +2224,199 @@ void cleanPrimaryLightingPipeline(const VulkanBaseContext& baseContext,
 }
 
 /*
-* Renders multiple directional light sources (utilizes gBuffer for shading).
-*/
+ * Performs the Stencil Shadow Volumes technique (fills the stencil buffers so
+ * that all pixels, that a lightsource could influence, have non-zero values in
+ * the stencil buffer).
+ */
+void createStencilPipeline(const ApplicationVulkanContext& appContext,
+                           const RenderContext&            renderContext,
+                           const RenderPassDescription& renderPassDescription,
+                           MainPass&                    mainPass) {
+    Shader vertexShader;
+    vertexShader.shaderStage      = ShaderStage::VERTEX_SHADER;
+    vertexShader.shaderSourceName = "stencil.vert";
+    vertexShader.sourceDirectory  = "res/shaders/source/";
+    vertexShader.spvDirectory     = "res/shaders/spv/";
+
+    VkShaderModule vertShaderModule =
+        createShaderModule(appContext.baseContext, vertexShader, true);
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.pName  = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo};
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    auto bindingDescription = Vertex::getBindingDescription();
+
+    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions   = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount  = 1;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer{};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.depthBiasEnable  = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+
+    // Enable Wireframe rendering here, requires GPU feature to be enabled
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode  = VK_CULL_MODE_NONE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable       = VK_TRUE;
+    depthStencil.depthWriteEnable      = VK_FALSE;
+    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable     = VK_TRUE;
+
+    // see https://ogldev.org/www/tutorial37/tutorial37.html for stencil operations
+
+    // back faces
+    depthStencil.back.compareOp   = VK_COMPARE_OP_ALWAYS;
+    depthStencil.back.failOp      = VK_STENCIL_OP_KEEP;
+    depthStencil.back.passOp      = VK_STENCIL_OP_KEEP;
+    depthStencil.back.depthFailOp = VK_STENCIL_OP_INCREMENT_AND_WRAP;
+    depthStencil.back.writeMask   = 0xff;
+
+    // front faces
+    depthStencil.front.compareOp   = VK_COMPARE_OP_ALWAYS;
+    depthStencil.front.failOp      = VK_STENCIL_OP_KEEP;
+    depthStencil.front.passOp      = VK_STENCIL_OP_KEEP;
+    depthStencil.front.depthFailOp = VK_STENCIL_OP_DECREMENT_AND_WRAP;
+    depthStencil.front.writeMask    = 0xff;
+
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable  = VK_TRUE;
+    multisampling.minSampleShading     = .2f;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    std::array<VkPipelineColorBlendAttachmentState, 3> colorBlendAttachments{};
+    for(int i = 0; i < 3; i++) {
+        VkPipelineColorBlendAttachmentState colorBlendAttachment;
+        colorBlendAttachment.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+            | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable         = VK_FALSE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
+        colorBlendAttachments[i]                 = colorBlendAttachment;
+    }
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable     = VK_FALSE;
+    colorBlending.logicOp           = VK_LOGIC_OP_COPY;  // Optional
+    colorBlending.attachmentCount   = colorBlendAttachments.size();
+    colorBlending.pAttachments      = colorBlendAttachments.data();
+    colorBlending.blendConstants[0] = 0.0f;  // Optional
+    colorBlending.blendConstants[1] = 0.0f;  // Optional
+    colorBlending.blendConstants[2] = 0.0f;  // Optional
+    colorBlending.blendConstants[3] = 0.0f;  // Optional
+
+    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR};
+    if(renderPassDescription.enableDepthBias) {
+        dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    }
+
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
+
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 0; //descriptorSetLayouts.size();
+    //pipelineLayoutInfo.pSetLayouts    = //descriptorSetLayouts.data();
+
+    // the used pushconstant will be only the struct "StencilPushConstant"
+    VkPushConstantRange pushConstantRange =
+        createPushConstantRange(0, sizeof(StencilPushConstant), VK_SHADER_STAGE_VERTEX_BIT);
+
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
+
+    if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo,
+                              nullptr, &mainPass.stencilPipelineLayout)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 1;
+    pipelineInfo.pStages    = shaderStages;
+    pipelineInfo.pVertexInputState   = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState      = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState   = &multisampling;
+    pipelineInfo.pDepthStencilState  = nullptr;  // Optional
+    pipelineInfo.pColorBlendState    = &colorBlending;
+    pipelineInfo.pDynamicState       = &dynamicState;
+    pipelineInfo.pDepthStencilState  = &depthStencil;
+
+    pipelineInfo.layout     = mainPass.stencilPipelineLayout;
+    pipelineInfo.renderPass = mainPass.geometryPass;
+    pipelineInfo.subpass    = 0;
+
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;  // Optional
+    pipelineInfo.basePipelineIndex  = -1;              // Optional
+
+    if(vkCreateGraphicsPipelines(appContext.baseContext.device, VK_NULL_HANDLE, 1,
+                                 &pipelineInfo, nullptr, &mainPass.stencilPipeline)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!");
+    }
+
+    vkDestroyShaderModule(appContext.baseContext.device, vertShaderModule, nullptr);
+}
+
+void cleanStencilPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
+    vkDestroyPipeline(baseContext.device, mainPass.stencilPipeline, nullptr);
+    vkDestroyPipelineLayout(baseContext.device, mainPass.stencilPipelineLayout, nullptr);
+}
+
+/*
+ * Renders multiple point light sources (utilizes gBuffer for shading and
+ * stencil buffer for early discard).
+ */
 void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
-                                   const RenderContext& renderContext,
-                                   const RenderPassDescription& renderPassDescription,
-                                   MainPass& mainPass) {
+                               const RenderContext&            renderContext,
+                               const RenderPassDescription& renderPassDescription,
+                               MainPass& mainPass) {
     Shader vertexShader;
     vertexShader.shaderStage      = ShaderStage::VERTEX_SHADER;
     vertexShader.shaderSourceName = "pointLights.vert";
@@ -2286,20 +2481,30 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 
     rasterizer.lineWidth = 1.0f;
-    // TODO: this will need to change in the future for correct lighting
-    //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.cullMode        = VK_CULL_MODE_NONE;
+    // only back faces of light sources get rendered
+    rasterizer.cullMode        = VK_CULL_MODE_FRONT_BIT;
+
+    //rasterizer.cullMode        = VK_CULL_MODE_NONE;
     rasterizer.frontFace       = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable  = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_FALSE;
-    // TODO: do some research on when to render here
-    depthStencil.depthCompareOp   = VK_COMPARE_OP_ALWAYS;//VK_COMPARE_OP_LESS;
+    // whether a light source will be drawn is only dependend on stencil buffer
+    // at this moment (the information about depth is stored in there too)
+    depthStencil.depthTestEnable       = VK_FALSE;
+    depthStencil.depthWriteEnable      = VK_FALSE;
+    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.stencilTestEnable     = VK_FALSE;
+    depthStencil.stencilTestEnable     = VK_TRUE;
+
+    // if stencil buffer is 0, that means that no lightsource can have influence on the pixel
+    depthStencil.back.compareOp   = VK_COMPARE_OP_NOT_EQUAL;
+    depthStencil.back.compareMask = 0xff;
+    depthStencil.back.writeMask   = 0xff;
+    depthStencil.back.reference   = 0;
+    depthStencil.back.failOp      = VK_STENCIL_OP_KEEP;
+    depthStencil.back.passOp      = VK_STENCIL_OP_KEEP;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -2372,7 +2577,6 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState   = &multisampling;
     pipelineInfo.pDepthStencilState  = nullptr;  // Optional
-    // TODO: see if it still works with this line commented out
     pipelineInfo.pColorBlendState   = &colorBlending;
     pipelineInfo.pDynamicState      = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;

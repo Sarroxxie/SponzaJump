@@ -323,7 +323,6 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
                          &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -416,62 +415,117 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
         
         if(m_RenderContext.imguiData.pointLights) {
-            // render point lights
-            vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
-                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              m_RenderContext.renderPasses.mainPass.pointLightsPipeline);
+            // render point lights for stencil shadow volumes
+            /*{
+                vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                                  VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                  m_RenderContext.renderPasses.mainPass.stencilPipeline);
 
-            // bind DescriptorSet 0 (Camera Transformations)
-            vkCmdBindDescriptorSets(
-                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout, 0, 1,
-                &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+                // bind point light mesh (it will remain the same for each light source
+                Mesh     pointLightMesh  = scene.getSceneData().pointLightMesh;
+                VkBuffer vertexBuffers[] = {pointLightMesh.vertexBuffer};
+                VkDeviceSize offsets[]   = {0};
+                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                       0, 1, vertexBuffers, offsets);
+                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                     pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-            // bind DescriptorSet 1 (gBuffer)
-            vkCmdBindDescriptorSets(
-                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout, 1, 1,
-                &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet, 0, nullptr);
+                glm::mat4 projection = getPerspectiveMatrix(
+                    m_RenderContext.renderSettings.perspectiveSettings,
+                    m_Context.swapchainContext.swapChainExtent.width,
+                    m_Context.swapchainContext.swapChainExtent.height);
+                // one tutorial says openGL has different convention for Y
+                // coordinates in clip space than vulkan, need to flip it
+                projection[1][1] *= -1;
+                StencilPushConstant stencilPushConstant;
+                stencilPushConstant.projView =
+                    projection * scene.getCameraRef().getCameraMatrix();
 
-            // bind point light mesh (it will remain the same for each light source
-            Mesh         pointLightMesh  = scene.getSceneData().pointLightMesh;
-            VkBuffer     vertexBuffers[] = {pointLightMesh.vertexBuffer};
-            VkDeviceSize offsets[]       = {0};
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                // draw icosphere per point light
+                for(PointLight& pointLight : scene.getSceneData().lights) {
+                    // build transformation matrix for vertex shader
+                    glm::mat4 scaleMat =
+                        glm::scale(glm::mat4(1), glm::vec3(pointLight.radius));
+                    glm::mat4 translateMat =
+                        glm::translate(glm::mat4(1), pointLight.position);
 
-            PointLightPushConstant pointLightPushConstant;
-            pointLightPushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
-            pointLightPushConstant.resolution =
-                glm::ivec2(m_Context.swapchainContext.swapChainExtent.width,
-                           m_Context.swapchainContext.swapChainExtent.height);
+                    stencilPushConstant.transformation = translateMat * scaleMat;
 
-            // draw icosphere per point light
-            for(PointLight& pointLight : scene.getSceneData().lights) {
-                // build transformation matrix for vertex shader
-                glm::mat4 scaleMat =
-                    glm::scale(glm::mat4(1), glm::vec3(pointLight.radius));
-                glm::mat4 translateMat = glm::translate(glm::mat4(1), pointLight.position);
+                    // sending push constant to GPU
+                    vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                                       m_RenderContext.renderPasses.mainPass.stencilPipelineLayout,
+                                       VK_SHADER_STAGE_VERTEX_BIT,
+                                       0,  // offset
+                                       sizeof(StencilPushConstant), &stencilPushConstant);
 
-                pointLightPushConstant.transformation = translateMat * scaleMat;
-                pointLightPushConstant.position       = pointLight.position;
-                pointLightPushConstant.intensity      = pointLight.intensity;
-                pointLightPushConstant.radius         = pointLight.radius;
+                    vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                     pointLightMesh.indicesCount, 1, 0, 0, 0);
+                }
+            }*/
 
-                // sending push constant to GPU
-                vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                                   m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
-                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                                   0,  // offset
-                                   sizeof(PointLightPushConstant), &pointLightPushConstant);
+            // render point lights for shading
+            {
+                vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                                  VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                  m_RenderContext.renderPasses.mainPass.pointLightsPipeline);
 
-                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                                 pointLightMesh.indicesCount, 1, 0, 0, 0);
+                // bind DescriptorSet 0 (Camera Transformations)
+                vkCmdBindDescriptorSets(
+                    m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
+                    0, 1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet,
+                    0, nullptr);
+
+                // bind DescriptorSet 1 (gBuffer)
+                vkCmdBindDescriptorSets(
+                    m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
+                    1, 1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet,
+                    0, nullptr);
+
+                // bind point light mesh (it will remain the same for each light source
+                Mesh     pointLightMesh  = scene.getSceneData().pointLightMesh;
+                VkBuffer vertexBuffers[] = {pointLightMesh.vertexBuffer};
+                VkDeviceSize offsets[]   = {0};
+                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                       0, 1, vertexBuffers, offsets);
+                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                     pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+                PointLightPushConstant pointLightPushConstant;
+                pointLightPushConstant.worldCamPosition =
+                    scene.getCameraRef().getWorldPos();
+                pointLightPushConstant.resolution =
+                    glm::ivec2(m_Context.swapchainContext.swapChainExtent.width,
+                               m_Context.swapchainContext.swapChainExtent.height);
+
+                // draw icosphere per point light
+                for(PointLight& pointLight : scene.getSceneData().lights) {
+                    // build transformation matrix for vertex shader
+                    glm::mat4 scaleMat =
+                        glm::scale(glm::mat4(1), glm::vec3(pointLight.radius));
+                    glm::mat4 translateMat =
+                        glm::translate(glm::mat4(1), pointLight.position);
+
+                    pointLightPushConstant.transformation = translateMat * scaleMat;
+                    pointLightPushConstant.position  = pointLight.position;
+                    pointLightPushConstant.intensity = pointLight.intensity;
+                    pointLightPushConstant.radius    = pointLight.radius;
+
+                    // sending push constant to GPU
+                    vkCmdPushConstants(
+                        m_Context.commandContext.commandBuffer,
+                        m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                        0,  // offset
+                        sizeof(PointLightPushConstant), &pointLightPushConstant);
+
+                    vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                     pointLightMesh.indicesCount, 1, 0, 0, 0);
+                }
             }
         }
-
+        /*
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.skyboxPipeline);
@@ -488,7 +542,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
             &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
 
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
+        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);*/
     }
 
     if(m_RenderContext.usesImgui) {
@@ -545,79 +599,136 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
     vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
 
     // render meshes
-    // TODO: pipeline is not yet created
-    vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
-                      VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipeline);
+    {
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                          VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipeline);
 
-    // bind DescriptorSet 0 (Camera Transformations)
-    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipelineLayout,
-                            0, 1, &mainPass.transformDescriptorSet, 0, nullptr);
+        // bind DescriptorSet 0 (Camera Transformations)
+        vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                mainPass.geometryPassPipelineLayout, 0, 1,
+                                &mainPass.transformDescriptorSet, 0, nullptr);
 
-    // TODO: from my understanding, this descriptor set only has to be bound
-    //       once, but I got errors when doing so
-    //        -> should make it possible for performance reasons
-    //        -> use separate command buffer that is only updated when the graphics pipeline is changed
+        // TODO: from my understanding, this descriptor set only has to be bound
+        //       once, but I got errors when doing so
+        //        -> should make it possible for performance reasons
+        //        -> use separate command buffer that is only updated when the graphics pipeline is changed
 
-    // bind DescriptorSet 1 (Materials)
-    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipelineLayout,
-                            1, 1, &mainPass.materialDescriptorSet, 0, nullptr);
+        // bind DescriptorSet 1 (Materials)
+        vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                mainPass.geometryPassPipelineLayout, 1, 1,
+                                &mainPass.materialDescriptorSet, 0, nullptr);
 
-    // bind DescriptorSet 2 (Shadows)
-    vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipelineLayout,
-                            2, 1, &mainPass.depthDescriptorSet, 0, nullptr);
+        // bind DescriptorSet 2 (Shadows)
+        vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                mainPass.geometryPassPipelineLayout, 2, 1,
+                                &mainPass.depthDescriptorSet, 0, nullptr);
 
 
-    // create PushConstant object and initialize with default values
-    PushConstant pushConstant;
-    pushConstant.transformation   = glm::mat4(1);
-    pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
-    pushConstant.materialIndex    = 0;
-    pushConstant.cascadeCount =
-        m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
+        // create PushConstant object and initialize with default values
+        PushConstant pushConstant;
+        pushConstant.transformation   = glm::mat4(1);
+        pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
+        pushConstant.materialIndex    = 0;
+        pushConstant.cascadeCount =
+            m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
 
-    pushConstant.controlFlags = 0;
-    if(m_RenderContext.imguiData.doPCF)
-        pushConstant.controlFlags |= PCF_CONTROL_BIT;
-    if(m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
-        pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
+        pushConstant.controlFlags = 0;
+        if(m_RenderContext.imguiData.doPCF)
+            pushConstant.controlFlags |= PCF_CONTROL_BIT;
+        if(m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
+            pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
 
-    for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
-        auto* modelComponent     = scene.getComponent<ModelComponent>(id);
-        auto* transformComponent = scene.getComponent<Transformation>(id);
+        for(EntityId id : SceneView<ModelComponent, Transformation>(scene)) {
+            auto* modelComponent     = scene.getComponent<ModelComponent>(id);
+            auto* transformComponent = scene.getComponent<Transformation>(id);
 
-        Model& model = scene.getSceneData().models[modelComponent->modelIndex];
+            Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
-        pushConstant.transformation = transformComponent->getMatrix();
+            pushConstant.transformation = transformComponent->getMatrix();
 
-        for(auto& meshPartIndex : model.meshPartIndices) {
-            MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
-            Mesh     mesh     = scene.getSceneData().meshes[meshPart.meshIndex];
-            VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
-            VkDeviceSize offsets[]   = {0};
+            for(auto& meshPartIndex : model.meshPartIndices) {
+                MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
+                VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
+                VkDeviceSize offsets[]   = {0};
 
-            pushConstant.materialIndex = meshPart.materialIndex;
+                pushConstant.materialIndex = meshPart.materialIndex;
 
-            vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
-                                   vertexBuffers, offsets);
+                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                                       0, 1, vertexBuffers, offsets);
 
-            vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                 mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                                     mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-            glm::mat4 transform = transformComponent->getMatrix();
+                glm::mat4 transform = transformComponent->getMatrix();
 
-            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                               mainPass.geometryPassPipelineLayout,
-                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                               0,  // offset
-                               sizeof(PushConstant), &pushConstant);
+                vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                                   mainPass.geometryPassPipelineLayout,
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                   0,  // offset
+                                   sizeof(PushConstant), &pushConstant);
 
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                             mesh.indicesCount, 1, 0, 0, 0);
+                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                                 mesh.indicesCount, 1, 0, 0, 0);
+            }
         }
     }
+
+    // render point lights for stencil shadow volumes
+    {
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          m_RenderContext.renderPasses.mainPass.stencilPipeline);
+
+        // bind point light mesh (it will remain the same for each light source
+        Mesh         pointLightMesh  = scene.getSceneData().pointLightMesh;
+        VkBuffer     vertexBuffers[] = {pointLightMesh.vertexBuffer};
+        VkDeviceSize offsets[]       = {0};
+        vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+                               vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                             pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        glm::mat4 projection =
+            getPerspectiveMatrix(m_RenderContext.renderSettings.perspectiveSettings,
+                                 m_Context.swapchainContext.swapChainExtent.width,
+                                 m_Context.swapchainContext.swapChainExtent.height);
+        // one tutorial says openGL has different convention for Y
+        // coordinates in clip space than vulkan, need to flip it
+        projection[1][1] *= -1;
+        StencilPushConstant stencilPushConstant;
+        stencilPushConstant.projView =
+            projection * scene.getCameraRef().getCameraMatrix();
+
+        // sending push constant to GPU
+        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                           m_RenderContext.renderPasses.mainPass.stencilPipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT,
+                           0,  // offset
+                           sizeof(StencilPushConstant), &stencilPushConstant);
+
+        // draw icosphere per point light
+        for(PointLight& pointLight : scene.getSceneData().lights) {
+            // build transformation matrix for vertex shader
+            glm::mat4 scaleMat = glm::scale(glm::mat4(1), glm::vec3(pointLight.radius));
+            glm::mat4 translateMat = glm::translate(glm::mat4(1), pointLight.position);
+
+            stencilPushConstant.transformation = translateMat * scaleMat;
+
+            // sending push constant to GPU
+            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                               m_RenderContext.renderPasses.mainPass.stencilPipelineLayout,
+                               VK_SHADER_STAGE_VERTEX_BIT,
+                               0,  // offset
+                               sizeof(StencilPushConstant), &stencilPushConstant);
+
+            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                             pointLightMesh.indicesCount, 1, 0, 0, 0);
+        }
+    }
+
     vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
 }
 
@@ -695,6 +806,13 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
     cleanGeometryPassPipeline(m_Context.baseContext,
                               m_RenderContext.renderPasses.mainPass);
     createGeometryPassPipeline(
+        m_Context, m_RenderContext,
+        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
+        m_RenderContext.renderPasses.mainPass);
+
+    // rebuild stencil pipeline
+    cleanStencilPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    createStencilPipeline(
         m_Context, m_RenderContext,
         m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
         m_RenderContext.renderPasses.mainPass);

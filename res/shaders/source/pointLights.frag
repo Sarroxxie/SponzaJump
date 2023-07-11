@@ -53,4 +53,6 @@ void main() {
     vec3 color = BRDF(L, V, normal, radiance, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g);
     
     outColor = vec4(color, 1);
+    // debug output to see on which pixels the fragment shader gets executed
+    //outColor = vec4(normalize(pushConstant.intensity) - 0.7, 1);
 }
