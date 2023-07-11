@@ -30,6 +30,9 @@ void VulkanRenderer::render(Scene& scene) {
         return;
     }
      */
+    // reset imgui per frame counters
+    m_RenderContext.imguiData.meshDrawCalls = 0;
+    m_RenderContext.imguiData.lightDrawCalls = 0;
 
     vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -415,54 +418,6 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
         
         if(m_RenderContext.imguiData.pointLights) {
-            // render point lights for stencil shadow volumes
-            /*{
-                vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
-                                  VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  m_RenderContext.renderPasses.mainPass.stencilPipeline);
-
-                // bind point light mesh (it will remain the same for each light source
-                Mesh     pointLightMesh  = scene.getSceneData().pointLightMesh;
-                VkBuffer vertexBuffers[] = {pointLightMesh.vertexBuffer};
-                VkDeviceSize offsets[]   = {0};
-                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
-                                       0, 1, vertexBuffers, offsets);
-                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
-                                     pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-                glm::mat4 projection = getPerspectiveMatrix(
-                    m_RenderContext.renderSettings.perspectiveSettings,
-                    m_Context.swapchainContext.swapChainExtent.width,
-                    m_Context.swapchainContext.swapChainExtent.height);
-                // one tutorial says openGL has different convention for Y
-                // coordinates in clip space than vulkan, need to flip it
-                projection[1][1] *= -1;
-                StencilPushConstant stencilPushConstant;
-                stencilPushConstant.projView =
-                    projection * scene.getCameraRef().getCameraMatrix();
-
-                // draw icosphere per point light
-                for(PointLight& pointLight : scene.getSceneData().lights) {
-                    // build transformation matrix for vertex shader
-                    glm::mat4 scaleMat =
-                        glm::scale(glm::mat4(1), glm::vec3(pointLight.radius));
-                    glm::mat4 translateMat =
-                        glm::translate(glm::mat4(1), pointLight.position);
-
-                    stencilPushConstant.transformation = translateMat * scaleMat;
-
-                    // sending push constant to GPU
-                    vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                                       m_RenderContext.renderPasses.mainPass.stencilPipelineLayout,
-                                       VK_SHADER_STAGE_VERTEX_BIT,
-                                       0,  // offset
-                                       sizeof(StencilPushConstant), &stencilPushConstant);
-
-                    vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
-                                     pointLightMesh.indicesCount, 1, 0, 0, 0);
-                }
-            }*/
-
             // render point lights for shading
             {
                 vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
@@ -671,6 +626,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
                                    0,  // offset
                                    sizeof(PushConstant), &pushConstant);
 
+                m_RenderContext.imguiData.meshDrawCalls++;
                 vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                                  mesh.indicesCount, 1, 0, 0, 0);
             }
@@ -678,7 +634,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
     }
 
     // render point lights for stencil shadow volumes
-    {
+    if(m_RenderContext.imguiData.pointLights) {
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.stencilPipeline);
 
@@ -723,6 +679,8 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
                                VK_SHADER_STAGE_VERTEX_BIT,
                                0,  // offset
                                sizeof(StencilPushConstant), &stencilPushConstant);
+
+            m_RenderContext.imguiData.lightDrawCalls++;
 
             vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                              pointLightMesh.indicesCount, 1, 0, 0, 0);

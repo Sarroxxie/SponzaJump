@@ -74,6 +74,9 @@ int main() {
                              | ImGuiWindowFlags_NoTitleBar);
             ImGui::Text("%.3f ms", 1000.0f / ImGui::GetIO().Framerate);
             ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
+            ImGui::Text("%i mesh draw calls", renderContext.imguiData.meshDrawCalls);
+            // lights get drawn once into stencil buffer and once for shading
+            ImGui::Text("%i light draw calls", renderContext.imguiData.lightDrawCalls * 2);
             ImGui::SetWindowSize(ImVec2(0, 0), ImGuiCond_Once);
             ImGui::End();
         }

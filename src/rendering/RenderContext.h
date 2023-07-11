@@ -151,6 +151,9 @@ typedef struct
 
     float depthBiasConstant = 0.0f;
     float depthBiasSlope    = 2.0f;
+
+    int meshDrawCalls  = 0;
+    int lightDrawCalls = 0;
 } ImguiData;
 
 typedef struct
