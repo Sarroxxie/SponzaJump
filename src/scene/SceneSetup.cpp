@@ -32,7 +32,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/sponza/final_scene3.gltf",
+        loader.loadModel("res/assets/models/sponza/final_scene7.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
@@ -113,7 +113,9 @@ void addToScene(Scene&                          scene,
             contactListener.setPlayerComponent(playerComponent);
             contactListener.setPlayerFixture(fixture);
 
-            levelData.playerSpawnLocation = glm::vec3(instance.translation.x, instance.translation.y, 0);
+            levelData.playerSpawnLocation =
+                glm::vec3(instance.translation.x, instance.translation.y,
+                          instance.translation.z);
         }
     }
 }

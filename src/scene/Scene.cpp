@@ -201,8 +201,7 @@ void Scene::doPhysicsUpdate(uint64_t deltaMillis) {
 
             b2Vec2 newPos = physicsComponent->body->GetPosition();
 
-            transform->translation =
-                glm::vec3(newPos.x, newPos.y, transform->translation.z);
+            transform->translation = glm::vec3(newPos.x, newPos.y, transform->translation.z);
             transform->rotation.z = physicsComponent->body->GetAngle();
         }
     }
