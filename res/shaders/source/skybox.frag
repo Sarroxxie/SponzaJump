@@ -17,7 +17,6 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec3 color = texture(skybox, inPosition - lightingInformation.cameraPosition).rgb;
-    color = textureLod(radianceMap, inPosition - lightingInformation.cameraPosition, 4).rgb;
 
     // exposure tone mapping
     color = vec3(1.0) - exp(-color * pushConstant.exposure);
