@@ -34,8 +34,7 @@ END_BINDING();
 
 START_BINDING(MaterialsBindings)
     eMaterials = 0,  // storage buffer containing materials
-    eTextures  = 1,  // storage buffer containing image views
-    eSkybox    = 3
+    eTextures  = 1   // storage buffer containing image views
 END_BINDING();
 
 START_BINDING(DepthBindings)
@@ -49,6 +48,13 @@ START_BINDING(GBufferBindings)
     eAlbedo = 1,
     ePBR = 2,
     eDepth = 3
+END_BINDING();
+
+START_BINDING(SkyboxBindings)
+    eSkybox = 0,
+    eIrradiance = 1,
+    eRadiance = 2,
+    eLUT = 3
 END_BINDING();
 
 const uint MAX_CASCADES = 4;

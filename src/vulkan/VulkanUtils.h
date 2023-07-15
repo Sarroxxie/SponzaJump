@@ -192,6 +192,11 @@ void createCubeMap(VulkanBaseContext context,
                    CubeMap&          cubemap,
                    bool              mipmaps);
 
+void createCubeMapFromFiles(VulkanBaseContext context,
+                            CommandContext    commandContext,
+                            CubeMap&          cubemap,
+                            std::string       directory);
+
 void createTextureImage(VulkanBaseContext& context,
                         CommandContext&    commandContext,
                         std::string        path,
@@ -210,7 +215,9 @@ void copyBufferToImage(const VulkanBaseContext& context,
                        uint32_t                 width,
                        uint32_t                 height,
                        uint32_t                 offset,
-                       uint32_t                 baseArrayLayer);
+                       uint32_t                 baseArrayLayer,
+                       uint32_t                 miplevel   = 0,
+                       uint32_t                 layerCount = 1);
 
 VkCommandBuffer beginSingleTimeCommands(const VulkanBaseContext  &context, const CommandContext &commandContext);
 
@@ -248,5 +255,8 @@ void transitionImageLayout(const VulkanBaseContext& context,
                            VkFormat                 format,
                            uint32_t                 baseArrayLayer,
                            VkImageLayout            oldLayout,
-                           VkImageLayout            newLayout);
-#endif //GRAPHICSPRAKTIKUM_VULKANUTILS_H
+                           VkImageLayout            newLayout,
+                           uint32_t                 mipLevel      = 0,
+                           uint32_t                 mipLevelCount = 1,
+                           uint32_t                 layerCount    = 1);
+#endif  // GRAPHICSPRAKTIKUM_VULKANUTILS_H

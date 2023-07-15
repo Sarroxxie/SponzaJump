@@ -74,13 +74,14 @@ typedef struct
 typedef struct
 {
     // descriptor stuff
-    VkDescriptorSetLayout transformDescriptorSetLayout;
-    VkDescriptorSet       transformDescriptorSet;
 
     BufferResources transformBuffer;
     BufferResources lightingBuffer;
     BufferResources materialBuffer;
     BufferResources cascadeSplitsBuffer;
+
+    VkDescriptorSetLayout transformDescriptorSetLayout;
+    VkDescriptorSet       transformDescriptorSet;
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;
@@ -90,6 +91,9 @@ typedef struct
 
     VkDescriptorSetLayout gBufferDescriptorSetLayout;
     VkDescriptorSet       gBufferDescriptorSet;
+
+    VkDescriptorSetLayout skyboxDescriptorSetLayout;
+    VkDescriptorSet       skyboxDescriptorSet;
 
     // pipelines
     // visualize shadow map

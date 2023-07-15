@@ -27,7 +27,9 @@ void Scene::cleanup() {
         sceneData.pointLightMesh.cleanup(m_Context.baseContext);
     }
 
-    sceneData.cubemap.cleanup(m_Context.baseContext);
+    sceneData.skybox.cleanup(m_Context.baseContext);
+    sceneData.irradianceMap.cleanup(m_Context.baseContext);
+    sceneData.radianceMap.cleanup(m_Context.baseContext);
 }
 
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {

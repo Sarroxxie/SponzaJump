@@ -1179,6 +1179,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     std::vector<VkDescriptorSetLayoutBinding> materialBindings;
     std::vector<VkDescriptorSetLayoutBinding> depthBindings;
     std::vector<VkDescriptorSetLayoutBinding> gBufferBindings;
+    std::vector<VkDescriptorSetLayoutBinding> skyboxBindings;
 
 
     transformBindings.push_back(createLayoutBinding(
@@ -1201,10 +1202,6 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         MaterialsBindings::eTextures, scene.getSceneData().textures.size(),
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         getStageFlag(ShaderStage::FRAGMENT_SHADER)));
-
-    materialBindings.push_back(
-        createLayoutBinding(MaterialsBindings::eSkybox, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     depthBindings.push_back(
         createLayoutBinding(DepthBindings::eShadowDepthBuffer, MAX_CASCADES,
@@ -1237,6 +1234,19 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         createLayoutBinding(GBufferBindings::eDepth, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
+    // stuff for image based lighting and skybox
+    skyboxBindings.push_back(
+        createLayoutBinding(SkyboxBindings::eSkybox, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    skyboxBindings.push_back(
+        createLayoutBinding(SkyboxBindings::eIrradiance, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    skyboxBindings.push_back(
+        createLayoutBinding(SkyboxBindings::eRadiance, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
     createDescriptorSetLayout(appContext.baseContext,
                               mainPass.transformDescriptorSetLayout, transformBindings);
 
@@ -1249,6 +1259,9 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     createDescriptorSetLayout(appContext.baseContext,
                               mainPass.gBufferDescriptorSetLayout, gBufferBindings);
 
+    createDescriptorSetLayout(appContext.baseContext,
+                              mainPass.skyboxDescriptorSetLayout, skyboxBindings);
+
     auto& mainPassLayouts = mainPass.renderPassContext.descriptorSetLayouts;
     mainPassLayouts.clear();
 
@@ -1256,6 +1269,7 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
     mainPassLayouts.push_back(mainPass.materialDescriptorSetLayout);
     mainPassLayouts.push_back(mainPass.depthDescriptorSetLayout);
     mainPassLayouts.push_back(mainPass.gBufferDescriptorSetLayout);
+    mainPassLayouts.push_back(mainPass.skyboxDescriptorSetLayout);
 }
 
 void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
@@ -1271,6 +1285,9 @@ void cleanMainPassDescriptorLayouts(const VulkanBaseContext& baseContext,
 
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  mainPass.gBufferDescriptorSetLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 mainPass.skyboxDescriptorSetLayout, nullptr);
 }
 
 void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
@@ -1396,18 +1413,6 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(texturesWrite);
 
-    // Sykbox
-    VkWriteDescriptorSet skyboxWrite{};
-    skyboxWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    skyboxWrite.dstSet          = mainPass.materialDescriptorSet;
-    skyboxWrite.dstBinding      = MaterialsBindings::eSkybox;
-    skyboxWrite.dstArrayElement = 0;
-    skyboxWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    skyboxWrite.descriptorCount = 1;
-    skyboxWrite.pImageInfo      = &scene.getSceneData().cubemap.descriptorInfo;
-
-    descriptorWrites.emplace_back(skyboxWrite);
-
     // create gBuffer descriptor set
     VkDescriptorSetAllocateInfo gBufferAllocInfo{};
     gBufferAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1499,6 +1504,57 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
     inverseLightVPWrite.pBufferInfo     = &inverseLightVPBufferInfo;
 
     descriptorWrites.emplace_back(inverseLightVPWrite);
+
+    // Image Based Lighting
+    VkDescriptorSetAllocateInfo skyboxAllocInfo{};
+    skyboxAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    skyboxAllocInfo.descriptorPool     = renderContext.descriptorPool;
+    skyboxAllocInfo.descriptorSetCount = 1;
+    skyboxAllocInfo.pSetLayouts        = &mainPass.skyboxDescriptorSetLayout;
+
+    auto skyboxAllocateRes =
+        vkAllocateDescriptorSets(appContext.baseContext.device, &skyboxAllocInfo,
+                                 &mainPass.skyboxDescriptorSet);
+
+    if(skyboxAllocateRes != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+
+    // skybox
+    VkWriteDescriptorSet skyboxWrite{};
+    skyboxWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    skyboxWrite.dstSet          = mainPass.skyboxDescriptorSet;
+    skyboxWrite.dstBinding      = SkyboxBindings::eSkybox;
+    skyboxWrite.dstArrayElement = 0;
+    skyboxWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    skyboxWrite.descriptorCount = 1;
+    skyboxWrite.pImageInfo      = &scene.getSceneData().skybox.descriptorInfo;
+
+    descriptorWrites.emplace_back(skyboxWrite);
+
+    // Irrandiance Map
+    VkWriteDescriptorSet irradianceWrite{};
+    irradianceWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    irradianceWrite.dstSet          = mainPass.skyboxDescriptorSet;
+    irradianceWrite.dstBinding      = SkyboxBindings::eIrradiance;
+    irradianceWrite.dstArrayElement = 0;
+    irradianceWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    irradianceWrite.descriptorCount = 1;
+    irradianceWrite.pImageInfo      = &scene.getSceneData().irradianceMap.descriptorInfo;
+
+    descriptorWrites.emplace_back(irradianceWrite);
+
+    // Irrandiance Map
+    VkWriteDescriptorSet radianceWrite{};
+    radianceWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    radianceWrite.dstSet          = mainPass.skyboxDescriptorSet;
+    radianceWrite.dstBinding      = SkyboxBindings::eRadiance;
+    radianceWrite.dstArrayElement = 0;
+    radianceWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    radianceWrite.descriptorCount = 1;
+    radianceWrite.pImageInfo = &scene.getSceneData().radianceMap.descriptorInfo;
+
+    descriptorWrites.emplace_back(radianceWrite);
 
 
     vkUpdateDescriptorSets(appContext.baseContext.device,
@@ -1985,7 +2041,7 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
-    descriptorSetLayouts.push_back(mainPass.materialDescriptorSetLayout);
+    descriptorSetLayouts.push_back(mainPass.skyboxDescriptorSetLayout);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

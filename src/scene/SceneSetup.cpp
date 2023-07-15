@@ -7,15 +7,22 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                               Scene&                          scene,
                               GameContactListener&            contactListener) {
 
-    CubeMap& cubemap = scene.getSceneData().cubemap;
+    CubeMap& skybox = scene.getSceneData().skybox;
+    CubeMap& irradianceMap = scene.getSceneData().irradianceMap;
+    CubeMap& radianceMap   = scene.getSceneData().radianceMap;
 
-    cubemap.paths[0] = "res/assets/textures/cubemap/skybox/px.hdr";
-    cubemap.paths[1] = "res/assets/textures/cubemap/skybox/nx.hdr";
-    cubemap.paths[2] = "res/assets/textures/cubemap/skybox/py.hdr";
-    cubemap.paths[3] = "res/assets/textures/cubemap/skybox/ny.hdr";
-    cubemap.paths[4] = "res/assets/textures/cubemap/skybox/pz.hdr";
-    cubemap.paths[5] = "res/assets/textures/cubemap/skybox/nz.hdr";
-    createCubeMap(context.baseContext, context.commandContext, cubemap, true);
+    const std::string cubemapFaceNames[6] = {"px", "nx", "py",
+                                             "ny", "pz", "nz"};
+    for(int i = 0; i < 6; i++) {
+        skybox.paths[i] =
+            "res/assets/textures/cubemap/skybox/" + cubemapFaceNames[i] + ".hdr";
+        irradianceMap.paths[i] =
+            "res/assets/textures/cubemap/irradiance/" + cubemapFaceNames[i] + ".hdr";
+    }
+    createCubeMap(context.baseContext, context.commandContext, skybox, true);
+    createCubeMap(context.baseContext, context.commandContext, irradianceMap, false);
+    createCubeMapFromFiles(context.baseContext, context.commandContext,
+                           radianceMap, "res/assets/textures/cubemap/radiance/");
 
     /*{
         ModelLoader loader;

@@ -13,7 +13,13 @@ typedef struct {
     std::vector<Model>         models;
     std::vector<PointLight>    lights;
 
-    CubeMap cubemap;
+    // used for Image Based Lighting
+    CubeMap skybox;
+    CubeMap irradianceMap;
+    CubeMap radianceMap;
+    Texture brdfIntegrationLUT;
+
+    // used when rendering light sources (for deferred)
     Mesh    pointLightMesh;
 } SceneData;
 

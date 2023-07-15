@@ -495,7 +495,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
-            &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
+            &m_RenderContext.renderPasses.mainPass.skyboxDescriptorSet, 0, nullptr);
 
         SkyboxPushConstant skyboxPushConstant;
         skyboxPushConstant.exposure = m_RenderContext.imguiData.exposure;
