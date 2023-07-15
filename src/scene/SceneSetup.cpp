@@ -10,6 +10,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     CubeMap& skybox = scene.getSceneData().skybox;
     CubeMap& irradianceMap = scene.getSceneData().irradianceMap;
     CubeMap& radianceMap   = scene.getSceneData().radianceMap;
+    Texture& brdfIntegrationLUT = scene.getSceneData().brdfIntegrationLUT;
 
     const std::string cubemapFaceNames[6] = {"px", "nx", "py",
                                              "ny", "pz", "nz"};
@@ -23,6 +24,9 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     createCubeMap(context.baseContext, context.commandContext, irradianceMap, false);
     createCubeMapFromFiles(context.baseContext, context.commandContext,
                            radianceMap, "res/assets/textures/cubemap/radiance/");
+    createHdrTextureImage(context.baseContext, context.commandContext,
+                          "res/assets/textures/cubemap/brdf_integration_LUT_flipped.hdr",
+                          brdfIntegrationLUT, false);
 
     /*{
         ModelLoader loader;
@@ -39,7 +43,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/sponza/final_scene19_debug.gltf",
+        loader.loadModel("res/assets/models/sponza/final_scene22.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 

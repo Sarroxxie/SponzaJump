@@ -391,6 +391,11 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 2,
             1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet, 0, nullptr);
+        // bind DescriptorSet 3 (IBL)
+        vkCmdBindDescriptorSets(
+            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 3,
+            1, &m_RenderContext.renderPasses.mainPass.skyboxDescriptorSet, 0, nullptr);
 
         // create PushConstant object and initialize with default values
         PushConstant pushConstant;

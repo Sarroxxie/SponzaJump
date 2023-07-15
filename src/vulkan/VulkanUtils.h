@@ -197,12 +197,18 @@ void createCubeMapFromFiles(VulkanBaseContext context,
                             CubeMap&          cubemap,
                             std::string       directory);
 
-void createTextureImage(VulkanBaseContext& context,
-                        CommandContext&    commandContext,
-                        std::string        path,
-                        VkFormat           format,
-                        Texture&           texture,
-                        bool               mipmaps);
+void createTextureImage(VulkanBaseContext context,
+                        CommandContext    commandContext,
+                        std::string       path,
+                        VkFormat          format,
+                        Texture&          texture,
+                        bool              mipmaps);
+
+void createHdrTextureImage(VulkanBaseContext context,
+                           CommandContext    commandContext,
+                           std::string       path,
+                           Texture&          texture,
+                           bool              mipmaps);
 
 void createTextureSampler(VulkanBaseContext& context, VkSampler& textureSampler, uint32_t mipLevels);
 

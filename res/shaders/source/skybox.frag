@@ -10,6 +10,7 @@ layout(set = 0, binding = eLighting) uniform _LightingInformation {LightingInfor
 layout(set = 1, binding = eSkybox) uniform samplerCube skybox;
 layout(set = 1, binding = eIrradiance) uniform samplerCube irradianceMap;
 layout(set = 1, binding = eRadiance) uniform samplerCube radianceMap;
+layout(set = 1, binding = eLUT) uniform sampler2D lut;
 
 layout( push_constant ) uniform _SkyboxPushConstant { SkyboxPushConstant pushConstant; };
 

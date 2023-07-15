@@ -649,12 +649,12 @@ void createCubeMapFromFiles(VulkanBaseContext context,
 }
 
 // TODO: instead of using "beginSingleTimeCommands", record everything into one command buffer
-void createTextureImage(VulkanBaseContext& context,
-                        CommandContext&    commandContext,
-                        std::string        path,
-                        VkFormat           format,
-                        Texture&           texture,
-                        bool               mipmaps) {
+void createTextureImage(VulkanBaseContext context,
+                        CommandContext    commandContext,
+                        std::string       path,
+                        VkFormat          format,
+                        Texture&          texture,
+                        bool              mipmaps) {
     int texWidth, texHeight, texChannels;
     // load image to CPU
     stbi_uc* pixels =
@@ -675,6 +675,88 @@ void createTextureImage(VulkanBaseContext& context,
     }
 
     VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+    // load image into staging buffer on GPU
+    VkBuffer       stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(context.device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(context.device, stagingBufferMemory);
+
+    // free image from CPU
+    stbi_image_free(pixels);
+
+    // allocate memory and create image
+    createImage(context, texWidth, texHeight, mipLevels, 1, VK_SAMPLE_COUNT_1_BIT,
+                format, VK_IMAGE_TILING_OPTIMAL, usageFlags,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture.image, texture.imageMemory);
+
+    // copy staging buffer to image
+    transitionImageLayout(context, commandContext, texture.image, format, 0,
+                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(context, commandContext, stagingBuffer, texture.image,
+                      static_cast<uint32_t>(texWidth),
+                      static_cast<uint32_t>(texHeight), 0, 0);
+    if(mipmaps) {
+        // after mipmap generation, all the levels are already in "SHADER_READ" format
+        generateMipmaps(context, commandContext, texture.image, format,
+                        texWidth, texHeight, 0, mipLevels);
+    } else {
+        // if no mipmaps were created, the image still needs to get transitioned into "SHADER_READ" layout
+        transitionImageLayout(context, commandContext, texture.image, format, 0,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+
+    // cleanup buffers
+    vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+    vkFreeMemory(context.device, stagingBufferMemory, nullptr);
+
+    // create image view
+    texture.imageView = createImageView(context, texture.image, format,
+                                        VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+
+    // create texture sampler
+    createTextureSampler(context, texture.sampler, mipLevels);
+
+    // create descriptor info
+    texture.descriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    texture.descriptorInfo.imageView = texture.imageView;
+    texture.descriptorInfo.sampler   = texture.sampler;
+}
+
+void createHdrTextureImage(VulkanBaseContext context,
+                        CommandContext    commandContext,
+                        std::string       path,
+                        Texture&          texture,
+                        bool              mipmaps) {
+    int texWidth, texHeight, texChannels;
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    // load image to CPU
+    float* pixels =
+        stbi_loadf(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+    if(!pixels) {
+        std::cerr << "failed to load texture image: \"" + path + "\"\n";
+        throw std::runtime_error("failed to load texture image: \"" + path + "\"");
+    }
+
+    uint32_t mipLevels = 1;
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    if(mipmaps) {
+        mipLevels =
+            static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+        // prepare mip level 0 for the creation of the next mip level
+        usageFlags = usageFlags | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    VkDeviceSize imageSize = texWidth * texHeight * 4 * sizeof(float);
 
     // load image into staging buffer on GPU
     VkBuffer       stagingBuffer;

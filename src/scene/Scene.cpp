@@ -30,6 +30,7 @@ void Scene::cleanup() {
     sceneData.skybox.cleanup(m_Context.baseContext);
     sceneData.irradianceMap.cleanup(m_Context.baseContext);
     sceneData.radianceMap.cleanup(m_Context.baseContext);
+    sceneData.brdfIntegrationLUT.cleanup(m_Context.baseContext);
 }
 
 ModelLoadingOffsets Scene::getModelLoadingOffsets() {

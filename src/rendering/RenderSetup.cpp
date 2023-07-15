@@ -1247,6 +1247,10 @@ void createMainPassDescriptorSetLayouts(const ApplicationVulkanContext& appConte
         createLayoutBinding(SkyboxBindings::eRadiance, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
+    skyboxBindings.push_back(
+        createLayoutBinding(SkyboxBindings::eLUT, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
     createDescriptorSetLayout(appContext.baseContext,
                               mainPass.transformDescriptorSetLayout, transformBindings);
 
@@ -1556,6 +1560,17 @@ void createMainPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(radianceWrite);
 
+    // Irrandiance Map
+    VkWriteDescriptorSet brdfIntegrationLUTWrite{};
+    brdfIntegrationLUTWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    brdfIntegrationLUTWrite.dstSet          = mainPass.skyboxDescriptorSet;
+    brdfIntegrationLUTWrite.dstBinding      = SkyboxBindings::eLUT;
+    brdfIntegrationLUTWrite.dstArrayElement = 0;
+    brdfIntegrationLUTWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    brdfIntegrationLUTWrite.descriptorCount = 1;
+    brdfIntegrationLUTWrite.pImageInfo = &scene.getSceneData().brdfIntegrationLUT.descriptorInfo;
+
+    descriptorWrites.emplace_back(brdfIntegrationLUTWrite);
 
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
@@ -2226,6 +2241,7 @@ void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
     descriptorSetLayouts.push_back(mainPass.transformDescriptorSetLayout);
     descriptorSetLayouts.push_back(mainPass.depthDescriptorSetLayout);
     descriptorSetLayouts.push_back(mainPass.gBufferDescriptorSetLayout);
+    descriptorSetLayouts.push_back(mainPass.skyboxDescriptorSetLayout);
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
