@@ -27,7 +27,7 @@ void main() {
     if(material.albedoTextureID != -1) {
         vec4 albedoTexture = texture(samplers[material.albedoTextureID], inTexCoords);
         // allow alpha masking
-        if (albedoTexture.a < 1.0)
+        if (albedoTexture.a == 0)
             discard;
         albedo = albedoTexture.rgb;
     }
