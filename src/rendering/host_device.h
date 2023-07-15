@@ -113,6 +113,12 @@ struct PointLightPushConstant
     ALIGN_AS(8) ivec2 resolution;
 };
 
+// used in skybox pipeline
+struct SkyboxPushConstant
+{
+    ALIGN_AS(4) float exposure;
+};
+
 struct ShadowPushConstant
 {
     ALIGN_AS(16) mat4 transform;

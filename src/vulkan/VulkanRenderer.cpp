@@ -497,6 +497,16 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
             &m_RenderContext.renderPasses.mainPass.materialDescriptorSet, 0, nullptr);
 
+        SkyboxPushConstant skyboxPushConstant;
+        skyboxPushConstant.exposure = m_RenderContext.imguiData.exposure;
+
+        // sending push constant to GPU
+        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                           m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout,
+                           VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0,  // offset
+                           sizeof(SkyboxPushConstant), &skyboxPushConstant);
+
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
     }
 

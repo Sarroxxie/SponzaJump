@@ -1992,8 +1992,12 @@ void createSkyboxPipeline(const ApplicationVulkanContext& appContext,
     pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts    = descriptorSetLayouts.data();
 
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges    = VK_NULL_HANDLE;
+    // the used pushconstant will be only the struct "SkyboxPushConstant"
+    VkPushConstantRange pushConstantRange =
+        createPushConstantRange(0, sizeof(SkyboxPushConstant), VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
 
     if(vkCreatePipelineLayout(appContext.baseContext.device, &pipelineLayoutInfo,
                               nullptr, &mainPass.skyboxPipelineLayout)

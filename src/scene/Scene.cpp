@@ -126,6 +126,8 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
     if(ImGui::CollapsingHeader("Lighting Controls")) {
         ImGui::Checkbox("Point Lights", &renderContext.imguiData.pointLights);
+        ImGui::SliderFloat("Exposure", &renderContext.imguiData.exposure, 0.1,
+                           5, "%3f", ImGuiSliderFlags_Logarithmic);
     }
 
     if(ImGui::CollapsingHeader("Gameplay Controls")) {

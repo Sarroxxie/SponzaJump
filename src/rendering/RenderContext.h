@@ -147,13 +147,15 @@ typedef struct
     bool visualizeShadowBuffer = false;
     bool playerSpikesShadow    = false;
     bool doPCF                 = true;
-    bool pointLights           = true;
 
     float depthBiasConstant = 0.0f;
     float depthBiasSlope    = 2.0f;
 
     int meshDrawCalls  = 0;
     int lightDrawCalls = 0;
+
+    bool pointLights = true;
+    float exposure    = 1.0f;
 } ImguiData;
 
 typedef struct
