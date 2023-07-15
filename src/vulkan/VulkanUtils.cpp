@@ -330,12 +330,12 @@ void createCubeMap(VulkanBaseContext context,
                    CommandContext    commandContext,
                    CubeMap&          cubemap,
                    bool              mipmaps) {
-    int      texWidth, texHeight, texChannels;
-    stbi_uc* pixels[6];
+    int    texWidth, texHeight, texChannels;
+    float* pixels[6];
 
     // load all faces of the cube map to CPU
     for(int i = 0; i < 6; i++) {
-        pixels[i] = stbi_load(cubemap.paths[i].c_str(), &texWidth, &texHeight,
+        pixels[i] = stbi_loadf(cubemap.paths[i].c_str(), &texWidth, &texHeight,
                               &texChannels, STBI_rgb_alpha);
         if(!pixels[i]) {
             std::cerr << "failed to load cubemap image: \"" + cubemap.paths[i] + "\"\n";
@@ -343,6 +343,7 @@ void createCubeMap(VulkanBaseContext context,
                                      + cubemap.paths[i] + "\"");
         }
     }
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
     uint32_t mipLevels = 1;
     VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -352,10 +353,10 @@ void createCubeMap(VulkanBaseContext context,
         // prepare mip level 0 for the creation of the next mip level
         usageFlags = usageFlags | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
-
     // every image will be stored with 4 channels and the cube has 6 sides in total
-    VkDeviceSize layerSize = texWidth * texHeight * 4;
-    VkDeviceSize imageSize = layerSize * 6;
+    int          numbersPerLayer = texWidth * texHeight * STBI_rgb_alpha;
+    VkDeviceSize layerSize       = numbersPerLayer * sizeof(float);
+    VkDeviceSize imageSize       = layerSize * 6;
 
     // load image into staging buffer on GPU
     VkBuffer       stagingBuffer;
@@ -368,9 +369,12 @@ void createCubeMap(VulkanBaseContext context,
     void* data;
     vkMapMemory(context.device, stagingBufferMemory, 0, imageSize, 0, &data);
     for(int i = 0; i < 6; i++) {
-        // TODO: check this arithmetic!
         // for arithmetic operations to be done on the pointer, it cannot have type "void*"
-        memcpy(static_cast<char*>(data) + (layerSize * i), pixels[i],
+        float* destination = static_cast<float*>(data);
+        // pointer arithmetic already takes length of the data pointer into account, so we have to devide it out
+        destination += numbersPerLayer * i;
+
+        memcpy(destination, pixels[i],
                static_cast<size_t>(layerSize));
     }
     vkUnmapMemory(context.device, stagingBufferMemory);
@@ -389,7 +393,7 @@ void createCubeMap(VulkanBaseContext context,
     imageInfo.extent.depth  = 1;
     imageInfo.mipLevels     = mipLevels;
     imageInfo.arrayLayers   = 6;
-    imageInfo.format        = VK_FORMAT_R8G8B8A8_SRGB;
+    imageInfo.format        = format;
     imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage         = usageFlags;
@@ -417,8 +421,8 @@ void createCubeMap(VulkanBaseContext context,
 
     for(int i = 0; i < 6; i++) {
         // copy staging buffer to image
-        transitionImageLayout(context, commandContext, cubemap.image,
-                              VK_FORMAT_R8G8B8A8_SRGB, i, VK_IMAGE_LAYOUT_UNDEFINED,
+        transitionImageLayout(context, commandContext, cubemap.image, format, i,
+                              VK_IMAGE_LAYOUT_UNDEFINED,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         copyBufferToImage(context, commandContext, stagingBuffer, cubemap.image,
@@ -428,14 +432,14 @@ void createCubeMap(VulkanBaseContext context,
     if(mipmaps) {
         // after mipmap generation, all the levels are already in "SHADER_READ" format
         for(int i = 0; i < 6; i++) {
-            generateMipmaps(context, commandContext, cubemap.image,
-                            VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, i, mipLevels);
+            generateMipmaps(context, commandContext, cubemap.image, format,
+                            texWidth, texHeight, i, mipLevels);
         }
     } else {
         // if no mipmaps were created, the image layers still need to get
         // transitioned into "SHADER_READ" layout
         for(int i = 0; i < 6; i++) {
-            transitionImageLayout(context, commandContext, cubemap.image, VK_FORMAT_R8G8B8A8_SRGB,
+            transitionImageLayout(context, commandContext, cubemap.image, format,
                                   i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
@@ -450,7 +454,7 @@ void createCubeMap(VulkanBaseContext context,
     createInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     createInfo.image    = cubemap.image;
     createInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-    createInfo.format   = VK_FORMAT_R8G8B8A8_SRGB;
+    createInfo.format   = format;
     createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
     createInfo.subresourceRange.baseMipLevel   = 0;
     createInfo.subresourceRange.levelCount     = mipLevels;

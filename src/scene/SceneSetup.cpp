@@ -9,12 +9,12 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
 
     CubeMap& cubemap = scene.getSceneData().cubemap;
 
-    cubemap.paths[0] = "res/assets/textures/cubemap/skybox/px.png";
-    cubemap.paths[1] = "res/assets/textures/cubemap/skybox/nx.png";
-    cubemap.paths[2] = "res/assets/textures/cubemap/skybox/py.png";
-    cubemap.paths[3] = "res/assets/textures/cubemap/skybox/ny.png";
-    cubemap.paths[4] = "res/assets/textures/cubemap/skybox/pz.png";
-    cubemap.paths[5] = "res/assets/textures/cubemap/skybox/nz.png";
+    cubemap.paths[0] = "res/assets/textures/cubemap/skybox/px.hdr";
+    cubemap.paths[1] = "res/assets/textures/cubemap/skybox/nx.hdr";
+    cubemap.paths[2] = "res/assets/textures/cubemap/skybox/py.hdr";
+    cubemap.paths[3] = "res/assets/textures/cubemap/skybox/ny.hdr";
+    cubemap.paths[4] = "res/assets/textures/cubemap/skybox/pz.hdr";
+    cubemap.paths[5] = "res/assets/textures/cubemap/skybox/nz.hdr";
     createCubeMap(context.baseContext, context.commandContext, cubemap, true);
 
     /*{
@@ -32,7 +32,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
 
-        loader.loadModel("res/assets/models/sponza/final_scene19.gltf",
+        loader.loadModel("res/assets/models/sponza/final_scene19_debug.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 

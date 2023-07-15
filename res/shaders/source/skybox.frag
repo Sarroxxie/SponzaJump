@@ -12,5 +12,9 @@ layout(set = 1, binding = eSkybox) uniform samplerCube skybox;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = texture(skybox, inPosition - lightingInformation.cameraPosition);
+    vec3 color = texture(skybox, inPosition - lightingInformation.cameraPosition).rgb;
+
+    // tone mapping
+    color = color / (color + vec3(1.0));
+    outColor = vec4(color, 1);
 }
