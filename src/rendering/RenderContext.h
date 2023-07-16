@@ -164,8 +164,9 @@ typedef struct
     float depthBiasConstant = 0.0f;
     float depthBiasSlope    = 2.0f;
 
-    int meshDrawCalls  = 0;
-    int lightDrawCalls = 0;
+    int meshDrawCalls       = 0;
+    int lightDrawCalls      = 0;
+    int shadowPassDrawCalls = 0;
 
     bool pointLights = true;
     // NOTE: this must always be true on startup, can modify at runtime via ImGui

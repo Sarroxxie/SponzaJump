@@ -33,6 +33,7 @@ void VulkanRenderer::render(Scene& scene) {
     // reset imgui per frame counters
     m_RenderContext.imguiData.meshDrawCalls = 0;
     m_RenderContext.imguiData.lightDrawCalls = 0;
+    m_RenderContext.imguiData.shadowPassDrawCalls = 0;
 
     vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -267,11 +268,11 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                     // this is fairly hardcoded so that the spiky mesh of the
                     // player has no shadow the meshes of the spikes are at
                     // position 1 and 2 (this is the hardcoded part)
-                    /*if(!m_RenderContext.imguiData.playerSpikesShadow
+                    if(!m_RenderContext.imguiData.playerSpikesShadow
                        && id == playerID && (counter == 1 || counter == 2)) {
                         counter++;
                         continue;
-                    }*/
+                    }
                     MeshPart& meshPart = scene.getSceneData().meshParts[meshPartIndex];
                     Mesh& mesh = scene.getSceneData().meshes[meshPart.meshIndex];
                     VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
@@ -295,15 +296,14 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                         0,  // offset
                         sizeof(ShadowPushConstant), &shadowPushConstant);
 
+                    m_RenderContext.imguiData.shadowPassDrawCalls++;
                     vkCmdDrawIndexed(commandBuffer,
                                      mesh.indicesCount, 1, 0, 0, 0);
-
 
                     counter++;
                 }
             }
         }
-
         vkCmdEndRenderPass(commandBuffer);
     }
 }
@@ -750,7 +750,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     CameraUniform& cameraUniform = m_RenderContext.uniforms.cameraUniform;
     cameraUniform.view = scene.getCameraRef().getCameraMatrix();
     cameraUniform.proj = projection;
-    cameraUniform.viewInverse = glm::inverse(scene.getCameraRef().getCameraMatrix());
+    cameraUniform.viewInverse = glm::inverse(cameraUniform.view);
     cameraUniform.projInverse = glm::inverse(projection);
 
     // PushConstants would be more efficient for often changing small data buffers
