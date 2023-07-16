@@ -124,18 +124,21 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    recordShadowPass(scene, imageIndex);
+    if(m_RenderContext.imguiData.shadows) {
 
-    VkMemoryBarrier memoryBarrier;
-    memoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    memoryBarrier.pNext         = VK_NULL_HANDLE;
-    memoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-    memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        recordShadowPass(scene, imageIndex);
 
-    vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1,
-                         &memoryBarrier, 0, VK_NULL_HANDLE, 0, VK_NULL_HANDLE);
+        VkMemoryBarrier memoryBarrier;
+        memoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        memoryBarrier.pNext         = VK_NULL_HANDLE;
+        memoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+        memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+        vkCmdPipelineBarrier(m_Context.commandContext.commandBuffer,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1,
+                             &memoryBarrier, 0, VK_NULL_HANDLE, 0, VK_NULL_HANDLE);
+    }
 
     recordGeometryPass(scene);
 
@@ -759,6 +762,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
         glm::normalize(m_RenderContext.renderSettings.shadowMappingSettings.lightDirection);
     lightingInformation.lightIntensity =
         m_RenderContext.renderSettings.lightingSetting.sunColor;
+    lightingInformation.shadows = m_RenderContext.imguiData.shadows;
 
     memcpy(m_RenderContext.renderPasses.mainPass.lightingBuffer.bufferMemoryMapping,
            &lightingInformation, sizeof(LightingInformation));

@@ -141,5 +141,5 @@ struct LightingInformation
     ALIGN_AS(16) vec3 cameraPosition;
     ALIGN_AS(16) vec3 lightDirection;
     ALIGN_AS(16) vec3 lightIntensity;
-    // could store some omnidirectional light sources here for demonstration
+    ALIGN_AS(4) int shadows;
 };

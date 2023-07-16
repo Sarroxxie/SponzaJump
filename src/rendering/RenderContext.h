@@ -159,7 +159,9 @@ typedef struct
     int lightDrawCalls = 0;
 
     bool pointLights = true;
-    float exposure    = 1.0f;
+    // NOTE: this must always be true on startup, can modify at runtime via ImGui
+    bool  shadows  = true;
+    float exposure = 1.0f;
 } ImguiData;
 
 typedef struct

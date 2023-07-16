@@ -104,28 +104,30 @@ void main() {
     tmp = cameraUniform.viewInverse * (tmp / tmp.w);
     vec3 position = tmp.xyz;
 
-    // depth in view space used for cascade evaluation
-    float viewSpaceDepth = (cameraUniform.view * vec4(position, 1)).z;
-
-    // shadow stuff
-    uint cascadeIndex = 0;
-    for(uint i = 0; i < pushConstant.cascadeCount - 1; ++i) {
-        if(viewSpaceDepth < cascadeSplits.split[i].splitVal) {
-            cascadeIndex = i + 1;
-        }
-    }
-    vec4 shadowCoord = (LightVPs.mats[cascadeIndex]) * vec4(position, 1.0);
-
-    shadowCoord = shadowCoord / shadowCoord.w;
-    shadowCoord = vec4((shadowCoord.xyz + vec3(1)) / 2, shadowCoord.a);
-
     float shadow = 0;
-    bool doPCF = getControlFlagValue(pushConstant.controlFlags, PCF_CONTROL_BIT);
+    uint cascadeIndex = 0;
+    if (lightingInformation.shadows == 1) {
+        // depth in view space used for cascade evaluation
+        float viewSpaceDepth = (cameraUniform.view * vec4(position, 1)).z;
 
-    if (doPCF) {
-        shadow = filterPCF(shadowCoord, cascadeIndex);
-    } else {
-        shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);
+        // shadow stuff
+        for(uint i = 0; i < pushConstant.cascadeCount - 1; ++i) {
+            if(viewSpaceDepth < cascadeSplits.split[i].splitVal) {
+                cascadeIndex = i + 1;
+            }
+        }
+        vec4 shadowCoord = (LightVPs.mats[cascadeIndex]) * vec4(position, 1.0);
+
+        shadowCoord = shadowCoord / shadowCoord.w;
+        shadowCoord = vec4((shadowCoord.xyz + vec3(1)) / 2, shadowCoord.a);
+
+        bool doPCF = getControlFlagValue(pushConstant.controlFlags, PCF_CONTROL_BIT);
+
+        if (doPCF) {
+            shadow = filterPCF(shadowCoord, cascadeIndex);
+        } else {
+            shadow = getShadow(shadowCoord, vec2(0.0), cascadeIndex);
+        }
     }
 
     // lighting calculation for directional light source
