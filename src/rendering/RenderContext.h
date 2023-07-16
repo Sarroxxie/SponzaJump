@@ -69,6 +69,7 @@ typedef struct
     uint32_t shadowMapHeight;
 
     RenderPassContext renderPassContext;
+    ShadowPushConstant shadowPushConstant;
 } ShadowPass;
 
 typedef struct
@@ -94,6 +95,14 @@ typedef struct
 
     VkDescriptorSetLayout skyboxDescriptorSetLayout;
     VkDescriptorSet       skyboxDescriptorSet;
+    
+    // Push Constants
+    PushConstant              pushConstant;
+    StencilPushConstant       stencilPushConstant;
+    PointLightPushConstant    pointLightPushConstant;
+    SkyboxPushConstant        skyboxPushConstant;
+    ShadowControlPushConstant shadowControlPushConstant;
+    CameraUniform             cameraUniform;
 
     // pipelines
     // visualize shadow map
@@ -186,6 +195,12 @@ typedef struct
 
 typedef struct
 {
+    LightingInformation lightingInformation;
+    CameraUniform       cameraUniform;
+} Uniforms;
+
+typedef struct
+{
     // color of sunlight according to https://www.color-name.com/sunlight.color
     glm::vec3 sunColor = glm::vec3(0.95686, 0.91373, 0.60784);
 } LightingSettings;
@@ -246,6 +261,7 @@ typedef struct s_renderContext
     ImguiData    imguiData;
 
     RenderSettings renderSettings;
+    Uniforms       uniforms;
 
     RenderSetupDescription renderSetupDescription;
 } RenderContext;

@@ -246,7 +246,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                 0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet,
                 0, nullptr);
 
-            ShadowPushConstant shadowPushConstant;
+            ShadowPushConstant& shadowPushConstant = shadowPass.shadowPushConstant;
             shadowPushConstant.cascadeIndex = i;
 
             EntityId playerID = -1;
@@ -308,7 +308,8 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 }
 
 void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
-    RenderPassContext& mainRenderPass = m_RenderContext.renderPasses.mainPass.renderPassContext;
+    MainPass& mainPass = m_RenderContext.renderPasses.mainPass;
+    RenderPassContext& mainRenderPass = mainPass.renderPassContext;
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType      = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -347,14 +348,14 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
     if(m_RenderContext.imguiData.visualizeShadowBuffer) {
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          m_RenderContext.renderPasses.mainPass.visualizePipeline);
+                          mainPass.visualizePipeline);
 
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.visualizePipelineLayout, 0, 1,
-            &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
+            mainPass.visualizePipelineLayout, 0, 1,
+            &mainPass.depthDescriptorSet, 0, nullptr);
 
-        ShadowControlPushConstant pushConstant{};
+        ShadowControlPushConstant& shadowControlPushConstant = mainPass.shadowControlPushConstant;
 
         ShadowMappingSettings shadowSettings =
             m_RenderContext.renderSettings.shadowMappingSettings;
@@ -364,44 +365,44 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         else if(shadowSettings.cascadeVisIndex >= shadowSettings.numberCascades)
             shadowSettings.cascadeVisIndex = shadowSettings.numberCascades - 1;
 
-        pushConstant.cascadeIndex = shadowSettings.cascadeVisIndex;
+        shadowControlPushConstant.cascadeIndex = shadowSettings.cascadeVisIndex;
 
         vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                           m_RenderContext.renderPasses.mainPass.visualizePipelineLayout,
+                           mainPass.visualizePipelineLayout,
                            VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,  // offset
-                           sizeof(ShadowControlPushConstant), &pushConstant);
+                           sizeof(ShadowControlPushConstant), &shadowControlPushConstant);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
 
     } else {
         // render screen quad for primary light source
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          m_RenderContext.renderPasses.mainPass.primaryLightingPipeline);
+                          mainPass.primaryLightingPipeline);
 
         // bind DescriptorSet 0 (Camera Transformations)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 0,
-            1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+            mainPass.primaryLightingPipelineLayout, 0,
+            1, &mainPass.transformDescriptorSet, 0, nullptr);
         // bind DescriptorSet 1 (Shadow)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 1,
-            1, &m_RenderContext.renderPasses.mainPass.depthDescriptorSet, 0, nullptr);
+            mainPass.primaryLightingPipelineLayout, 1,
+            1, &mainPass.depthDescriptorSet, 0, nullptr);
         // bind DescriptorSet 2 (gBuffer)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 2,
-            1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet, 0, nullptr);
+            mainPass.primaryLightingPipelineLayout, 2,
+            1, &mainPass.gBufferDescriptorSet, 0, nullptr);
         // bind DescriptorSet 3 (IBL)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout, 3,
-            1, &m_RenderContext.renderPasses.mainPass.skyboxDescriptorSet, 0, nullptr);
+            mainPass.primaryLightingPipelineLayout, 3,
+            1, &mainPass.skyboxDescriptorSet, 0, nullptr);
 
         // create PushConstant object and initialize with default values
-        PushConstant pushConstant;
+        PushConstant& pushConstant    = mainPass.pushConstant;
         pushConstant.transformation   = glm::mat4(1);
         pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
         pushConstant.resolution =
@@ -418,7 +419,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
 
         vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                           m_RenderContext.renderPasses.mainPass.primaryLightingPipelineLayout,
+                           mainPass.primaryLightingPipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,  // offset
                            sizeof(PushConstant), &pushConstant);
@@ -430,20 +431,20 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
             {
                 vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
                                   VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  m_RenderContext.renderPasses.mainPass.pointLightsPipeline);
+                                  mainPass.pointLightsPipeline);
 
                 // bind DescriptorSet 0 (Camera Transformations)
                 vkCmdBindDescriptorSets(
                     m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
-                    0, 1, &m_RenderContext.renderPasses.mainPass.transformDescriptorSet,
+                    mainPass.pointLightsPipelineLayout,
+                    0, 1, &mainPass.transformDescriptorSet,
                     0, nullptr);
 
                 // bind DescriptorSet 1 (gBuffer)
                 vkCmdBindDescriptorSets(
                     m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
-                    1, 1, &m_RenderContext.renderPasses.mainPass.gBufferDescriptorSet,
+                    mainPass.pointLightsPipelineLayout,
+                    1, 1, &mainPass.gBufferDescriptorSet,
                     0, nullptr);
 
                 // bind point light mesh (it will remain the same for each light source
@@ -455,7 +456,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                 vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
                                      pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-                PointLightPushConstant pointLightPushConstant;
+                PointLightPushConstant& pointLightPushConstant = mainPass.pointLightPushConstant;
                 pointLightPushConstant.worldCamPosition =
                     scene.getCameraRef().getWorldPos();
                 pointLightPushConstant.resolution =
@@ -478,7 +479,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                     // sending push constant to GPU
                     vkCmdPushConstants(
                         m_Context.commandContext.commandBuffer,
-                        m_RenderContext.renderPasses.mainPass.pointLightsPipelineLayout,
+                        mainPass.pointLightsPipelineLayout,
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0,  // offset
                         sizeof(PointLightPushConstant), &pointLightPushConstant);
@@ -491,26 +492,26 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          m_RenderContext.renderPasses.mainPass.skyboxPipeline);
+                          mainPass.skyboxPipeline);
 
         // bind DescriptorSet 0 (Camera Transformations)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 0, 1,
-            &m_RenderContext.renderPasses.mainPass.transformDescriptorSet, 0, nullptr);
+            mainPass.skyboxPipelineLayout, 0, 1,
+            &mainPass.transformDescriptorSet, 0, nullptr);
 
         // bind DescriptorSet 1 (Materials)
         vkCmdBindDescriptorSets(
             m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout, 1, 1,
-            &m_RenderContext.renderPasses.mainPass.skyboxDescriptorSet, 0, nullptr);
+            mainPass.skyboxPipelineLayout, 1, 1,
+            &mainPass.skyboxDescriptorSet, 0, nullptr);
 
-        SkyboxPushConstant skyboxPushConstant;
+        SkyboxPushConstant& skyboxPushConstant = mainPass.skyboxPushConstant;
         skyboxPushConstant.exposure = m_RenderContext.imguiData.exposure;
 
         // sending push constant to GPU
         vkCmdPushConstants(m_Context.commandContext.commandBuffer,
-                           m_RenderContext.renderPasses.mainPass.skyboxPipelineLayout,
+                           mainPass.skyboxPipelineLayout,
                            VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,  // offset
                            sizeof(SkyboxPushConstant), &skyboxPushConstant);
@@ -530,9 +531,8 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
 void VulkanRenderer::recordGeometryPass(Scene& scene) {
     // geometry pass
-    RenderPassContext& mainRenderPass = m_RenderContext.renderPasses.mainPass.renderPassContext;
-
-    MainPass mainPass = m_RenderContext.renderPasses.mainPass;
+    MainPass& mainPass = m_RenderContext.renderPasses.mainPass;
+    RenderPassContext& mainRenderPass = mainPass.renderPassContext;
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -601,7 +601,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
 
         // create PushConstant object and initialize with default values
-        PushConstant pushConstant;
+        PushConstant& pushConstant = mainPass.pushConstant;
         pushConstant.transformation   = glm::mat4(1);
         pushConstant.worldCamPosition = scene.getCameraRef().getWorldPos();
         pushConstant.materialIndex    = 0;
@@ -671,7 +671,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
         // one tutorial says openGL has different convention for Y
         // coordinates in clip space than vulkan, need to flip it
         projection[1][1] *= -1;
-        StencilPushConstant stencilPushConstant;
+        StencilPushConstant& stencilPushConstant = mainPass.stencilPushConstant;
         stencilPushConstant.projView =
             projection * scene.getCameraRef().getCameraMatrix();
 
@@ -744,7 +744,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     // clip space than vulkan, need to flip it
     projection[1][1] *= -1;
 
-    CameraUniform cameraUniform;
+    CameraUniform& cameraUniform = m_RenderContext.uniforms.cameraUniform;
     cameraUniform.view = scene.getCameraRef().getCameraMatrix();
     cameraUniform.proj = projection;
     cameraUniform.viewInverse = glm::inverse(scene.getCameraRef().getCameraMatrix());
@@ -755,7 +755,8 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     memcpy(m_RenderContext.renderPasses.mainPass.transformBuffer.bufferMemoryMapping,
            &cameraUniform, sizeof(CameraUniform));
 
-    LightingInformation lightingInformation;
+
+    LightingInformation& lightingInformation = m_RenderContext.uniforms.lightingInformation;
     lightingInformation.cameraPosition = scene.getCameraRef().getWorldPos();
     lightingInformation.lightDirection =
         glm::normalize(m_RenderContext.renderSettings.shadowMappingSettings.lightDirection);
