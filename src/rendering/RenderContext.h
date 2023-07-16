@@ -149,7 +149,7 @@ typedef struct
     bool lockCamera = true;
 
     bool visualizeShadowBuffer = false;
-    bool playerSpikesShadow    = false;
+    bool playerSpikesShadow    = true;
     bool doPCF                 = true;
 
     float depthBiasConstant = 0.0f;
