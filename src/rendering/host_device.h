@@ -146,4 +146,5 @@ struct LightingInformation
     ALIGN_AS(16) vec3 lightDirection;
     ALIGN_AS(16) vec3 lightIntensity;
     ALIGN_AS(4) int shadows;
+    ALIGN_AS(4) float iblFactor;
 };

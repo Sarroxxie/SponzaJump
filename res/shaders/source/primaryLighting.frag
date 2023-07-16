@@ -133,10 +133,10 @@ void main() {
     // lighting calculation for directional light source
     vec3 color = vec3(0,0,0);
     vec3 V = normalize(lightingInformation.cameraPosition - position);
-    /*if (shadow > 0) {
+    if (shadow > 0) {
         vec3 L = normalize(-lightingInformation.lightDirection);
-        color += BRDF(L, V, normal, lightingInformation.lightIntensity * 5, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g) * shadow;
-    }*/
+        color += BRDF(L, V, normal, lightingInformation.lightIntensity * 5, albedo, aoRoughnessMetallic.b, aoRoughnessMetallic.g) * shadow * (1 - lightingInformation.iblFactor);
+    }
     // ambient lighting (we now use IBL as the ambient term)
 
 
@@ -162,13 +162,12 @@ void main() {
 
     vec3 ambient = (kD * diffuse + specular) * aoRoughnessMetallic.r;
 
-    // tune down IBL influence when shadowed
-    if(shadow == 0) {
-        ambient *= 0.015;
-    }
+    // Image Based Lighting does not get affected by occlusion, so a variable scaling factor is applied for showcase
+    color += ambient * lightingInformation.iblFactor;
+
     // old, not IBL ambient
     //vec3 ambient = vec3(0.01) * albedo * aoRoughnessMetallic.r;
-    color += ambient;
+    //color += ambient;
 
     outColor = vec4(color, 1);
     bool cascadeVis = getControlFlagValue(pushConstant.controlFlags, CASCADE_VIS_CONTROL_BIT);

@@ -175,6 +175,7 @@ typedef struct
     bool pointLights = true;
     // NOTE: this must always be true on startup, can modify at runtime via ImGui
     bool  shadows  = true;
+    float iblFactor = 0.1f;
     float exposure = 1.0f;
 } ImguiData;
 

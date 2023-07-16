@@ -772,6 +772,7 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
     lightingInformation.lightIntensity =
         m_RenderContext.renderSettings.lightingSetting.sunColor;
     lightingInformation.shadows = m_RenderContext.imguiData.shadows;
+    lightingInformation.iblFactor = m_RenderContext.imguiData.iblFactor;
 
     memcpy(m_RenderContext.renderPasses.mainPass.lightingBuffer.bufferMemoryMapping,
            &lightingInformation, sizeof(LightingInformation));

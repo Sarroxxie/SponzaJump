@@ -130,6 +130,8 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     if(ImGui::CollapsingHeader("Lighting Controls")) {
         ImGui::Checkbox("Point Lights", &renderContext.imguiData.pointLights);
         ImGui::Checkbox("Shadows", &renderContext.imguiData.shadows);
+        ImGui::SliderFloat("IBL factor", &renderContext.imguiData.iblFactor,
+                           0.0, 1, "%3f", ImGuiSliderFlags_Logarithmic);
         ImGui::SliderFloat("Skybox Exposure", &renderContext.imguiData.exposure, 0.1,
                            5, "%3f", ImGuiSliderFlags_Logarithmic);
     }
