@@ -24,7 +24,7 @@ void main() {
     // prepare data for normal mapping
     mat3 normalTransformation = mat3(pushConstant.normalsTransformation);
     outNormal = normalize(normalTransformation * inNormal);
-    outTangents = vec4(normalize(normalTransformation * inTangents.xyz), inTangents.w);
+    outTangents = normalize(vec4(normalTransformation * inTangents.xyz, inTangents.w));
 
     outTexCoords = inTexCoords;
 }
