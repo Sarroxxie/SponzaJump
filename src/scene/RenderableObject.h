@@ -6,7 +6,9 @@
 #include "vulkan/ApplicationContext.h"
 #include "vulkan/VulkanUtils.h"
 #include "glm/ext/matrix_float4x4.hpp"
+#include "glm/ext/matrix_float3x3.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include "glm/gtc/matrix_inverse.hpp"
 #include <glm/gtx/euler_angles.hpp>
 
 typedef struct transformation_s
@@ -17,19 +19,32 @@ typedef struct transformation_s
 
     // the transformation should only be updated after the object has changed
     glm::mat4 transformation {glm::mat4(1)};
+    // transpose inverse of transformation
+    glm::mat4 normalsTransformation{glm::mat4(1)};
     bool      hasChanged = false;
 
-    glm::mat4 getMatrix() {
-        if(!hasChanged) {
-            return transformation;
+    glm::mat4 getTransformationMatrix() {
+        if(hasChanged) {
+            recalculateMatrices();
         }
+        return transformation;
+    }
+
+    glm::mat4 getNormalsTransformationMatrix() {
+        if(hasChanged) {
+            recalculateMatrices();
+        }
+        return normalsTransformation;
+    }
+
+    void recalculateMatrices() {
         glm::mat4 scaleMat = glm::scale(glm::mat4(1), scaling);
         glm::mat4 rotateMat =
             glm::eulerAngleXYZ(rotation.x, rotation.y, rotation.z);
         glm::mat4 translateMat = glm::translate(glm::mat4(1), translation);
         transformation         = translateMat * rotateMat * scaleMat;
-        hasChanged             = false;
-        return transformation;
+        normalsTransformation = glm::inverseTranspose(transformation);
+        hasChanged = false;
     }
 } Transformation;
 

@@ -22,7 +22,7 @@ void main() {
     gl_Position = cameraUniform.proj * cameraUniform.view * worldPosition;
 
     // prepare data for normal mapping
-    mat3 normalTransformation = transpose(inverse(mat3(pushConstant.transformation)));
+    mat3 normalTransformation = mat3(pushConstant.normalsTransformation);
     outNormal = normalize(normalTransformation * inNormal);
     outTangents = vec4(normalize(normalTransformation * inTangents.xyz), inTangents.w);
 

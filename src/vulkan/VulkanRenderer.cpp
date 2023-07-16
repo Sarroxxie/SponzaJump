@@ -286,7 +286,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                                          mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
                     // only updates transformation matrix if the transformation has changed
-                    shadowPushConstant.transform = transformComponent->getMatrix();
+                    shadowPushConstant.transform = transformComponent->getTransformationMatrix();
 
                     vkCmdPushConstants(
                         commandBuffer,
@@ -624,7 +624,9 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
             Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
             // only update transformation matrix if the transformation has changed
-            pushConstant.transformation = transformComponent->getMatrix();
+            pushConstant.transformation = transformComponent->getTransformationMatrix();
+            pushConstant.normalsTransformation =
+                transformComponent->getNormalsTransformationMatrix();
 
             for(auto& meshPartIndex : model.meshPartIndices) {
                 MeshPart& meshPart = scene.getSceneData().meshParts[meshPartIndex];

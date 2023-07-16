@@ -9,6 +9,7 @@
 #include "glm/glm.hpp"
 using ivec2 = glm::ivec2;
 using vec3 = glm::vec3;
+using mat3 = glm::mat3;
 using mat4 = glm::mat4;
 using uint = unsigned int;
 #endif
@@ -94,6 +95,8 @@ struct PushConstant
 {
     // transformation matrix of the current instance
     ALIGN_AS(16) mat4 transformation;
+    // is only needed in the geometry pass to correctly transform normals
+    ALIGN_AS(16) mat4 normalsTransformation;
     ALIGN_AS(16) vec3 worldCamPosition;
     // index of the material (in the material buffer) for the current MeshPart
     ALIGN_AS(4) int materialIndex;
