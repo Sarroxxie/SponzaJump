@@ -19,7 +19,6 @@ layout (push_constant) uniform shadowPushConstant {
 void main() {
     MaterialDescription material = materials.m[pushConstant.materialIndex];
 
-    vec3 albedo = material.albedo;
     if(material.albedoTextureID != -1) {
         vec4 albedoTexture = texture(samplers[material.albedoTextureID], inTexCoords);
         // allow alpha masking
