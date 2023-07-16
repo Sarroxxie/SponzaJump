@@ -42,6 +42,10 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                     RenderContext& renderContext,
                                     Scene& scene);
 
+void createShadowPipeline(const ApplicationVulkanContext &appContext, ShadowPass &shadowPass);
+
+void cleanShadowPipeline(const VulkanBaseContext& baseContext, const ShadowPass& shadowPass);
+
 void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& shadowPass);
 
 // -----
@@ -163,6 +167,7 @@ void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
                             VkPipeline&                     graphicsPipeline,
                             const RenderPassDescription& renderSetupDescription,
                             std::vector<VkDescriptorSetLayout>& layouts,
+                            bool recompileShaders = false,
                             bool useFragmentShader = true);
 
 void createBlankAttachment(const ApplicationVulkanContext& context,

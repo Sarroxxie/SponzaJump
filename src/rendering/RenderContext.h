@@ -20,9 +20,6 @@ typedef struct
 {
     VkRenderPass renderPass;
 
-    VkPipelineLayout pipelineLayouts[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-    VkPipeline       graphicsPipelines[2]{VK_NULL_HANDLE, VK_NULL_HANDLE};
-
     bool activePipelineIndex = 0;
 
     RenderPassDescription renderPassDescription;
@@ -67,6 +64,10 @@ typedef struct
 
     VkDescriptorSetLayout materialDescriptorSetLayout;
     VkDescriptorSet       materialDescriptorSet;
+
+    VkPipelineLayout shadowPipelineLayout;
+    VkPipeline       shadowPipeline;
+
 
     uint32_t shadowMapWidth;
     uint32_t shadowMapHeight;

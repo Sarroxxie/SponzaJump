@@ -37,8 +37,10 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     shadowPassDescription.fragmentShader.sourceDirectory = "res/shaders/source/";
     shadowPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
-    shadowPassDescription.pushConstantRanges.push_back(createPushConstantRange(
-        0, sizeof(ShadowPushConstant), getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+    shadowPassDescription.pushConstantRanges.push_back(
+        createPushConstantRange(0, sizeof(ShadowPushConstant),
+                                getStageFlag(ShaderStage::VERTEX_SHADER)
+                                    | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     shadowPassDescription.enableDepthBias = true;
 
@@ -76,7 +78,8 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
     // --- Shadow Pass
 
-    initializeShadowPass(appContext, renderContext, renderSetupDescription.shadowPassDescription, scene);
+    initializeShadowPass(appContext, renderContext,
+                         renderSetupDescription.shadowPassDescription, scene);
 
     createShadowPassResources(appContext, renderContext);
 
@@ -163,21 +166,6 @@ void cleanupRenderContext(const VulkanBaseContext& baseContext, RenderContext& r
     vkDestroyDescriptorPool(baseContext.device, renderContext.descriptorPool, nullptr);
 }
 
-void cleanupRenderPassContext(const VulkanBaseContext& baseContext,
-                              const RenderPassContext& renderPassContext) {
-    // delete graphics pipeline(s) (if the 2nd one was created, delete that too)
-    for(int i = 0; i < 2; i++) {
-        if(renderPassContext.graphicsPipelines[i] != VK_NULL_HANDLE) {
-            vkDestroyPipeline(baseContext.device,
-                              renderPassContext.graphicsPipelines[i], nullptr);
-            vkDestroyPipelineLayout(baseContext.device,
-                                    renderPassContext.pipelineLayouts[i], nullptr);
-        }
-    }
-
-    vkDestroyRenderPass(baseContext.device, renderPassContext.renderPass, nullptr);
-}
-
 void cleanupImGuiContext(const VulkanBaseContext& baseContext, RenderContext& renderContext) {
     vkDestroyDescriptorPool(baseContext.device,
                             renderContext.imguiContext.descriptorPool, nullptr);
@@ -213,7 +201,7 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.storeOp =
         VK_ATTACHMENT_STORE_OP_STORE;  // TODO this will probably need to change for shadow mapping ?
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 
     VkAttachmentReference depthAttachmentRef{};
@@ -346,7 +334,7 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
             attachmentDescs[i].finalLayout =
                 VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
             // stencil buffer should be conserved within a frame
-            attachmentDescs[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachmentDescs[i].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
             attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
         } else {
             attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -454,8 +442,8 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
 
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext,
-                          const RenderPassDescription& renderPassDescription,
-                          Scene& scene) {
+                          const RenderPassDescription&    renderPassDescription,
+                          Scene&                          scene) {
 
     ShadowPass& shadowPass = renderContext.renderPasses.shadowPass;
 
@@ -465,9 +453,9 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     bindings.push_back(createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                            getStageFlag(ShaderStage::VERTEX_SHADER)));
 
-    materialBindings.push_back(createLayoutBinding(
-        MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+    materialBindings.push_back(
+        createLayoutBinding(MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                            getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     materialBindings.push_back(createLayoutBinding(
         MaterialsBindings::eTextures, scene.getSceneData().textures.size(),
@@ -477,7 +465,8 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     createDescriptorSetLayout(appContext.baseContext,
                               shadowPass.transformDescriptorSetLayout, bindings);
 
-    // TODO (new descriptorSetLayout), increase poolsize, create DescriptorsSets for it, bind buffer, bind into shader, pass uvs, perform alpha test
+    // TODO (new descriptorSetLayout), increase poolsize, create DescriptorsSets
+    // for it, bind buffer, bind into shader, pass uvs, perform alpha test
     createDescriptorSetLayout(appContext.baseContext,
                               shadowPass.materialDescriptorSetLayout, materialBindings);
 
@@ -544,16 +533,19 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     descriptorSetLayouts.push_back(shadowPass.transformDescriptorSetLayout);
     descriptorSetLayouts.push_back(shadowPass.materialDescriptorSetLayout);
 
-    createGraphicsPipeline(appContext, shadowPass.renderPassContext,
-                           shadowPass.renderPassContext.pipelineLayouts[0],
-                           shadowPass.renderPassContext.graphicsPipelines[0], renderPassDescription,
-                           shadowPass.renderPassContext.descriptorSetLayouts);
-
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
+    createShadowPipeline(appContext, shadowPass);
+
+    /*
+    createGraphicsPipeline(appContext, shadowPass.renderPassContext,
+                           shadowPass.shadowPipelineLayout,
+                           shadowPass.shadowPipeline, renderPassDescription,
+                           shadowPass.renderPassContext.descriptorSetLayouts);
+    */
 
 
-    const uint32_t SHADOW_MAP_WIDTH  = 1920;
-    const uint32_t SHADOW_MAP_HEIGHT = 1920;
+    const uint32_t SHADOW_MAP_WIDTH  = 3840;
+    const uint32_t SHADOW_MAP_HEIGHT = 3840;
 
     shadowPass.shadowMapWidth  = SHADOW_MAP_WIDTH;
     shadowPass.shadowMapHeight = SHADOW_MAP_HEIGHT;
@@ -599,18 +591,33 @@ void initializeShadowDepthBuffer(const ApplicationVulkanContext& appContext,
     }
 }
 
+void createShadowPipeline(const ApplicationVulkanContext& appContext, ShadowPass& shadowPass) {
+    createGraphicsPipeline(appContext, shadowPass.renderPassContext,
+                           shadowPass.shadowPipelineLayout, shadowPass.shadowPipeline,
+                           shadowPass.renderPassContext.renderPassDescription,
+                           shadowPass.renderPassContext.descriptorSetLayouts, true);
+}
+
+void cleanShadowPipeline(const VulkanBaseContext& baseContext, const ShadowPass& shadowPass) {
+    vkDestroyPipeline(baseContext.device, shadowPass.shadowPipeline, nullptr);
+    vkDestroyPipelineLayout(baseContext.device, shadowPass.shadowPipelineLayout, nullptr);
+}
+
 void createGraphicsPipeline(const ApplicationVulkanContext& appContext,
                             RenderPassContext&              renderPass,
                             VkPipelineLayout&               pipelineLayout,
                             VkPipeline&                     graphicsPipeline,
                             const RenderPassDescription& renderPassDescription,
                             std::vector<VkDescriptorSetLayout>& layouts,
+                            bool recompileShaders,
                             bool useFragmentShader) {
 
     VkShaderModule vertShaderModule =
-        createShaderModule(appContext.baseContext, renderPassDescription.vertexShader);
+        createShaderModule(appContext.baseContext,
+                           renderPassDescription.vertexShader, recompileShaders);
     VkShaderModule fragShaderModule =
-        createShaderModule(appContext.baseContext, renderPassDescription.fragmentShader);
+        createShaderModule(appContext.baseContext,
+                           renderPassDescription.fragmentShader, recompileShaders);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1076,7 +1083,7 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
 
 void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
                                     RenderContext& renderContext,
-                                    Scene& scene) {
+                                    Scene&         scene) {
     ShadowPass& shadowPass = renderContext.renderPasses.shadowPass;
 
     VkDescriptorSetAllocateInfo allocInfo{};
@@ -1112,10 +1119,11 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
 
     VkDescriptorSetAllocateInfo allocInfoMaterial{};
-    allocInfoMaterial.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfoMaterial.descriptorPool = renderContext.descriptorPool;
+    allocInfoMaterial.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfoMaterial.descriptorPool     = renderContext.descriptorPool;
     allocInfoMaterial.descriptorSetCount = 1;
-    allocInfoMaterial.pSetLayouts = &renderContext.renderPasses.shadowPass.materialDescriptorSetLayout;
+    allocInfoMaterial.pSetLayouts =
+        &renderContext.renderPasses.shadowPass.materialDescriptorSetLayout;
 
     if(vkAllocateDescriptorSets(appContext.baseContext.device, &allocInfoMaterial,
                                 &shadowPass.materialDescriptorSet)
@@ -1130,12 +1138,12 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
     materialBufferInfo.range  = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet materialDescriptorWrite;
-    materialDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    materialDescriptorWrite.sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     materialDescriptorWrite.pNext      = nullptr;
     materialDescriptorWrite.dstSet     = shadowPass.materialDescriptorSet;
     materialDescriptorWrite.dstBinding = MaterialsBindings::eMaterials;
     materialDescriptorWrite.dstArrayElement = 0;
-    materialDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    materialDescriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     materialDescriptorWrite.descriptorCount = 1;
     materialDescriptorWrite.pBufferInfo     = &materialBufferInfo;
 
@@ -1175,7 +1183,9 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
     vkDestroyBuffer(baseContext.device, shadowPass.transformBuffer.buffer, nullptr);
     vkFreeMemory(baseContext.device, shadowPass.transformBuffer.bufferMemory, nullptr);
 
-    cleanupRenderPassContext(baseContext, shadowPass.renderPassContext);
+    vkDestroyRenderPass(baseContext.device, shadowPass.renderPassContext.renderPass, nullptr);
+
+    cleanShadowPipeline(baseContext, shadowPass);
 
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  shadowPass.transformDescriptorSetLayout, nullptr);
@@ -1595,7 +1605,8 @@ void updateGBufferDescriptor(const ApplicationVulkanContext& appContext,
         mainPass.aoRoughnessMetallicAttachment.imageView;
     gBufferDescriptorImageInfos[3].imageView = mainPass.depthAttachment.imageView;
     // depth needs special treatment
-    gBufferDescriptorImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+    gBufferDescriptorImageInfos[3].imageLayout =
+        VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
 
     // Normal
     VkWriteDescriptorSet gBufferNormalWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
@@ -1673,7 +1684,7 @@ void cleanMainPass(const VulkanBaseContext& baseContext, const MainPass& mainPas
 
     cleanSkyboxPipeline(baseContext, mainPass);
 
-    cleanupRenderPassContext(baseContext, mainPass.renderPassContext);
+    vkDestroyRenderPass(baseContext.device, mainPass.renderPassContext.renderPass, nullptr);
 
     cleanMainPassDescriptorLayouts(baseContext, mainPass);
 }
@@ -2264,9 +2275,9 @@ void createPrimaryLightingPipeline(const ApplicationVulkanContext& appContext,
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState   = &multisampling;
     pipelineInfo.pDepthStencilState  = nullptr;  // Optional
-    pipelineInfo.pColorBlendState   = &colorBlending;
-    pipelineInfo.pDynamicState      = &dynamicState;
-    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState    = &colorBlending;
+    pipelineInfo.pDynamicState       = &dynamicState;
+    pipelineInfo.pDepthStencilState  = &depthStencil;
 
     pipelineInfo.layout = mainPass.primaryLightingPipelineLayout;
 
@@ -2344,8 +2355,8 @@ void createStencilPipeline(const ApplicationVulkanContext& appContext,
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.depthBiasEnable  = VK_FALSE;
+    rasterizer.depthClampEnable        = VK_FALSE;
+    rasterizer.depthBiasEnable         = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
 
     // Enable Wireframe rendering here, requires GPU feature to be enabled
@@ -2377,7 +2388,7 @@ void createStencilPipeline(const ApplicationVulkanContext& appContext,
     depthStencil.front.failOp      = VK_STENCIL_OP_KEEP;
     depthStencil.front.passOp      = VK_STENCIL_OP_KEEP;
     depthStencil.front.depthFailOp = VK_STENCIL_OP_DECREMENT_AND_WRAP;
-    depthStencil.front.writeMask    = 0xff;
+    depthStencil.front.writeMask   = 0xff;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -2428,8 +2439,8 @@ void createStencilPipeline(const ApplicationVulkanContext& appContext,
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0; //descriptorSetLayouts.size();
-    //pipelineLayoutInfo.pSetLayouts    = //descriptorSetLayouts.data();
+    pipelineLayoutInfo.setLayoutCount = 0;  // descriptorSetLayouts.size();
+    // pipelineLayoutInfo.pSetLayouts    = //descriptorSetLayouts.data();
 
     // the used pushconstant will be only the struct "StencilPushConstant"
     VkPushConstantRange pushConstantRange =
@@ -2552,9 +2563,9 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
 
     rasterizer.lineWidth = 1.0f;
     // only back faces of light sources get rendered
-    rasterizer.cullMode        = VK_CULL_MODE_FRONT_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
 
-    //rasterizer.cullMode        = VK_CULL_MODE_NONE;
+    // rasterizer.cullMode        = VK_CULL_MODE_NONE;
     rasterizer.frontFace       = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -2647,9 +2658,9 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState   = &multisampling;
     pipelineInfo.pDepthStencilState  = nullptr;  // Optional
-    pipelineInfo.pColorBlendState   = &colorBlending;
-    pipelineInfo.pDynamicState      = &dynamicState;
-    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState    = &colorBlending;
+    pipelineInfo.pDynamicState       = &dynamicState;
+    pipelineInfo.pDepthStencilState  = &depthStencil;
 
     pipelineInfo.layout = mainPass.pointLightsPipelineLayout;
 
@@ -2669,8 +2680,7 @@ void createPointLightsPipeline(const ApplicationVulkanContext& appContext,
     vkDestroyShaderModule(appContext.baseContext.device, vertShaderModule, nullptr);
 }
 
-void cleanPointLightsPipeline(const VulkanBaseContext& baseContext,
-                                  const MainPass&          mainPass) {
+void cleanPointLightsPipeline(const VulkanBaseContext& baseContext, const MainPass& mainPass) {
     vkDestroyPipeline(baseContext.device, mainPass.pointLightsPipeline, nullptr);
     vkDestroyPipelineLayout(baseContext.device, mainPass.pointLightsPipelineLayout, nullptr);
 }

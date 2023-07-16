@@ -31,7 +31,7 @@ void VulkanRenderer::render(Scene& scene) {
     }
      */
     // reset imgui per frame counters
-    m_RenderContext.imguiData.meshDrawCalls = 0;
+    m_RenderContext.imguiData.meshDrawCalls  = 0;
     m_RenderContext.imguiData.lightDrawCalls = 0;
 
     vkWaitForFences(m_Context.baseContext.device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
@@ -224,9 +224,8 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
         vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
                              &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          shadowPass.renderPassContext
-                              .graphicsPipelines[shadowPass.renderPassContext.activePipelineIndex]);
+        vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                          VK_PIPELINE_BIND_POINT_GRAPHICS, shadowPass.shadowPipeline);
 
 
         if(i < m_RenderContext.renderSettings.shadowMappingSettings.numberCascades) {
@@ -236,22 +235,20 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                               m_RenderContext.imguiData.depthBiasConstant, 0.0f,
                               m_RenderContext.imguiData.depthBiasSlope * (i + 1));
 
-            vkCmdBindDescriptorSets(
-                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                shadowPass.renderPassContext
-                    .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet,
-                0, nullptr);
+            vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    shadowPass.shadowPipelineLayout, 0, 1,
+                                    &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet,
+                                    0, nullptr);
 
-            vkCmdBindDescriptorSets(
-                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                shadowPass.renderPassContext
-                    .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                1, 1, &m_RenderContext.renderPasses.shadowPass.materialDescriptorSet,
-                0, nullptr);
+            vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    shadowPass.shadowPipelineLayout, 1, 1,
+                                    &m_RenderContext.renderPasses.shadowPass.materialDescriptorSet,
+                                    0, nullptr);
 
             ShadowPushConstant shadowPushConstant;
-            shadowPushConstant.cascadeIndex = i;
+            shadowPushConstant.cascadeIndex  = i;
             shadowPushConstant.materialIndex = 0;
 
             EntityId playerID = -1;
@@ -292,13 +289,11 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
 
                     shadowPushConstant.transform = transformComponent->getMatrix();
 
-                    vkCmdPushConstants(
-                        m_Context.commandContext.commandBuffer,
-                        shadowPass.renderPassContext
-                            .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                        0,  // offset
-                        sizeof(ShadowPushConstant), &shadowPushConstant);
+                    vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                                       shadowPass.shadowPipelineLayout,
+                                       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                       0,  // offset
+                                       sizeof(ShadowPushConstant), &shadowPushConstant);
 
                     vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
                                      mesh.indicesCount, 1, 0, 0, 0);
@@ -425,7 +420,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                            sizeof(PushConstant), &pushConstant);
 
         vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
-        
+
         if(m_RenderContext.imguiData.pointLights) {
             // render point lights for shading
             {
@@ -489,7 +484,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                 }
             }
         }
-        
+
         // render skybpx
         vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.skyboxPipeline);
@@ -763,6 +758,11 @@ void VulkanRenderer::recompileToSecondaryPipeline() {
     std::cout << "\nRecompiling Shaders...\n";
 
     vkDeviceWaitIdle(m_Context.baseContext.device);
+
+    // rebuild shadow pipeline
+    cleanShadowPipeline(m_Context.baseContext, m_RenderContext.renderPasses.shadowPass);
+    createShadowPipeline(m_Context, m_RenderContext.renderPasses.shadowPass);
+
     // rebuild shadow map visualization pipeline
     cleanVisualizationPipeline(m_Context.baseContext,
                                m_RenderContext.renderPasses.mainPass);
