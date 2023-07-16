@@ -161,7 +161,8 @@ void VulkanRenderer::recordCommandBuffer(Scene& scene, uint32_t imageIndex) {
 }
 
 void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
-    ShadowPass& shadowPass = m_RenderContext.renderPasses.shadowPass;
+    ShadowPass&      shadowPass    = m_RenderContext.renderPasses.shadowPass;
+    VkCommandBuffer& commandBuffer = m_Context.commandContext.commandBuffer;
 
     VkExtent2D shadowExtent;
     shadowExtent.width  = shadowPass.shadowMapWidth;
@@ -178,12 +179,12 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
     viewport.height   = shadowExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(m_Context.commandContext.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = shadowExtent;
-    vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 
     int numberCascades = m_RenderContext.renderSettings.shadowMappingSettings.numberCascades;
@@ -224,10 +225,10 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = shadowExtent;
 
-        vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
+        vkCmdBeginRenderPass(commandBuffer,
                              &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           shadowPass.renderPassContext
                               .graphicsPipelines[shadowPass.renderPassContext.activePipelineIndex]);
 
@@ -235,12 +236,12 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
         if(i < m_RenderContext.renderSettings.shadowMappingSettings.numberCascades) {
 
 
-            vkCmdSetDepthBias(m_Context.commandContext.commandBuffer,
+            vkCmdSetDepthBias(commandBuffer,
                               m_RenderContext.imguiData.depthBiasConstant, 0.0f,
                               m_RenderContext.imguiData.depthBiasSlope * (i + 1));
 
             vkCmdBindDescriptorSets(
-                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 shadowPass.renderPassContext
                     .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
                 0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet,
@@ -277,24 +278,24 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                     VkDeviceSize offsets[]       = {0};
 
 
-                    vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                    vkCmdBindVertexBuffers(commandBuffer,
                                            0, 1, vertexBuffers, offsets);
 
-                    vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                    vkCmdBindIndexBuffer(commandBuffer,
                                          mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
                     // only updates transformation matrix if the transformation has changed
                     shadowPushConstant.transform = transformComponent->getMatrix();
 
                     vkCmdPushConstants(
-                        m_Context.commandContext.commandBuffer,
+                        commandBuffer,
                         shadowPass.renderPassContext
                             .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
                         VK_SHADER_STAGE_VERTEX_BIT,
                         0,  // offset
                         sizeof(ShadowPushConstant), &shadowPushConstant);
 
-                    vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                    vkCmdDrawIndexed(commandBuffer,
                                      mesh.indicesCount, 1, 0, 0, 0);
 
 
@@ -303,13 +304,14 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
             }
         }
 
-        vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
+        vkCmdEndRenderPass(commandBuffer);
     }
 }
 
 void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
-    MainPass& mainPass = m_RenderContext.renderPasses.mainPass;
+    MainPass&          mainPass       = m_RenderContext.renderPasses.mainPass;
     RenderPassContext& mainRenderPass = mainPass.renderPassContext;
+    VkCommandBuffer&   commandBuffer  = m_Context.commandContext.commandBuffer;
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType      = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -327,7 +329,7 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues    = clearValues.data();
 
-    vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
+    vkCmdBeginRenderPass(commandBuffer,
                          &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport{};
@@ -339,19 +341,19 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         static_cast<float>(m_Context.swapchainContext.swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(m_Context.commandContext.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = m_Context.swapchainContext.swapChainExtent;
-    vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     if(m_RenderContext.imguiData.visualizeShadowBuffer) {
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           mainPass.visualizePipeline);
 
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.visualizePipelineLayout, 0, 1,
             &mainPass.depthDescriptorSet, 0, nullptr);
 
@@ -367,37 +369,37 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
         shadowControlPushConstant.cascadeIndex = shadowSettings.cascadeVisIndex;
 
-        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+        vkCmdPushConstants(commandBuffer,
                            mainPass.visualizePipelineLayout,
                            VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,  // offset
                            sizeof(ShadowControlPushConstant), &shadowControlPushConstant);
 
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
+        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
 
     } else {
         // render screen quad for primary light source
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           mainPass.primaryLightingPipeline);
 
         // bind DescriptorSet 0 (Camera Transformations)
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.primaryLightingPipelineLayout, 0,
             1, &mainPass.transformDescriptorSet, 0, nullptr);
         // bind DescriptorSet 1 (Shadow)
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.primaryLightingPipelineLayout, 1,
             1, &mainPass.depthDescriptorSet, 0, nullptr);
         // bind DescriptorSet 2 (gBuffer)
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.primaryLightingPipelineLayout, 2,
             1, &mainPass.gBufferDescriptorSet, 0, nullptr);
         // bind DescriptorSet 3 (IBL)
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.primaryLightingPipelineLayout, 3,
             1, &mainPass.skyboxDescriptorSet, 0, nullptr);
 
@@ -418,31 +420,31 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         if(m_RenderContext.renderSettings.shadowMappingSettings.visualizeCascades)
             pushConstant.controlFlags |= CASCADE_VIS_CONTROL_BIT;
 
-        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+        vkCmdPushConstants(commandBuffer,
                            mainPass.primaryLightingPipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,  // offset
                            sizeof(PushConstant), &pushConstant);
 
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
+        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
         
         if(m_RenderContext.imguiData.pointLights) {
             // render point lights for shading
             {
-                vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+                vkCmdBindPipeline(commandBuffer,
                                   VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   mainPass.pointLightsPipeline);
 
                 // bind DescriptorSet 0 (Camera Transformations)
                 vkCmdBindDescriptorSets(
-                    m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     mainPass.pointLightsPipelineLayout,
                     0, 1, &mainPass.transformDescriptorSet,
                     0, nullptr);
 
                 // bind DescriptorSet 1 (gBuffer)
                 vkCmdBindDescriptorSets(
-                    m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     mainPass.pointLightsPipelineLayout,
                     1, 1, &mainPass.gBufferDescriptorSet,
                     0, nullptr);
@@ -451,9 +453,9 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
                 Mesh     pointLightMesh  = scene.getSceneData().pointLightMesh;
                 VkBuffer vertexBuffers[] = {pointLightMesh.vertexBuffer};
                 VkDeviceSize offsets[]   = {0};
-                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                vkCmdBindVertexBuffers(commandBuffer,
                                        0, 1, vertexBuffers, offsets);
-                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                vkCmdBindIndexBuffer(commandBuffer,
                                      pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
                 PointLightPushConstant& pointLightPushConstant = mainPass.pointLightPushConstant;
@@ -478,31 +480,31 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
 
                     // sending push constant to GPU
                     vkCmdPushConstants(
-                        m_Context.commandContext.commandBuffer,
+                        commandBuffer,
                         mainPass.pointLightsPipelineLayout,
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0,  // offset
                         sizeof(PointLightPushConstant), &pointLightPushConstant);
 
-                    vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                    vkCmdDrawIndexed(commandBuffer,
                                      pointLightMesh.indicesCount, 1, 0, 0, 0);
                 }
             }
         }
         
         // render skybpx
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           mainPass.skyboxPipeline);
 
         // bind DescriptorSet 0 (Camera Transformations)
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.skyboxPipelineLayout, 0, 1,
             &mainPass.transformDescriptorSet, 0, nullptr);
 
         // bind DescriptorSet 1 (Materials)
         vkCmdBindDescriptorSets(
-            m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             mainPass.skyboxPipelineLayout, 1, 1,
             &mainPass.skyboxDescriptorSet, 0, nullptr);
 
@@ -510,29 +512,30 @@ void VulkanRenderer::recordMainRenderPass(Scene& scene, uint32_t imageIndex) {
         skyboxPushConstant.exposure = m_RenderContext.imguiData.exposure;
 
         // sending push constant to GPU
-        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+        vkCmdPushConstants(commandBuffer,
                            mainPass.skyboxPipelineLayout,
                            VK_SHADER_STAGE_FRAGMENT_BIT,
                            0,  // offset
                            sizeof(SkyboxPushConstant), &skyboxPushConstant);
 
-        vkCmdDraw(m_Context.commandContext.commandBuffer, 6, 1, 0, 0);
+        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
     }
 
     if(m_RenderContext.usesImgui) {
         // @IMGUI
         ImGui::Render();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
-                                        m_Context.commandContext.commandBuffer);
+                                        commandBuffer);
     }
 
-    vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
+    vkCmdEndRenderPass(commandBuffer);
 }
 
 void VulkanRenderer::recordGeometryPass(Scene& scene) {
     // geometry pass
-    MainPass& mainPass = m_RenderContext.renderPasses.mainPass;
+    MainPass&          mainPass       = m_RenderContext.renderPasses.mainPass;
     RenderPassContext& mainRenderPass = mainPass.renderPassContext;
+    VkCommandBuffer&   commandBuffer  = m_Context.commandContext.commandBuffer;
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -551,7 +554,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues    = clearValues.data();
 
-    vkCmdBeginRenderPass(m_Context.commandContext.commandBuffer,
+    vkCmdBeginRenderPass(commandBuffer,
                          &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 
@@ -564,20 +567,20 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
         static_cast<float>(m_Context.swapchainContext.swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(m_Context.commandContext.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = m_Context.swapchainContext.swapChainExtent;
-    vkCmdSetScissor(m_Context.commandContext.commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // render meshes
     {
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer,
+        vkCmdBindPipeline(commandBuffer,
                           VK_PIPELINE_BIND_POINT_GRAPHICS, mainPass.geometryPassPipeline);
 
         // bind DescriptorSet 0 (Camera Transformations)
-        vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+        vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 mainPass.geometryPassPipelineLayout, 0, 1,
                                 &mainPass.transformDescriptorSet, 0, nullptr);
@@ -588,13 +591,13 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
         //        -> use separate command buffer that is only updated when the graphics pipeline is changed
 
         // bind DescriptorSet 1 (Materials)
-        vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+        vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 mainPass.geometryPassPipelineLayout, 1, 1,
                                 &mainPass.materialDescriptorSet, 0, nullptr);
 
         // bind DescriptorSet 2 (Shadows)
-        vkCmdBindDescriptorSets(m_Context.commandContext.commandBuffer,
+        vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 mainPass.geometryPassPipelineLayout, 2, 1,
                                 &mainPass.depthDescriptorSet, 0, nullptr);
@@ -631,20 +634,20 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
                 pushConstant.materialIndex = meshPart.materialIndex;
 
-                vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
+                vkCmdBindVertexBuffers(commandBuffer,
                                        0, 1, vertexBuffers, offsets);
 
-                vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+                vkCmdBindIndexBuffer(commandBuffer,
                                      mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-                vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+                vkCmdPushConstants(commandBuffer,
                                    mainPass.geometryPassPipelineLayout,
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                    0,  // offset
                                    sizeof(PushConstant), &pushConstant);
 
                 m_RenderContext.imguiData.meshDrawCalls++;
-                vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+                vkCmdDrawIndexed(commandBuffer,
                                  mesh.indicesCount, 1, 0, 0, 0);
             }
         }
@@ -652,16 +655,16 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
     // render point lights for stencil shadow volumes
     if(m_RenderContext.imguiData.pointLights) {
-        vkCmdBindPipeline(m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           m_RenderContext.renderPasses.mainPass.stencilPipeline);
 
         // bind point light mesh (it will remain the same for each light source
         Mesh         pointLightMesh  = scene.getSceneData().pointLightMesh;
         VkBuffer     vertexBuffers[] = {pointLightMesh.vertexBuffer};
         VkDeviceSize offsets[]       = {0};
-        vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer, 0, 1,
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1,
                                vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
+        vkCmdBindIndexBuffer(commandBuffer,
                              pointLightMesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         glm::mat4 projection =
@@ -676,7 +679,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
             projection * scene.getCameraRef().getCameraMatrix();
 
         // sending push constant to GPU
-        vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+        vkCmdPushConstants(commandBuffer,
                            m_RenderContext.renderPasses.mainPass.stencilPipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT,
                            0,  // offset
@@ -691,7 +694,7 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
             stencilPushConstant.transformation = translateMat * scaleMat;
 
             // sending push constant to GPU
-            vkCmdPushConstants(m_Context.commandContext.commandBuffer,
+            vkCmdPushConstants(commandBuffer,
                                m_RenderContext.renderPasses.mainPass.stencilPipelineLayout,
                                VK_SHADER_STAGE_VERTEX_BIT,
                                0,  // offset
@@ -699,12 +702,12 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
             m_RenderContext.imguiData.lightDrawCalls++;
 
-            vkCmdDrawIndexed(m_Context.commandContext.commandBuffer,
+            vkCmdDrawIndexed(commandBuffer,
                              pointLightMesh.indicesCount, 1, 0, 0, 0);
         }
     }
 
-    vkCmdEndRenderPass(m_Context.commandContext.commandBuffer);
+    vkCmdEndRenderPass(commandBuffer);
 }
 
 
@@ -771,48 +774,50 @@ void VulkanRenderer::updateUniformBuffer(Scene& scene) {
 
 void VulkanRenderer::recompileToSecondaryPipeline() {
     std::cout << "\nRecompiling Shaders...\n";
+    MainPass&          mainPass    = m_RenderContext.renderPasses.mainPass;
+    VulkanBaseContext& baseContext = m_Context.baseContext;
 
-    vkDeviceWaitIdle(m_Context.baseContext.device);
+    vkDeviceWaitIdle(baseContext.device);
     // rebuild shadow map visualization pipeline
-    cleanVisualizationPipeline(m_Context.baseContext,
-                               m_RenderContext.renderPasses.mainPass);
+    cleanVisualizationPipeline(baseContext,
+                               mainPass);
     createVisualizationPipeline(m_Context, m_RenderContext,
-                                m_RenderContext.renderPasses.mainPass);
+                                mainPass);
 
     // rebuild geometry pass pipeline
-    cleanGeometryPassPipeline(m_Context.baseContext,
-                              m_RenderContext.renderPasses.mainPass);
+    cleanGeometryPassPipeline(baseContext,
+                              mainPass);
     createGeometryPassPipeline(
         m_Context, m_RenderContext,
-        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
-        m_RenderContext.renderPasses.mainPass);
+        mainPass.renderPassContext.renderPassDescription,
+        mainPass);
 
     // rebuild stencil pipeline
-    cleanStencilPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    cleanStencilPipeline(baseContext, mainPass);
     createStencilPipeline(
         m_Context, m_RenderContext,
-        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
-        m_RenderContext.renderPasses.mainPass);
+        mainPass.renderPassContext.renderPassDescription,
+        mainPass);
 
     // rebuild primary lighting pipeline
-    cleanPrimaryLightingPipeline(m_Context.baseContext,
-                                 m_RenderContext.renderPasses.mainPass);
+    cleanPrimaryLightingPipeline(baseContext,
+                                 mainPass);
     createPrimaryLightingPipeline(
         m_Context, m_RenderContext,
-        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
-        m_RenderContext.renderPasses.mainPass);
+        mainPass.renderPassContext.renderPassDescription,
+        mainPass);
 
     // rebuild point lights pipeline
-    cleanPointLightsPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    cleanPointLightsPipeline(baseContext, mainPass);
     createPointLightsPipeline(
         m_Context, m_RenderContext,
-        m_RenderContext.renderPasses.mainPass.renderPassContext.renderPassDescription,
-        m_RenderContext.renderPasses.mainPass);
+        mainPass.renderPassContext.renderPassDescription,
+        mainPass);
 
     // rebuild skybox pipeline
-    cleanSkyboxPipeline(m_Context.baseContext, m_RenderContext.renderPasses.mainPass);
+    cleanSkyboxPipeline(baseContext, mainPass);
     createSkyboxPipeline(m_Context, m_RenderContext,
-                         m_RenderContext.renderPasses.mainPass);
+                         mainPass);
 }
 ApplicationVulkanContext VulkanRenderer::getContext() {
     return m_Context;
