@@ -50,8 +50,8 @@ void main() {
         vec3 aoRoughnessMetallic = texture(samplers[material.aoRoughnessMetallicTextureID], inTexCoords).rgb;
         // For some reason, the blender glTF exporter sets AO to 0 if no texture is provided. However we want a default value of 1.0
         ao = aoRoughnessMetallic.r > 0.0 ? aoRoughnessMetallic.r : 1.0;
-        roughness = aoRoughnessMetallic.g;
-        metallic = aoRoughnessMetallic.b;
+        roughness *= aoRoughnessMetallic.g;
+        metallic *= aoRoughnessMetallic.b;
     }
 
     outNormal = vec4(normal,0);

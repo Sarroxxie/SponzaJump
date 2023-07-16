@@ -495,8 +495,6 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
         int textureID = createTexture(uri, texturesOffset, VK_FORMAT_R8G8B8A8_UNORM,
                                       context, commandContext);
         material.aoRoughnessMetallicTextureID = textureID;
-    } else {
-        material.aoRoughnessMetallic.r = 1;
     }
     if(pbrSection.metallicRoughnessTexture.index != -1
        && material.aoRoughnessMetallicTextureID == -1) {
@@ -505,10 +503,10 @@ Material ModelLoader::createMaterial(tinygltf::Material& gltfMaterial,
         int textureID = createTexture(uri, texturesOffset, VK_FORMAT_R8G8B8A8_UNORM,
                                       context, commandContext);
         material.aoRoughnessMetallicTextureID = textureID;
-    } else {
-        material.aoRoughnessMetallic.g = pbrSection.roughnessFactor;
-        material.aoRoughnessMetallic.b = pbrSection.metallicFactor;
     }
+    material.aoRoughnessMetallic.r = 1;
+    material.aoRoughnessMetallic.g = pbrSection.roughnessFactor;
+    material.aoRoughnessMetallic.b = pbrSection.metallicFactor;
     return material;
 }
 
