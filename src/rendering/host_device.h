@@ -132,6 +132,7 @@ struct ShadowPushConstant
 {
     ALIGN_AS(16) mat4 transform;
     ALIGN_AS(4) int cascadeIndex;
+    ALIGN_AS(4) int materialIndex;
 };
 
 struct ShadowControlPushConstant
