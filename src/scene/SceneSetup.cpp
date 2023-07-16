@@ -89,6 +89,7 @@ void addToScene(Scene&                          scene,
         transformationComponent->translation = instance.translation;
         transformationComponent->rotation    = instance.rotation;
         transformationComponent->scaling     = instance.scaling;
+        transformationComponent->hasChanged  = true;
 
 
         const std::string PhysicsNamePrefix = "Static";

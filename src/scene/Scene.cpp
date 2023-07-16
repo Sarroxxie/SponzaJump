@@ -207,8 +207,14 @@ void Scene::doPhysicsUpdate(uint64_t deltaMillis) {
 
             b2Vec2 newPos = physicsComponent->body->GetPosition();
 
-            transform->translation = glm::vec3(newPos.x, newPos.y, transform->translation.z);
-            transform->rotation.z = physicsComponent->body->GetAngle();
+            if(newPos.x != transform->translation.x
+               || newPos.y != transform->translation.y
+               || physicsComponent->body->GetAngle() != transform->rotation.z) {
+                transform->translation =
+                    glm::vec3(newPos.x, newPos.y, transform->translation.z);
+                transform->rotation.z = physicsComponent->body->GetAngle();
+                transform->hasChanged = true;
+            }
         }
     }
 }
@@ -301,6 +307,7 @@ void Scene::doGameplayUpdate() {
 
         if(died) {
             transformation->translation = levelData.playerSpawnLocation;
+            transformation->hasChanged  = true;
             physicsComponent->body->SetTransform(
                 b2Vec2(levelData.playerSpawnLocation.x,
                        levelData.playerSpawnLocation.y),
@@ -331,6 +338,7 @@ void Scene::resetPlayer() {
         *playerComponent = PlayerComponent();
 
         transformation->translation = levelData.playerSpawnLocation;
+        transformation->hasChanged  = true;
         physicsComponent->body->SetTransform(
             b2Vec2(levelData.playerSpawnLocation.x,
                    levelData.playerSpawnLocation.y),

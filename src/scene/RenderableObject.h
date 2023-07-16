@@ -15,12 +15,21 @@ typedef struct transformation_s
     glm::vec3 rotation {glm::vec3(0)};
     glm::vec3 scaling {glm::vec3(1)};
 
-    [[nodiscard]] glm::mat4 getMatrix() const {
-        glm::mat4 scaleMat = glm::scale(glm::mat4(1), scaling);
-        glm::mat4 rotateMat = glm::eulerAngleXYZ(rotation.x, rotation.y, rotation.z);
-        glm::mat4 translateMat = glm::translate(glm::mat4(1), translation);
+    // the transformation should only be updated after the object has changed
+    glm::mat4 transformation {glm::mat4(1)};
+    bool      hasChanged = false;
 
-        return translateMat * rotateMat * scaleMat;
+    glm::mat4 getMatrix() {
+        if(!hasChanged) {
+            return transformation;
+        }
+        glm::mat4 scaleMat = glm::scale(glm::mat4(1), scaling);
+        glm::mat4 rotateMat =
+            glm::eulerAngleXYZ(rotation.x, rotation.y, rotation.z);
+        glm::mat4 translateMat = glm::translate(glm::mat4(1), translation);
+        transformation         = translateMat * rotateMat * scaleMat;
+        hasChanged             = false;
+        return transformation;
     }
 } Transformation;
 

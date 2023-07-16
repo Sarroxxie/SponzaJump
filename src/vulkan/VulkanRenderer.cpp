@@ -266,13 +266,13 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                     // this is fairly hardcoded so that the spiky mesh of the
                     // player has no shadow the meshes of the spikes are at
                     // position 1 and 2 (this is the hardcoded part)
-                    if(!m_RenderContext.imguiData.playerSpikesShadow
+                    /*if(!m_RenderContext.imguiData.playerSpikesShadow
                        && id == playerID && (counter == 1 || counter == 2)) {
                         counter++;
                         continue;
-                    }
-                    MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
-                    Mesh mesh = scene.getSceneData().meshes[meshPart.meshIndex];
+                    }*/
+                    MeshPart& meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                    Mesh& mesh = scene.getSceneData().meshes[meshPart.meshIndex];
                     VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
                     VkDeviceSize offsets[]       = {0};
 
@@ -283,7 +283,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                     vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
                                          mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-
+                    // only updates transformation matrix if the transformation has changed
                     shadowPushConstant.transform = transformComponent->getMatrix();
 
                     vkCmdPushConstants(
@@ -620,11 +620,12 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
             Model& model = scene.getSceneData().models[modelComponent->modelIndex];
 
+            // only update transformation matrix if the transformation has changed
             pushConstant.transformation = transformComponent->getMatrix();
 
             for(auto& meshPartIndex : model.meshPartIndices) {
-                MeshPart meshPart = scene.getSceneData().meshParts[meshPartIndex];
-                Mesh     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
+                MeshPart& meshPart = scene.getSceneData().meshParts[meshPartIndex];
+                Mesh&     mesh = scene.getSceneData().meshes[meshPart.meshIndex];
                 VkBuffer vertexBuffers[] = {mesh.vertexBuffer};
                 VkDeviceSize offsets[]   = {0};
 
@@ -635,8 +636,6 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
 
                 vkCmdBindIndexBuffer(m_Context.commandContext.commandBuffer,
                                      mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-                glm::mat4 transform = transformComponent->getMatrix();
 
                 vkCmdPushConstants(m_Context.commandContext.commandBuffer,
                                    mainPass.geometryPassPipelineLayout,
