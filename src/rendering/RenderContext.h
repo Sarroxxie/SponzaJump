@@ -65,6 +65,9 @@ typedef struct
     VkDescriptorSetLayout transformDescriptorSetLayout;
     VkDescriptorSet       transformDescriptorSet;
 
+    VkDescriptorSetLayout materialDescriptorSetLayout;
+    VkDescriptorSet       materialDescriptorSet;
+
     uint32_t shadowMapWidth;
     uint32_t shadowMapHeight;
 

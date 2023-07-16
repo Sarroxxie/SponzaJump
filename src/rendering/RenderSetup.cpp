@@ -38,7 +38,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     shadowPassDescription.fragmentShader.spvDirectory = "res/shaders/spv/";
 
     shadowPassDescription.pushConstantRanges.push_back(createPushConstantRange(
-        0, sizeof(ShadowPushConstant), getStageFlag(ShaderStage::VERTEX_SHADER)));
+        0, sizeof(ShadowPushConstant), getStageFlag(ShaderStage::VERTEX_SHADER) | getStageFlag(ShaderStage::FRAGMENT_SHADER)));
 
     shadowPassDescription.enableDepthBias = true;
 
@@ -76,15 +76,16 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
     // --- Shadow Pass
 
-    initializeShadowPass(appContext, renderContext, renderSetupDescription.shadowPassDescription);
+    initializeShadowPass(appContext, renderContext, renderSetupDescription.shadowPassDescription, scene);
 
     createShadowPassResources(appContext, renderContext);
-    createShadowPassDescriptorSets(appContext, renderContext);
 
     // --- Main Render Pass
     initializeMainRenderPass(appContext, renderContext,
                              renderSetupDescription.mainRenderPassDescription, scene);
 
+    // after main Render Pass since we need materials buffer
+    createShadowPassDescriptorSets(appContext, renderContext, scene);
 
     renderContext.renderSetupDescription = renderSetupDescription;
     createFrameBuffers(appContext, renderContext);
@@ -453,20 +454,36 @@ void createGeometryRenderPass(const ApplicationVulkanContext& appContext,
 
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext,
-                          const RenderPassDescription& renderPassDescription) {
+                          const RenderPassDescription& renderPassDescription,
+                          Scene& scene) {
 
     ShadowPass& shadowPass = renderContext.renderPasses.shadowPass;
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
+    std::vector<VkDescriptorSetLayoutBinding> materialBindings;
 
     bindings.push_back(createLayoutBinding(SceneBindings::eCamera, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                            getStageFlag(ShaderStage::VERTEX_SHADER)));
 
+    materialBindings.push_back(createLayoutBinding(
+        MaterialsBindings::eMaterials, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
+    materialBindings.push_back(createLayoutBinding(
+        MaterialsBindings::eTextures, scene.getSceneData().textures.size(),
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        getStageFlag(ShaderStage::FRAGMENT_SHADER)));
+
     createDescriptorSetLayout(appContext.baseContext,
                               shadowPass.transformDescriptorSetLayout, bindings);
 
+    // TODO (new descriptorSetLayout), increase poolsize, create DescriptorsSets for it, bind buffer, bind into shader, pass uvs, perform alpha test
+    createDescriptorSetLayout(appContext.baseContext,
+                              shadowPass.materialDescriptorSetLayout, materialBindings);
+
     auto& shadowPassLayouts = shadowPass.renderPassContext.descriptorSetLayouts;
     shadowPassLayouts.push_back(shadowPass.transformDescriptorSetLayout);
+    shadowPassLayouts.push_back(shadowPass.materialDescriptorSetLayout);
 
     // Shadow Depth Buffer Attachment
     VkAttachmentDescription depthAttachment{};
@@ -525,12 +542,12 @@ void initializeShadowPass(const ApplicationVulkanContext& appContext,
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
 
     descriptorSetLayouts.push_back(shadowPass.transformDescriptorSetLayout);
-
+    descriptorSetLayouts.push_back(shadowPass.materialDescriptorSetLayout);
 
     createGraphicsPipeline(appContext, shadowPass.renderPassContext,
                            shadowPass.renderPassContext.pipelineLayouts[0],
                            shadowPass.renderPassContext.graphicsPipelines[0], renderPassDescription,
-                           shadowPass.renderPassContext.descriptorSetLayouts, false);
+                           shadowPass.renderPassContext.descriptorSetLayouts);
 
     shadowPass.renderPassContext.renderPassDescription = renderPassDescription;
 
@@ -1058,7 +1075,8 @@ void createDescriptorPool(const VulkanBaseContext& baseContext, RenderContext& r
 
 
 void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
-                                    RenderContext& renderContext) {
+                                    RenderContext& renderContext,
+                                    Scene& scene) {
     ShadowPass& shadowPass = renderContext.renderPasses.shadowPass;
 
     VkDescriptorSetAllocateInfo allocInfo{};
@@ -1092,6 +1110,55 @@ void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
 
     descriptorWrites.emplace_back(descriptorWrite);
 
+
+    VkDescriptorSetAllocateInfo allocInfoMaterial{};
+    allocInfoMaterial.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfoMaterial.descriptorPool = renderContext.descriptorPool;
+    allocInfoMaterial.descriptorSetCount = 1;
+    allocInfoMaterial.pSetLayouts = &renderContext.renderPasses.shadowPass.materialDescriptorSetLayout;
+
+    if(vkAllocateDescriptorSets(appContext.baseContext.device, &allocInfoMaterial,
+                                &shadowPass.materialDescriptorSet)
+       != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+
+    VkDescriptorBufferInfo materialBufferInfo{};
+    materialBufferInfo.buffer =
+        renderContext.renderPasses.mainPass.materialBuffer.buffer;
+    materialBufferInfo.offset = 0;
+    materialBufferInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet materialDescriptorWrite;
+    materialDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    materialDescriptorWrite.pNext      = nullptr;
+    materialDescriptorWrite.dstSet     = shadowPass.materialDescriptorSet;
+    materialDescriptorWrite.dstBinding = MaterialsBindings::eMaterials;
+    materialDescriptorWrite.dstArrayElement = 0;
+    materialDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    materialDescriptorWrite.descriptorCount = 1;
+    materialDescriptorWrite.pBufferInfo     = &materialBufferInfo;
+
+    descriptorWrites.emplace_back(materialDescriptorWrite);
+
+
+    std::vector<VkDescriptorImageInfo> textureSamplers;
+    for(auto& texture : scene.getSceneData().textures) {
+        textureSamplers.emplace_back(texture.descriptorInfo);
+    }
+
+    VkWriteDescriptorSet texturesWrite{};
+    texturesWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    texturesWrite.dstSet          = shadowPass.materialDescriptorSet;
+    texturesWrite.dstBinding      = MaterialsBindings::eTextures;
+    texturesWrite.dstArrayElement = 0;
+    texturesWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+    texturesWrite.descriptorCount = textureSamplers.size();
+    texturesWrite.pImageInfo      = textureSamplers.data();
+
+    descriptorWrites.emplace_back(texturesWrite);
+
     vkUpdateDescriptorSets(appContext.baseContext.device,
                            static_cast<uint32_t>(descriptorWrites.size()),
                            descriptorWrites.data(), 0, nullptr);
@@ -1112,6 +1179,9 @@ void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& sha
 
     vkDestroyDescriptorSetLayout(baseContext.device,
                                  shadowPass.transformDescriptorSetLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(baseContext.device,
+                                 shadowPass.materialDescriptorSetLayout, nullptr);
 
     for(size_t i = 0; i < MAX_CASCADES; i++) {
         ImageResources currentDepthImage = shadowPass.depthImages[i];

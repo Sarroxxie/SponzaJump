@@ -6,7 +6,9 @@
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec4 inTangents;
-layout (location = 3) in vec2 texCoords;
+layout (location = 3) in vec2 inTexCoords;
+
+layout (location = 0) out vec2 outTexCoords;
 
 layout (set = 0, binding = eCamera) uniform SceneTransform {
     mat4 data[MAX_CASCADES];
@@ -15,6 +17,7 @@ layout (set = 0, binding = eCamera) uniform SceneTransform {
 layout (push_constant) uniform ObjectTransform {
     mat4 transform;
     int cascadeIndex;
+    int materialIndex;
 } objectTransform;
 
 out gl_PerVertex
@@ -25,6 +28,8 @@ out gl_PerVertex
 void main() {
     vec4 pos =  VPMats.data[objectTransform.cascadeIndex]
                 * objectTransform.transform * vec4(inPosition, 1);
+
+    outTexCoords = inTexCoords;
 
     gl_Position = pos;
     gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;

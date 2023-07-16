@@ -243,8 +243,16 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                 0, 1, &m_RenderContext.renderPasses.shadowPass.transformDescriptorSet,
                 0, nullptr);
 
+            vkCmdBindDescriptorSets(
+                m_Context.commandContext.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                shadowPass.renderPassContext
+                    .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
+                1, 1, &m_RenderContext.renderPasses.shadowPass.materialDescriptorSet,
+                0, nullptr);
+
             ShadowPushConstant shadowPushConstant;
             shadowPushConstant.cascadeIndex = i;
+            shadowPushConstant.materialIndex = 0;
 
             EntityId playerID = -1;
 
@@ -273,6 +281,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                     VkBuffer     vertexBuffers[] = {mesh.vertexBuffer};
                     VkDeviceSize offsets[]       = {0};
 
+                    shadowPushConstant.materialIndex = meshPart.materialIndex;
 
                     vkCmdBindVertexBuffers(m_Context.commandContext.commandBuffer,
                                            0, 1, vertexBuffers, offsets);
@@ -287,7 +296,7 @@ void VulkanRenderer::recordShadowPass(Scene& scene, uint32_t imageIndex) {
                         m_Context.commandContext.commandBuffer,
                         shadowPass.renderPassContext
                             .pipelineLayouts[shadowPass.renderPassContext.activePipelineIndex],
-                        VK_SHADER_STAGE_VERTEX_BIT,
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0,  // offset
                         sizeof(ShadowPushConstant), &shadowPushConstant);
 

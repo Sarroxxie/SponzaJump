@@ -26,7 +26,8 @@ void initializeRenderContext(ApplicationVulkanContext& appContext,
 
 void initializeShadowPass(const ApplicationVulkanContext& appContext,
                           RenderContext&                  renderContext,
-                          const RenderPassDescription& renderPassDescription);
+                          const RenderPassDescription& renderPassDescription,
+                          Scene& scene);
 
 void initializeShadowDepthBuffer(const ApplicationVulkanContext& appContext,
                                  ShadowPass&                     shadowPass,
@@ -38,7 +39,8 @@ void createShadowPassResources(const ApplicationVulkanContext& appContext,
                                RenderContext&                  renderContext);
 
 void createShadowPassDescriptorSets(const ApplicationVulkanContext& appContext,
-                                    RenderContext& renderContext);
+                                    RenderContext& renderContext,
+                                    Scene& scene);
 
 void cleanShadowPass(const VulkanBaseContext& baseContext, const ShadowPass& shadowPass);
 
