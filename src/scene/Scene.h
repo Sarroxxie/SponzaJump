@@ -33,7 +33,7 @@ class Scene
     LevelData levelData;
 
     Camera m_Camera;
-    float  cameraOffsetY = 3.5;
+    float  cameraOffsetY = 3.0f;
 
     b2World m_World;
 
@@ -43,7 +43,7 @@ class Scene
 
   public:
     Scene(ApplicationVulkanContext& vulkanContext,
-          Camera                    camera = Camera(glm::vec3(0, 0, 25)));
+          Camera                    camera = Camera(glm::vec3(0, 0, 32)));
 
     // ECS ---
     EntityId addEntity();

@@ -160,6 +160,7 @@ typedef struct
 typedef struct
 {
     bool lockCamera = true;
+    float yOffset    = 10.0f;
 
     bool visualizeShadowBuffer = false;
     bool playerSpikesShadow    = true;

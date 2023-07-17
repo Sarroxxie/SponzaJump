@@ -75,6 +75,8 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
 
         ImGui::SliderFloat("Y Lookat Offset", &cameraOffsetY, 0.0f, 10.0f);
 
+        ImGui::SliderFloat("Y Position Offset", &renderContext.imguiData.yOffset, -10.0f, 20.0f);
+
         ImGui::Checkbox("Lock Camera to Player", &renderContext.imguiData.lockCamera);
     }
     if(ImGui::CollapsingHeader("Perspective Controls")) {
@@ -296,7 +298,7 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
             auto prevPos = m_Camera.getWorldPos();
 
             m_Camera.setPosition(glm::vec3(transformation->translation.x,
-                                           transformation->translation.y + 10,
+                                           transformation->translation.y + renderContext.imguiData.yOffset,
                                            prevPos.z));
             m_Camera.setLookAt(glm::vec3(transformation->translation.x,
                                          transformation->translation.y + cameraOffsetY, 0));
