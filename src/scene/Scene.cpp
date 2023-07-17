@@ -328,6 +328,8 @@ void Scene::doGameplayUpdate() {
                 playerComponent->touchesHazard = false;
                 died                           = true;
             }
+        } else {
+            playerComponent->touchesHazard = false;
         }
 
         if(died) {
