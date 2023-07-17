@@ -4,6 +4,7 @@
 #include "game/PlayerComponent.h"
 #include "rendering/host_device.h"
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
 
 Scene::Scene(ApplicationVulkanContext& vulkanContext, Camera camera)
     : m_Camera(camera)
@@ -130,9 +131,11 @@ void Scene::registerSceneImgui(RenderContext& renderContext) {
     if(ImGui::CollapsingHeader("Lighting Controls")) {
         ImGui::Checkbox("Point Lights", &renderContext.imguiData.pointLights);
         ImGui::Checkbox("Shadows", &renderContext.imguiData.shadows);
+        ImGui::Checkbox("Automatic IBL Factor", &renderContext.imguiData.autoIbl);
         ImGui::SliderFloat("IBL factor", &renderContext.imguiData.iblFactor,
                            0.0, 1, "%3f", ImGuiSliderFlags_Logarithmic);
-        ImGui::SliderFloat("Skybox Exposure", &renderContext.imguiData.exposure, 0.1,
+        ImGui::SliderFloat("Skybox Exposure", &renderContext.imguiData.exposure,
+                           0.1,
                            5, "%3f", ImGuiSliderFlags_Logarithmic);
     }
 
@@ -268,6 +271,26 @@ void Scene::setInputController(InputController* inputController) {
 void Scene::doCameraUpdate(RenderContext& renderContext) {
     for(auto id : SceneView<PlayerComponent, Transformation>(*this)) {
         auto* transformation = getComponent<Transformation>(id);
+
+        if(renderContext.imguiData.autoIbl) {
+            // TODO: should remove, this is only for presentation purposes
+            float       posX            = transformation->translation.x;
+            const float LOWER_THRESHOLD = 90.0f;
+            const float UPPER_THRESHOLD = 195.0f;
+
+            if(posX < LOWER_THRESHOLD) {
+                renderContext.imguiData.iblFactor = 0.05f;
+            } else if(posX > UPPER_THRESHOLD) {
+                renderContext.imguiData.iblFactor = 1.0f;
+            } else {
+                float iblFactor = std::abs(posX - LOWER_THRESHOLD)
+                                  / (UPPER_THRESHOLD - LOWER_THRESHOLD);
+                // quadratic interpolation looks better here
+                renderContext.imguiData.iblFactor =
+                    std::clamp(std::powf(iblFactor, 2), 0.05f, 1.0f);
+            }
+        }
+
 
         if(renderContext.imguiData.lockCamera) {
             auto prevPos = m_Camera.getWorldPos();

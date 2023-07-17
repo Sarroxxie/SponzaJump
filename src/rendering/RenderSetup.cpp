@@ -14,7 +14,7 @@ RenderSetupDescription initializeSimpleSceneRenderContext(ApplicationVulkanConte
     settings.perspectiveSettings.farPlane  = 300;
 
     ShadowMappingSettings shadowMappingSettings;
-    shadowMappingSettings.lightDirection = glm::normalize(glm::vec3(-50, -50, -20));
+    //shadowMappingSettings.lightDirection = glm::normalize(glm::vec3(-50, -50, -20));
     shadowMappingSettings.projection.widthHeightDim = 50;
     shadowMappingSettings.projection.zNear          = 1;
     shadowMappingSettings.projection.zFar           = 100;

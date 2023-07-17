@@ -175,8 +175,9 @@ typedef struct
     bool pointLights = true;
     // NOTE: this must always be true on startup, can modify at runtime via ImGui
     bool  shadows  = true;
+    bool  autoIbl   = true;
     float iblFactor = 0.1f;
-    float exposure = 1.0f;
+    float exposure = 3.0f;
 } ImguiData;
 
 typedef struct
@@ -213,7 +214,7 @@ typedef struct
 
 typedef struct
 {
-    glm::vec3     lightDirection;
+    glm::vec3 lightDirection = glm::vec3(-0.452f, -1.0f, -0.095f);
     OrthoSettings projection;
 
     int numberCascades = MAX_CASCADES;
@@ -224,7 +225,7 @@ typedef struct
 
     // Extra offset for distance of the light camera to account for objects
     // outside of the view frustum along the light direction
-    float lightCameraZOffset = 0;
+    float lightCameraZOffset = 200;
 
     // controls the blending between logarithmic (1) and linear (0) cascade splits
     float cascadeSplitsBlendFactor = 0.5;
