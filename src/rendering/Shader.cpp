@@ -2,6 +2,7 @@
 #include <filesystem>
 #include "Shader.h"
 #include "utils/FileUtils.h"
+#include <iostream>
 
 VkShaderStageFlags getStageFlag(ShaderStage stage) {
     switch (stage) {
@@ -48,5 +49,6 @@ void compileShader(const Shader &shader, uint32_t minorVersionTarget) {
     #else
         command += " > /dev/null";
     #endif*/
+    std::cout << "Compiling Shader: ";
     system(command.c_str());
 }

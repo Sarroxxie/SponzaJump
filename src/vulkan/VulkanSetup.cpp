@@ -192,7 +192,7 @@ void pickPhysicalDevice(VulkanBaseContext &context, GraphicSettings &graphicSett
     vkGetPhysicalDeviceProperties(context.physicalDevice, &deviceProperties);
 
     graphicSettings.msaaSamples = graphicSettings.maxMsaaSamples;
-    std::cout << "Using " << graphicSettings.msaaSamples << " msaa samples" << std::endl;
+    //std::cout << "Using " << graphicSettings.msaaSamples << " msaa samples" << std::endl;
 
     context.maxSupportedMinorVersion = VK_API_VERSION_MINOR(deviceProperties.apiVersion);
     context.maxSamplerAnisotropy = deviceProperties.limits.maxSamplerAnisotropy;

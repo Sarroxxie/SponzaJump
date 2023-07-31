@@ -7,6 +7,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
                               Scene&                          scene,
                               GameContactListener&            contactListener) {
 
+    // load skybox and all the textures needed for image based lighting
     CubeMap& skybox = scene.getSceneData().skybox;
     CubeMap& irradianceMap = scene.getSceneData().irradianceMap;
     CubeMap& radianceMap   = scene.getSceneData().radianceMap;
@@ -25,32 +26,21 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     createCubeMapFromFiles(context.baseContext, context.commandContext,
                            radianceMap, "res/assets/textures/cubemap/radiance/");
     createHdrTextureImage(context.baseContext, context.commandContext,
-                          "res/assets/textures/cubemap/brdf_integration_LUT_flipped.hdr",
+                          "res/assets/textures/cubemap/brdf_integration_LUT.hdr",
                           brdfIntegrationLUT, false);
 
-    /*{
-        ModelLoader loader;
-
-
-        loader.loadModel("res/assets/models/scene2/playable.gltf",
-        //loader.loadModel("res/assets/models/sponza/sponza.gltf",
-                         scene.getModelLoadingOffsets(), context.baseContext,
-                         context.commandContext);
-
-        addToScene(scene, loader, contactListener);
-    }*/
-
+    // load the scene that contains the playable level
     {
         ModelLoader loader;
-
-        loader.loadModel("res/assets/models/sponza/final_scene33.gltf",
+        std::cout << "Loading Level (this can take some time, be patient)\n";
+        loader.loadModel("res/assets/models/sponza/level_0.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
         addToScene(scene, loader, contactListener);
     }
 
-    // set point light model
+    // load model used for rendering point light sources
     {
         ModelLoader loader;
         loader.loadModel("res/assets/models/pointlight_model/pointlight_model.gltf",
