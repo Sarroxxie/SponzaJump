@@ -1,16 +1,12 @@
 # Graphics and Game Development Praktikum
 
-Project for the graphics and game development praktikum during SS23 of Josias Distler (uiqvb) and Jan-Luca Gutsch (uhivi).
+This small game was created for a course at the KIT (Karlsruher Institut für Technologie). Since the course is now over, this project is not in active development anymore.
 
 ## Setup
 
 ### Working Directory
 
-The working directory needs to be set to the project root directory.
-
-### Shader Compile Directory
-
-A directory called "spv" has to be created in "res/shaders/". Final path is "res/shaders/spv" and this directory is used to store the compiled shaders.
+The working directory of the project needs to be set to the project root directory. This is usually done inside the project settings in the IDE of your choice.
 
 ### Submodules
 
