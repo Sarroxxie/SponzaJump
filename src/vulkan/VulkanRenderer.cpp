@@ -589,11 +589,6 @@ void VulkanRenderer::recordGeometryPass(Scene& scene) {
                                 mainPass.geometryPassPipelineLayout, 0, 1,
                                 &mainPass.transformDescriptorSet, 0, nullptr);
 
-        // TODO: from my understanding, this descriptor set only has to be bound
-        //       once, but I got errors when doing so
-        //        -> should make it possible for performance reasons
-        //        -> use separate command buffer that is only updated when the graphics pipeline is changed
-
         // bind DescriptorSet 1 (Materials)
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,

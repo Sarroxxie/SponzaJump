@@ -113,9 +113,6 @@ void initializeMainRenderPass(const ApplicationVulkanContext& appContext,
     createDepthSampler(appContext, renderContext.renderPasses.mainPass);
     createMainPassResources(appContext, renderContext, scene);
 
-    // TODO: skybox should have own descriptor set
-    // same goes for the skybox pipeline (as it uses the descriptor set that
-    // contains the textures for now)
     createGeometryPassPipeline(appContext, renderContext, renderPassDescription,
                                renderContext.renderPasses.mainPass);
     createPrimaryLightingPipeline(appContext, renderContext, renderPassDescription,
@@ -255,12 +252,10 @@ void createMainRenderPass(const ApplicationVulkanContext& appContext,
     dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     if(renderContext.usesImgui) {
-        // @IMGUI
         dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;  // |
                                                                               // VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
-        // @IMGUI
         dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;  // | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
                                         | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
@@ -864,7 +859,7 @@ VkPushConstantRange createPushConstantRange(uint32_t offset, uint32_t size, VkSh
 
     return pushConstantRange;
 }
-// @IMGUI
+
 // Heavily inspired by "https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/main.cpp"
 void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext& renderContext) {
     // Create ImGui Context and set style
@@ -908,13 +903,14 @@ void initializeImGui(const ApplicationVulkanContext& appContext, RenderContext& 
     initInfo.Queue          = appContext.baseContext.graphicsQueue;
     initInfo.PipelineCache  = VK_NULL_HANDLE;
     initInfo.DescriptorPool = renderContext.imguiContext.descriptorPool;
-    // TODO: check for interference here
+    // specifying subpass (as we only use one subpass at the moment, it will
+    // just be rendered at the end of it)
     initInfo.Subpass   = 0;
     initInfo.Allocator = VK_NULL_HANDLE;
-    // TODO: find out if these are the correct values
+    // these values are widely used in tutorials, so we use them too
     initInfo.MinImageCount = 2;
     initInfo.ImageCount    = imageCount;
-    // TODO: could implement to check for errors
+    // could implement to check for errors
     initInfo.CheckVkResultFn = nullptr;
 
     if(appContext.graphicSettings.useMsaa) {

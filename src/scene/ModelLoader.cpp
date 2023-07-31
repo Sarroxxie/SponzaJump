@@ -13,12 +13,9 @@ constexpr char* TEXTURES_DIRECTORY_NAME      = "textures/";
 constexpr int   TEXTURES_DIRECTORY_NAME_SIZE = 9;
 constexpr char* ASSETS_DIRECTORY_PATH        = "res/assets/";
 
-/**
- * TODO: keep track of uploaded textures somewhere in a map (uri + TextureStruct)
- *       -> probably create a class to handle all model loading
- *       -> will need to create a proper desriptor for objects and textures so the data can get stored
- *       -> use tinygltf only for initial loading, scrap the "tinygltf::model" after loading
- *       -> maybe name class "sceneResourceManager"
+/*
+ * As image loading is done inside a custom function later, this is only needed
+ * to ensure that the path to the image gets set correctly for later extraction.
  */
 bool imageLoaderFunction(tinygltf::Image*     image,
                          const int            image_idx,
@@ -29,17 +26,6 @@ bool imageLoaderFunction(tinygltf::Image*     image,
                          const unsigned char* bytes,
                          int                  size,
                          void*                user_data) {
-    // TODO:
-    // 1. check if the uri is already registered (image->uri is already set at this point)
-
-    // 2. use stbi_load_from_memory() -> use the memory content from "bytes"
-
-    // 3. upload the image to the GPU and register it (with URI as identifier)
-    // -> same structure as noted in the todo above
-
-    // 4. use stbi_image_free() to free image from CPU RAM
-
-    // tinygltf::LoadImageData(image, image_idx, err, warn, req_width, req_height, bytes, size, user_data);
     return true;
 }
 
@@ -599,7 +585,6 @@ Mesh ModelLoader::createMesh(tinygltf::Primitive&              primitive,
     return mesh;
 }
 
-// TODO: implement this -> will need vulkan tutorial for it
 int ModelLoader::createTexture(std::string       uri,
                                int               texturesOffset,
                                VkFormat          format,

@@ -315,13 +315,7 @@ void createSwapChain(VulkanBaseContext &context, SwapchainContext &swapchainCont
     swapchainContext.swapChainImageFormat = surfaceFormat.format;
     swapchainContext.swapChainExtent = extent;
 }
-/*
- * TODO: resizing is not working at the moment!!
- * things that would have to change to make it work:
- *  - recreate deffered render pass by destroying all resources and then calling
- *    "createGeometryRenderPass"
- *  - recreate the descriptor set for gBuffer (this is the annoying part)
- */
+
 void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &renderContext) {
     int width = 0, height = 0;
     glfwGetFramebufferSize(appContext.window->getWindowHandle(), &width, &height);
@@ -330,7 +324,7 @@ void recreateSwapChain(ApplicationVulkanContext &appContext, RenderContext &rend
         glfwWaitEvents();
     }
 
-    // @IMGUI
+    // need to manually end the ImGui frame before recreating all used resources
     if(ImGui::GetCurrentContext() != nullptr) {
         ImGui::EndFrame();
         auto& imguiIO = ImGui::GetIO();
