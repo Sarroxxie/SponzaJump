@@ -33,7 +33,7 @@ void createSamplePhysicsScene(const ApplicationVulkanContext& context,
     {
         ModelLoader loader;
         std::cout << "Loading Level (this can take some time, be patient)\n";
-        loader.loadModel("res/assets/models/sponza/level_0.gltf",
+        loader.loadModel("res/assets/models/levels/level_0.gltf",
                          scene.getModelLoadingOffsets(), context.baseContext,
                          context.commandContext);
 
