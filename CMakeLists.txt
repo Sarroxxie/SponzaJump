@@ -66,3 +66,6 @@ target_link_libraries(GraphicsPraktikum tinygltf)
 
 # Pass path to the Vulkan glslangValidator.exe as definition to C++
 add_definitions(-DVULKAN_GLSLANG_VALIDATOR_PATH=\"${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}\")
+
+# Create directory for compiled shaders
+file(MAKE_DIRECTORY "./res/shaders/spv")
