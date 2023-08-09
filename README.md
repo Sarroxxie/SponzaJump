@@ -1,6 +1,6 @@
 # Sponza Jump
 
-This small game was created for a course at the KIT (Karlsruhe Institute of Technology) in a timespan of 12 weeks. Since the course is now over, this project is not in active development anymore.
+This small game was created for a course at the KIT (Karlsruhe Institute of Technology) over a period of 12 weeks. Since the course is now over, this project is not in active development anymore.
 
 ![](res/docs/images/game_preview.png)
 
