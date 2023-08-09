@@ -9,7 +9,7 @@
 
 #define DEFAULT_APPLICATION_WIDTH 1920
 #define DEFAULT_APPLICATION_HEIGHT 1080
-#define DEFAULT_APPLICATION_NAME "GraphicsPraktikum"
+#define DEFAULT_APPLICATION_NAME "Sponza Jump"
 
 #define CURRENT_MILLIS                                                         \
     (std::chrono::duration_cast<std::chrono::milliseconds>(                    \
