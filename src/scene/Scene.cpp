@@ -289,7 +289,7 @@ void Scene::doCameraUpdate(RenderContext& renderContext) {
                                   / (UPPER_THRESHOLD - LOWER_THRESHOLD);
                 // quadratic interpolation looks better here
                 renderContext.imguiData.iblFactor =
-                    std::clamp(std::powf(iblFactor, 2), 0.05f, 1.0f);
+                    std::clamp((float) std::pow(iblFactor, 2), 0.05f, 1.0f);
             }
         }
 
