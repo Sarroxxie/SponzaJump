@@ -6,7 +6,7 @@
 
 layout (location = 0) in vec2 inTexCoords;
 
-layout (std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
+layout (std140, set = 1, binding = eMaterials) readonly buffer Materials {MaterialDescription m[];} materials;
 
 layout(set = 1, binding = eTextures) uniform sampler2D samplers[];
 

@@ -14,7 +14,7 @@ layout(location = eAlbedo) out vec4 outAlbedo;
 layout(location = ePBR) out vec4 outAoRoughnessMetallic;
 
 // materials array
-layout (std140, set = 1, binding = eMaterials) buffer Materials {MaterialDescription m[];} materials;
+layout (std140, set = 1, binding = eMaterials) readonly buffer Materials {MaterialDescription m[];} materials;
 // textures array
 layout(set = 1, binding = eTextures) uniform sampler2D samplers[];
 layout( push_constant ) uniform _PushConstant { PushConstant pushConstant; };
