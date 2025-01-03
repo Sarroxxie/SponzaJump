@@ -39,7 +39,7 @@ VkShaderModule createShaderModule(const VulkanBaseContext &context, const Shader
 }
 
 void compileShader(const Shader &shader, uint32_t minorVersionTarget) {
-    std::string command = std::string(VULKAN_GLSLANG_VALIDATOR_PATH)
+    std::string command = "\"" + std::string(VULKAN_GLSLANG_VALIDATOR_PATH) + "\""
                           + " -g --target-env vulkan1." + std::to_string(minorVersionTarget) + " -o "
                           + shader.spvDirectory + shader.getCompiledName() + " "
                           + shader.sourceDirectory + shader.shaderSourceName;
